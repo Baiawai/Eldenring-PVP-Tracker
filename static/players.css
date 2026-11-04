@@ -1,0 +1,77 @@
+.cadre_players[hidden] { display:none; }
+.cadre_players {
+    position:absolute;
+    inset:0;
+    z-index:1450;
+    overflow:auto;
+    text-align:left;
+    color:#e8dfcd;
+    background-color:#000;
+    background-image:linear-gradient(to bottom, rgba(255,0,0,0), #a68d60);
+}
+.players-shell { box-sizing:border-box; max-width:1120px; margin:0 auto; padding:46px 38px 64px; }
+.tracker-frame { border:0; background-color:transparent; background-image:linear-gradient(90deg, transparent 0%, rgba(0,0,0,.55) 10%, rgba(0,0,0,.55) 90%, transparent 100%); box-shadow:none; }
+.players-header { padding-bottom:22px; border-bottom:1px solid #544a35; }
+.players-header .players-eyebrow { margin:0 0 12px; color:#a38a5d; font:18px Arial, sans-serif; letter-spacing:.18em; }
+.players-header h1 { max-width:none; margin:0; text-align:left; font-size:42px; line-height:1.1; color:#e1ca9a; }
+.players-header .players-intro { margin:12px 0 0; color:#a7a092; font:18px/1.6 Arial, sans-serif; }
+.players-overview { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:32px; margin:22px 0 28px; }
+.players-metric { min-width:0; padding:16px 10%; }
+.players-metric span { display:block; color:#e1d8c9; text-shadow:0 1px 3px #000; font:18px Arial, sans-serif; }
+.players-metric strong { display:block; margin-top:6px; color:#fff0ce; text-shadow:0 1px 4px #000; font:30px/1 'optimus princeps', Georgia, serif; }
+.players-controls { display:flex; gap:18px; align-items:flex-end; flex-wrap:wrap; }
+.players-search { order:1; flex:1 1 230px; min-width:0; }
+.players-search span, .players-sort span { display:block; margin-bottom:8px; color:#a59b89; font:18px Arial, sans-serif; }
+.players-search input { box-sizing:border-box; width:100%; height:42px; padding:0 14px; border:1px solid #66583c; border-radius:2px; background:#11100e; color:#f2e4c5; font:18px Arial, sans-serif; }
+.players-search input::placeholder { color:#827b6c; }
+.players-search input:focus-visible, .players-filter:focus-visible, .player-card summary:focus-visible { outline:2px solid #e1c487; outline-offset:2px; }
+.players-filters { order:3; display:flex; flex:1 0 100%; flex-wrap:wrap; gap:6px; }
+.players-filter { min-height:42px; padding:7px 15px; border:1px solid #514733; border-radius:2px; background:#141310 !important; color:#bbad91; font-size:18px; font-weight:normal; }
+.players-filter:hover { border-color:#ac9365; color:#f2dfb6; }
+.players-filter.active { background:#574a32 !important; border-color:#b39a6c; color:#fff1d1; }
+.players-sort { order:2; min-width:150px; }
+.players-sort select { width:100%; height:42px; }
+.players-list-heading { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:34px 0 12px; border-bottom:1px solid #463e2e; }
+.players-list-heading h2 { margin:0; padding:0 0 10px; color:#d4bd8f; font-size:23px; line-height:1.2; text-align:left; }
+.players-list-heading span { color:#8f887a; font:18px Arial, sans-serif; }
+.players-list { display:grid; gap:10px; }
+.player-card summary { display:grid; grid-template-columns:44px minmax(0,1fr) auto 22px; gap:15px; align-items:center; padding:15px 10%; cursor:pointer; list-style:none; }
+.player-card summary::-webkit-details-marker { display:none; }
+.player-emblem { display:grid; place-items:center; width:42px; height:42px; border:1px solid #7a6747; border-radius:50%; background:#272217; color:#ead4a4; font-size:21px; }
+.player-identity { min-width:0; }
+.player-name { display:block; color:#fff0d2; text-shadow:0 1px 4px #000; font-size:20px; overflow-wrap:anywhere; }
+.player-roles { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; color:#f6e6c3; text-shadow:0 1px 3px #000; font:18px Arial, sans-serif; }
+.player-role + .player-role::before { content:'·'; margin-right:8px; color:#9d8c70; }
+.player-meta { display:block; margin-top:3px; color:#e3dbce; text-shadow:0 1px 3px #000; font:18px/1.4 Arial, sans-serif; }
+.player-record { display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end; text-shadow:0 1px 3px #000; font:18px Arial, sans-serif; }
+.player-record span { white-space:nowrap; }
+.player-record .win { color:#c5edc2; }
+.player-record .loss { color:#ffd1c8; }
+.player-record .draw { color:#e6e0d3; }
+.player-record .none { color:#e4dbcd; }
+.player-expand { color:#b39a6c; font-size:20px; text-align:center; }
+.player-card[open] .player-expand { transform:rotate(180deg); }
+.player-history { padding:0 10% 17px calc(10% + 59px); }
+.player-history h3 { margin:0; padding:8px 0 4px; color:#eee3d2; text-shadow:0 1px 3px #000; font:18px Arial, sans-serif; text-align:left; letter-spacing:.08em; text-transform:uppercase; }
+.player-match { display:flex; gap:14px; justify-content:space-between; flex-wrap:wrap; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.12); color:#f2e9db; text-shadow:0 1px 3px #000; font:18px Arial, sans-serif; }
+.player-match:last-child { border-bottom:0; }
+.player-outcome { min-width:75px; color:#e0c997; }
+.players-empty { padding:36px 10%; color:#ddd5c5; text-align:center; font:18px/1.6 Arial, sans-serif; }
+.players-notice { margin:20px 0 0; color:#eee2ca; text-shadow:0 1px 3px #000; font:18px/1.6 Arial, sans-serif; }
+@media (max-width:1100px) {
+    .players-shell { padding:32px 22px 50px; }
+    .player-card summary { grid-template-columns:44px minmax(0,1fr) 22px; }
+    .player-record { grid-column:2; grid-row:2; justify-content:flex-start; }
+    .player-expand { grid-column:3; grid-row:1; }
+}
+@media (max-width:700px) {
+    .players-overview { grid-template-columns:1fr; }
+    .player-history { padding-left:10%; }
+}
+.player-steam-address { padding: 8px 0; color: #d4bd8f; font: 18px/1.4 Arial, sans-serif; overflow-wrap: anywhere; }
+.player-card .player-profile-button { display:block; width:auto; max-width:100%; padding:0; border:0; border-radius:0; background:none !important; color:#fff0d2; text-align:left; font:inherit; font-size:20px; overflow-wrap:anywhere; }
+.player-card .player-profile-button:hover { color:#ffdda0; text-decoration:underline; }
+.player-profile-button:focus-visible, .player-profile-web:focus-visible { outline:2px solid #e1c487; outline-offset:3px; }
+.player-profile-web { display:inline-block; margin:5px 0; color:#e4c991; font:18px/1.4 Arial,sans-serif; text-decoration:underline; }
+.player-profile-status { margin:5px 0; color:#e4c991; font:18px/1.4 Arial,sans-serif; }
+.player-profile-status:empty { display:none; }

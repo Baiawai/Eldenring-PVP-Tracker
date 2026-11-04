@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="{{lang}}" translate="no">
+  <head>
+    <meta charset="utf-8">
+    <title translate="no">ELDEN RING Tracker</title>
+    <script src="{{ url_for('static', filename='jquery.js') }}"></script>
+    
+    <link href="{{ url_for('static', filename='font.css') }}" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='datatables.min.css') }}"/>
+    <script type="text/javascript" src="{{ url_for('static', filename='datatables.min.js') }}"></script>
+ 
+    <script type="text/javascript" src="{{ url_for('static', filename='chart.min.js') }}"></script>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='baia.webp') }}" />
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='statistique.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='selects.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='players.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='history.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='stats-page.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='app-typography.css') }}" rel="stylesheet" type="text/css" />
+    <style>
+        .notranslate {
+          -webkit-user-select: none;
+          user-select: none;
+          -moz-user-select: none;
+          -ms-user-select: none;
+        }
+        .capture-toolbar { display:none; position:sticky; top:0; z-index:1020; align-items:center; gap:12px; flex-wrap:wrap; background:#111; padding:8px; border-bottom:1px solid #68583d; }
+        .capture-mode-label { color:#dfc28a; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .capture-mode-label select { max-width:100%; }
+        .capture-toolbar .up_capture { position:static; display:block; flex:0 0 36px; width:36px; height:58px; margin:0; }
+        .capture-toolbar .choice_capture { position:static; display:flex; gap:5px; height:58px; padding:0; margin:0 0 0 auto; }
+        .capture-toolbar .sub_v, .capture-toolbar .sub_d, .capture-toolbar .sub_e { min-width:36px; }
+        .capture-toolbar .min_up, .capture-toolbar .min_v, .capture-toolbar .min_d, .capture-toolbar .min_e { line-height:42px; }
+        #stats_mode_error { display:none; color:#e49d8c; font-size:0.9em; }
+        .stats-mode-picker { display:block; width:90%; color:#dfc28a; font-size:0.9em; margin:7px 0 7px 5px; }
+        .stats-mode-picker select { display:block; box-sizing:border-box; width:100%; max-width:100%; margin-top:4px; }
+      </style>
+  
+  </head>
+  <body class="profile-sidebar-open">
+    <div class="sprit">
+        
+        <div class="main">
+
+            <span class="intro-banner-vdo-play-btn">
+                <span class="ripple pinkBg"></span>
+                <span class="ripple pinkBg"></span>
+                <span class="ripple pinkBg"></span>
+                <img src="{{ url_for('static', filename='eldenring-sign2.webp') }}">
+            </span>
+            
+    
+        </div>
+    
+    </div>
+    <div class="nav_menu">
+        <div class="bg-fire-left">
+            <img src="{{ url_for('static', filename='border-left.png') }}"/>
+            
+        </div>
+        <!-- <div class="cadre_sign">
+
+            <img src="{{ url_for('static', filename='eldenring-sign1.webp') }}"/>
+        </div> -->
+        <img class="img_elden2" src="{{ url_for('static', filename='EldenTracker.png') }}"/>
+        <!-- <h1> Elden Ring<br><span> pvp counteur</span></h1> -->
+        <div class="counteur">
+            <ul>
+                <li>
+                    <span class="victory" >Victory</span><span class="victory_count">0</span>
+                </li>
+                <li>
+                    <span class="defeat">Defeat</span><span class="defeat_count">0</span>
+                </li>
+                <li>
+                    <span class="egality">Egality</span><span class="egality_count">0</span>
+                </li>
+            </ul>
+        </div>
+        <ul class="list_menu">
+            <li id="start">
+                Start
+            </li>
+            <li id="menu_button_captures">
+                Captures
+            </li>
+            <li id="menu_button_multi">
+                Classement
+            </li>
+            <li id="menu_button_info">
+                Statistiques
+            </li>
+            <li id="menu_button_players" data-i18n="menu_players">
+                Joueurs
+            </li>
+            <li id="menu_button_history" data-i18n="menu_history">
+                Historique
+            </li>
+            <li id="menu_button_settings">
+                Settings
+            </li>
+        </ul>
+        
+    </div>
+    <div class="containeur">
+
+        <section id="stats_panel" class="stats-page" aria-labelledby="stats_title" hidden>
+            <div class="stats-shell">
+                <header class="stats-header">
+                    <div><p class="stats-eyebrow" data-i18n="stats_eyebrow">BILAN DES COMBATS</p><h1 id="stats_title" data-i18n="stats_title">Statistiques</h1></div>
+                    <label class="stats-mode-picker" for="stats_mode_choice"><span data-i18n="mode">Mode</span>
+                        <select id="stats_mode_choice" aria-label="Mode" data-i18n-aria="mode">
+                            <option value="auto" data-i18n="automatic_detection">Détection automatique</option>
+                            <option value="Arena" data-i18n="arena">Arène 1v1</option>
+                            <option value="Invasion" data-i18n="invasion">Invasions</option>
+                            <option value="Defense" data-i18n="defense">Monde envahi</option>
+                        </select>
+                    </label>
+                </header>
+                <p id="stats_mode_error" role="status"></p>
+                <div class="stats-overview">
+                    <div class="stat-card tracker-frame"><span data-i18n="victories">Victoires</span><strong class="victory_count">0</strong></div>
+                    <div class="stat-card tracker-frame"><span data-i18n="defeats">Défaites</span><strong class="defeat_count">0</strong></div>
+                    <div class="stat-card tracker-frame"><span data-i18n="fights">Combats</span><strong class="combats_count">0</strong></div>
+                    <div class="stat-card tracker-frame"><span class="ratio">Ratio</span><strong><span class="ratio_count">0</span> %</strong></div>
+                </div>
+                <div class="stats-layout">
+                    <section class="stats-graph tracker-frame"><h2 data-i18n="stats_evolution">Évolution des résultats</h2>
+                    <div class="containeur_chart">
+                        <div class="btn-chart">
+                            <button type="button" mode="modal" class="chartResize">[ ]</button>
+
+                            <button type="button" mode="24h">24h</button>
+                            <button type="button" mode="48h">48h</button>
+                            <button type="button" mode="7j" class="active">7j</button>
+                            <button type="button" mode="30j">30j</button>
+                            <button type="button" mode="all">all</button>
+                        </div>
+                        <div class="cadre_chartJs">
+                            <div class="load_chart"></div>
+                            
+                        </div>
+                    </div>
+                    </section>
+                    <section class="stats-details tracker-frame"><h2 data-i18n="stats_details">Détails des combats</h2>
+                        <div class="stat-detail-row"><span class="score">Score</span><strong class="score_count">0</strong></div>
+                        <div class="stat-detail-row arena-draw-row"><span class="egality">Égalités</span><strong class="egality_count">0</strong></div>
+                        <div class="stat-detail-row"><span class="serie_victory">Série de victoires</span><strong class="serie_victory_count">0</strong></div>
+                        <div class="stat-detail-row"><span class="serie_defeat">Série de défaites</span><strong class="serie_defeat_count">0</strong></div>
+                        <div class="stat-detail-row"><span class="noResult">Sans résultat</span><strong class="noResult_count">0</strong></div>
+                        <div class="stat-detail-row"><span class="abandons">Abandons</span><strong class="abandons_count">0</strong></div>
+                        <div class="stat-detail-row"><span class="fight_exit">Adversaires partis</span><strong class="fight_exit_count">0</strong></div>
+                        <div class="stat-detail-row"><span class="connexionError">Erreurs de connexion</span><strong class="connexionError_count">0</strong></div>
+                        <div class="stat-detail-row"><span class="gameExit">Jeu fermé en combat</span><strong class="gameExit_count">0</strong></div>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <section class="cadre_history" id="history_panel" aria-labelledby="history_title" hidden>
+            <div class="players-shell history-shell">
+                <header class="players-header">
+                    <p class="players-eyebrow" data-i18n="history_eyebrow">JOURNAL DU COMPTEUR</p>
+                    <h1 id="history_title" data-i18n="history_title">Historique des détections</h1>
+                    <p class="players-intro" data-i18n="history_intro">Retrouve les événements reconnus par le tracker au fil de tes parties.</p>
+                </header>
+                <div class="history-controls">
+                    <label for="history_mode" data-i18n="history_category">Catégorie</label>
+                    <select id="history_mode">
+                        <option value="all" data-i18n="history_all_categories">Toutes les catégories</option>
+                        <option value="System" data-i18n="history_system">Système</option>
+                        <option value="Arena" data-i18n="arena">Arène 1v1</option>
+                        <option value="Invasion" data-i18n="invasion">Invasions</option>
+                        <option value="Defense" data-i18n="defense">Monde envahi</option>
+                        <option value="Unknown" data-i18n="unknown_mode">Mode non déterminé</option>
+                    </select>
+                </div>
+                <div class="players-list-heading"><h2 data-i18n="recent_events">Événements récents</h2><span id="history_count"></span></div>
+                <div id="history_list" class="history-list" aria-live="polite"></div>
+                <button type="button" class="history-more players-filter" id="history_more" data-i18n="history_more" hidden>Afficher les événements précédents</button>
+                <p class="players-notice" data-i18n="history_notice">Les nouveaux événements sont conservés à partir de l’activation de cet historique.</p>
+            </div>
+        </section>
+
+        <section class="cadre_players" id="players_panel" aria-labelledby="players_title" hidden>
+            <div class="players-shell">
+                <header class="players-header">
+                    <div>
+                        <p class="players-eyebrow" data-i18n="players_eyebrow">JOURNAL DES RENCONTRES</p>
+                        <h1 id="players_title" data-i18n="players_title">Joueurs rencontrés</h1>
+                        <p class="players-intro" data-i18n="players_intro">Retrouve les adversaires, alliés et chasseurs reconnus pendant tes parties.</p>
+                    </div>
+                </header>
+                <div class="players-overview" aria-label="Bilan des joueurs identifiés">
+                    <div class="players-metric tracker-frame"><span data-i18n="players_recognized">Pseudos reconnus</span><strong id="players_count">0</strong></div>
+                    <div class="players-metric tracker-frame"><span data-i18n="victories">Victoires</span><strong id="players_victories">0</strong></div>
+                    <div class="players-metric tracker-frame"><span data-i18n="defeats">Défaites</span><strong id="players_defeats">0</strong></div>
+                </div>
+                <div class="players-controls">
+                    <label class="players-search"><span data-i18n="search_player">Rechercher un pseudo</span><input id="players_search" type="search" placeholder="Rechercher un joueur…" data-i18n-placeholder="search_placeholder" autocomplete="off"></label>
+                    <div class="players-filters" role="group" aria-label="Filtrer les joueurs" data-i18n-aria="filter_players">
+                        <button type="button" class="players-filter active" data-filter="all" data-i18n="all" aria-pressed="true">Tous</button>
+                        <button type="button" class="players-filter" data-filter="opponent" data-i18n="opponents" aria-pressed="false">Adversaires</button>
+                        <button type="button" class="players-filter" data-filter="ally" data-i18n="allies" aria-pressed="false">Alliés</button>
+                        <button type="button" class="players-filter" data-filter="hunter" data-i18n="hunters" aria-pressed="false">Chasseurs</button>
+                        <button type="button" class="players-filter" data-filter="victory" data-i18n="defeated_players" aria-pressed="false">Vaincus</button>
+                        <button type="button" class="players-filter" data-filter="defeat" data-i18n="defeated_me" aria-pressed="false">M’ont vaincu</button>
+                    </div>
+                    <label class="players-sort"><span data-i18n="sort_by">Trier par</span><select id="players_sort"><option value="recent" data-i18n="most_recent">Plus récents</option><option value="matches" data-i18n="most_matches">Plus de combats</option><option value="name" data-i18n="player_name">Pseudo</option></select></label>
+                </div>
+                <div class="players-list-heading"><h2 data-i18n="participants">Participants</h2><span id="players_result_count"></span></div>
+                <div id="players_list" class="players-list" aria-live="polite"></div>
+                <p id="players_notice" class="players-notice"></p>
+            </div>
+        </section>
+
+        <div class="modal_chart hide">
+            <div class="btn-chart">
+                <button type="button" mode="normal" class="chartResize activax">[ ]</button>
+
+                <button type="button" mode="24h">24h</button>
+                <button type="button" mode="48h">48h</button>
+                <button type="button" mode="7j" class="active">7j</button>
+                <button type="button" mode="30j">30j</button>
+                <button type="button" mode="all">all</button>
+            </div>
+            <div class="cadre_chartJs">
+                <div class="load_chart"></div>
+                
+            </div>
+        </div>
+        <div class="cadre_multi">
+            <div class="infoMulti">
+                
+
+                <!-- PANEL USER -->
+                <div class="panel_status panel_user hide">
+             
+                    <div class="panel_multi panel_multi_body">
+
+                     
+                        <div class="containuer_multi_cadre" cadre="sync_multi">
+                            <table id="table_multi" class="display" style="width:100%">
+                                <thead>
+                                    <tr>
+                                        <th class="tb-1">N°</th>
+                                        <th class="tb-11">Lang</th>
+                                        <th class="tb-3">Pseudo</th>
+                                        <th class="tb-2">Avatar</th> 
+                                        <th class="tb-4">Niveau</th>
+                                        <th class="tb-5">Score</th>
+                                        <th class="tb-6">Victoires</th>
+                                        <th class="tb-7">Defaites</th>
+                                        <th class="tb-8">Egalites</th>
+                                        <th class="tb-9">Ratio</th>
+                                        <th class="tb-10">Combats</th>
+                                        
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                </tbody>                           
+                            </table>
+                            <a target="_blank" href="https://www.google.com/search?q=eldenring+tracker" class="moreStats" data-i18n="more_stats">Plus de statistiques</a>
+                        </div>
+                    
+                        
+                    </div>
+                    <!-- <div class="sub_carde_user">
+
+                    </div> -->
+
+                </div>
+
+            </div>
+        </div>
+
+
+
+
+
+
+        <div class="cadre">
+            <div class="cadre_resu">
+                <div class="presentation">
+                    <div class="img_eldenring">
+                        <img src="{{ url_for('static', filename='EldenTracker.png') }}"/>
+                     
+                    </div>
+     
+                    
+                    <h5 class="version">BETA</h5>
+                    
+                </div>
+                <div class="live">
+                    
+                    <div class="live-preview">
+                        <div class="live-preview-loader" aria-hidden="true">
+                            <span class="live-preview-ripple"></span><span class="live-preview-ripple"></span>
+                            <span class="live-preview-emblem"></span>
+                        </div>
+                        <img src="" alt=""/>
+                    </div>
+                    <b><span class="game_detect">Jeu non visible pour la capture </span><span class="live_off"></span></b>
+                    <i><span data-i18n="time">Temps</span> : <span class="live-timer-value">00</span>s</i>
+                    <section class="steam-peer-card" aria-label="Joueurs connectés" data-i18n-aria="steam_peer_title">
+                        <p id="steam_peer_status" role="status">Connexion à Steam…</p>
+                        <ul id="steam_peer_list"></ul>
+                        <p id="steam_profile_status" role="status"></p>
+                    </section>
+                </div>
+              
+                <div class="cadreStats">
+                        
+
+                
+
+                </div>
+                
+            </div>
+            
+        </div>
+        <div class="cadre_settings">
+            <div class="cadre_settings_sub">
+                <div class="header_settings"></div>
+                <div class="contente_header_settings">
+                    <div class="btn_menu_settings active_setting" menu="0"><img  src="{{ url_for('static', filename='icon-setting.png') }}"/></div>
+                    <div class="btn_menu_settings" menu="1"><img  src="{{ url_for('static', filename='icon-ecrant.png') }}"/></div>
+                    <div class="btn_menu_settings" menu="2"><img  src="{{ url_for('static', filename='icon-picture.png') }}"/></div>
+                    <div class="btn_menu_settings" menu="3"><img  src="{{ url_for('static', filename='icon-multi.png') }}"/></div>
+                    <div class="btn_menu_settings steam-peer-tab" menu="5" title="Steam P2P">P2P</div>
+                    <div class="btn_menu_settings" menu="4"><img  src="{{ url_for('static', filename='icon-exit.png') }}"/></div>
+                </div>
+                <div class="contente_settings" setting="0">
+                  
+                    <div class="form_single game-language-setting">
+                        <label class="form_single_left" for="game_language" id="game_language_label">Langue</label>
+                        <div class="form_single_right">
+                            <select id="game_language" aria-labelledby="game_language_label" disabled></select>
+                            <span id="game_language_status" role="status" aria-live="polite"></span>
+                        </div>
+                    </div>
+                    <div class="form_single capture-speed-setting">
+                        <label class="form_single_left" for="capture_speed" data-i18n="capture_interval">Intervalle de capture</label>
+                        <div class="form_single_right">
+                            <select id="capture_speed" disabled aria-describedby="capture_speed_status">
+                                <option value="0" data-i18n="capture_maximum">Maximum (sans délai)</option>
+                                <option value="0.5">0,5 s</option>
+                                <option value="1">1 s</option>
+                                <option value="2">2 s</option>
+                                <option value="3">3 s</option>
+                                <option value="5">5 s</option>
+                            </select>
+                            <span id="capture_speed_status" role="status" aria-live="polite"></span>
+                        </div>
+                    </div>
+                    <div class="form_single">
+                        <div class="form_single_left autoStrat_tr">
+                            Auto Start
+                        </div>
+                        <div class="form_single_right auto_start">
+                          <button><</button> <span auto_start="false"> Non </span> <span class="hide" auto_start="true"> Oui </span> <button>></button>
+                        </div>
+                    </div>
+                
+
+                </div>
+                <div class="contente_settings hide" setting="1">
+                    <div class="form_single">
+                        <div class="form_single_left reEcr_tr">
+                            Resolution de votre ecrant
+                        </div>
+                        <div class="form_single_right">
+                          <div class="form_plain resolution">???</div>
+                        </div>
+                    </div>
+                    <div class="form_single">
+                        <div class="form_single_left zoomEcr_tr">
+                            <label for="rang1">Zoom de votre ecrant</label>
+                        </div>
+                        <div class="form_single_right input_range">
+                            <div class="form_plain zoomWindow">???</div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="contente_settings hide" setting="2">
+                    <div class="notification-region-settings">
+                        <p class="notification-region-title" data-i18n="notification_region_title">Zone des notifications</p>
+                        <p class="notification-region-intro" data-i18n="notification_region_intro">Ajuste les limites pour encadrer les messages du jeu.</p>
+                        <div class="notification-region-controls">
+                            <label for="notification_top" data-i18n="notification_top">Limite supérieure</label>
+                            <input type="range" id="notification_top" min="0" max="95" step="1" value="40">
+                            <output id="notification_top_value">40 %</output>
+                            <label for="notification_bottom" data-i18n="notification_bottom">Limite inférieure</label>
+                            <input type="range" id="notification_bottom" min="5" max="100" step="1" value="100">
+                            <output id="notification_bottom_value">100 %</output>
+                        </div>
+                        <button type="button" id="notification_reset" data-i18n="notification_reset">Réinitialiser</button>
+                        <p id="notification_status" role="status" aria-live="polite"></p>
+                        <div id="notification_preview" class="notification-preview" hidden>
+                            <img id="notification_preview_image" alt="" />
+                            <div id="notification_preview_area" class="notification-preview-area"></div>
+                        </div>
+                        <p id="notification_preview_empty" data-i18n="notification_preview_empty">L’aperçu apparaîtra après une capture du jeu par le tracker.</p>
+                    </div>
+
+                </div>
+                <div class="contente_settings hide setting_user" setting="3">
+                    <div class="form_single">
+                        <div class="form_single_left">
+                            <label for="pseudo" class="vt_pseudo_tr">Votre pseudo</label>
+                            
+                        </div>
+                        <div class="form_single_right">
+                            <input type="text" name="pseudo" id="pseudo"/>
+                        </div>
+                    </div>
+                    <div class="form_single legend-setting">
+                        <div class="form_single_left"><label for="profile_legend" data-i18n="profile_legend">Ma légende</label></div>
+                        <div class="form_single_right">
+                            <input type="text" id="profile_legend" maxlength="160" autocomplete="off" placeholder="Une phrase pour votre profil" data-i18n-placeholder="profile_legend_placeholder">
+                            <div id="profile_legend_status" role="status"></div>
+                        </div>
+                    </div>
+                    <div class="form_single">
+                        <div class="form_single_left">
+                            <label class="vt_avatar_tr">Votre avatar</label>
+                        </div>
+                        <div class="form_single_right input_range">
+                            <input type="button" id="changeAvatar" value="Changer">
+                        </div>
+                    </div>
+                    <div class="form_single">
+                        <div class="form_single_left">
+                            <label class="vt_niveau_tr">Votre niveau</label>
+                        </div>
+                        <div class="form_single_right input_range">
+                            <input type="button" id="changeLvl" value="Changer">
+                        </div>
+                    </div>
+                    <div class="form_single setting_user_detail detail_pseudo hide">
+
+                        <div class="descri_profil">
+                            <div class="profile-instructions">
+                                <p class="profile-instructions-title" data-i18n="profile_name_title">Choisir votre pseudo</p>
+                                <p data-i18n="profile_name_intro">Saisissez de préférence le pseudo utilisé dans le jeu.</p>
+                                <ol>
+                                    <li><span id="min3" aria-hidden="true">–</span> <span data-i18n="profile_name_min">Au moins 3 caractères.</span></li>
+                                    <li><span id="max21" aria-hidden="true">–</span> <span data-i18n="profile_name_max">16 caractères maximum.</span></li>
+                                    <li><span id="notcs" aria-hidden="true">–</span> <span data-i18n="profile_name_chars">Lettres non accentuées et chiffres uniquement.</span></li>
+                                </ol>
+                                <p class="profile-instructions-note" data-i18n="profile_name_saved">Le pseudo est enregistré automatiquement lorsqu’il respecte ces conditions.</p>
+                            </div>
+                        </div>
+                 
+                    </div>
+                    <div class="form_single setting_user_detail detail_img hide">
+                        <div class="panel_status panel_img ">
+                            <div class="pseudo_cadre">
+                                
+                                <div class="preview_img_profil">
+                                    <div class="loading"></div>
+                                </div>
+                                <button type="button" id="capture_img_profil" mode="img_avatar">Commencer</button>
+                                
+                            </div>
+                            <div class="descri_profil">
+                                
+                                <div class="profile-instructions">
+                                    <p class="profile-instructions-title" data-i18n="profile_avatar_title">Capturer l’avatar du personnage</p>
+                                    <ol>
+                                        <li data-i18n="profile_step_start">Clique sur « Commencer » : le suivi démarre automatiquement si nécessaire.</li>
+                                        <li data-i18n="profile_step_menu">Dans Elden Ring, ouvre le menu, puis Configuration et l’onglet « Quitter la partie », sans confirmer la sortie.</li>
+                                        <li data-i18n="profile_step_wait">Reste sur cet écran quelques secondes, puis reviens dans le tracker.</li>
+                                    </ol>
+                                    <p class="profile-instructions-note" data-i18n="profile_avatar_note">La photo est enregistrée automatiquement dès sa capture. Vérifie l’aperçu, puis clique sur « Terminer ».</p>
+                                </div>
+                                <div class="avatr_save" data-i18n="profile_avatar_saved">Avatar enregistré automatiquement.</div>   
+                            </div>
+                            <button type="button" class="hide" id="save_img" disabled>Terminer</button>
+                        </div>
+                    </div>
+                    <div class="form_single setting_user_level hide">
+                        <div class="panel_status ">
+                            <div class="pseudo_cadre">
+                                
+                                <div class="preview_img_level">
+                                    <div class="loading"></div>
+                                </div>
+                                <button type="button" id="capture_img_level" mode="img_lvl">Commencer</button>
+                                
+                            </div>
+                            <div class="descri_profil">
+                                
+                                <div class="profile-instructions">
+                                    <p class="profile-instructions-title" data-i18n="profile_level_title">Relever le niveau du personnage</p>
+                                    <ol>
+                                        <li data-i18n="profile_step_start">Clique sur « Commencer » : le suivi démarre automatiquement si nécessaire.</li>
+                                        <li data-i18n="profile_step_menu">Dans Elden Ring, ouvre le menu, puis Configuration et l’onglet « Quitter la partie », sans confirmer la sortie.</li>
+                                        <li data-i18n="profile_step_wait">Reste sur cet écran quelques secondes, puis reviens dans le tracker.</li>
+                                    </ol>
+                                    <p class="profile-instructions-note" data-i18n="profile_level_note">Le niveau est enregistré automatiquement dès sa lecture. Vérifie le résultat, puis clique sur « Terminer ».</p>
+                                </div>
+                                <div class="lvl_save hide" data-i18n="profile_level_saved">Niveau enregistré automatiquement.</div> 
+                            </div>
+                            <button type="button" class="hide" id="save_lvl" disabled>Terminer</button>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="contente_settings hide steam-peer-settings" setting="5">
+                    <div class="steam-peer-settings-inner">
+                        <h2 data-i18n="steam_settings_title">Joueurs connectés · Steam</h2>
+                        <label for="steam_peer_enabled" data-i18n="steam_settings_toggle">Détection des joueurs Steam</label>
+                        <select id="steam_peer_enabled"><option value="true" data-i18n="steam_enabled">Activée</option><option value="false" data-i18n="steam_disabled">Désactivée</option></select>
+                        <div class="steam-ping-setting">
+                            <p data-i18n="steam_ping_help">La mesure avancée démarre avec le suivi. Accepte la demande administrateur Windows si elle apparaît ; tu peux aussi la lancer ici.</p>
+                            <button type="button" id="steam_ping_activate" data-i18n="steam_ping_activate">Activer la mesure des pings</button>
+                            <p id="steam_ping_status" role="status"></p>
+                        </div>
+                        <p id="steam_settings_status" role="status"></p>
+                        <p data-i18n="steam_settings_help">Lance le jeu puis laisse Steam ouvert. Les noms affichés sont les profils Steam ; les personnages et les rôles peuvent être différents. Le ping peut être indisponible.</p>
+                        <details id="steam_manual_setup">
+                            <summary data-i18n="steam_manual_setup">Configuration manuelle de Steam</summary>
+                            <p data-i18n="steam_settings_intro">Pour activer la détection, ouvre la console Steam et saisis cette commande :</p>
+                            <code id="steam_command">log_ipc "BeginAuthSession,EndAuthSession,LeaveLobby,SendClanChatMessage"</code>
+                            <div class="steam-settings-actions"><a href="steam://open/console" data-i18n="steam_open_console">Ouvrir la console Steam</a><button id="steam_copy_command" type="button" data-i18n="steam_copy">Copier la commande</button></div>
+                        </details>
+                    </div>
+                </div>
+                <div class="contente_settings hide" setting="4">
+                    <div class="form_single form_bg">
+                        <div class="form_single">
+                            
+                            <div class="form_single_left">
+                                <div style="width:100%; height:auto; display:block;">
+                                    <div class="present_label userName">???</div>
+                                
+                                    <div class="present_label " style="width:78%; margin:0px;"><i class="tr-60">Niveau</i> <span class="userLvl_count">0</span></div>
+                                    <div class="present_label" style="width:20%; margin:0px; opacity:0;"></div>
+                                </div>
+                            </div>
+                            <div class="form_single_right img_user">
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form_single form_btn">
+                        <button type="button" id="close_nav">Fermer l'onglet du navigateur</button>
+                        <button type="button" id="close_app">Arreter le programme</button>
+                    </div>
+
+                </div>
+                
+
+            </div>
+        </div>
+        <div class="cardre_captures">
+            <div class="capture-toolbar">
+                <div class="up_capture">
+                    <div class="sub_up">
+                        <div class="min_up">/\</div>
+                    </div>
+                </div>
+                <label class="capture-mode-label">
+                    <select id="capture_mode" aria-label="Mode des captures">
+                        <option value="all" data-i18n="all_modes">Tous les modes</option>
+                        <option value="Arena" data-i18n="arena">Arène 1v1</option>
+                        <option value="Invasion" data-i18n="invasion">Invasions</option>
+                        <option value="Defense" data-i18n="defense">Monde envahi</option>
+                    </select>
+                </label>
+                <div class="choice_capture">
+                    <div class="sub_v" title="Victoires"><div class="min_v">V</div></div>
+                    <div class="sub_d" title="Défaites"><div class="min_d">D</div></div>
+                    <div class="sub_e" title="Égalités"><div class="min_e">E</div></div>
+                </div>
+            </div>
+           
+            <div class="capture-scroll">
+                <div class="no_capture">
+                    Aucune capture disponible
+                </div>
+            </div>
+        </div>
+       
+    </div>  
+    <button type="button" id="sidebar_toggle" class="sidebar-toggle" aria-controls="profile_sidebar" aria-expanded="true" aria-label="Fermer le panneau de profil" data-i18n-aria="sidebar_close"><img src="{{ url_for('static', filename='sidebar-chevron.png') }}" alt="" aria-hidden="true"></button>
+    <div class="containeur_info" id="profile_sidebar">
+        <div class="cadreInfo">
+
+          
+
+            <div class="cadre_user ">
+                <div class="header_carde img_user">
+                    <div class="fakeImageuser">?</div>
+                <h5><span class="userName">???</span> <span class="niv_tr"><br>niveau: </span> <span class="userLvl_count">0</span></h5> 
+                </div>
+                <p id="sidebar_legend" class="sidebar-legend" hidden></p>
+                <section class="sidebar-session" aria-labelledby="sidebar_session_title">
+                    <h2 id="sidebar_session_title" data-i18n="session_title">Session en cours</h2>
+                    <div class="sidebar-session-metrics">
+                        <div><strong id="session_combats">0</strong><span data-i18n="fights">Combats</span></div>
+                        <div><strong id="session_victories">0</strong><span data-i18n="victories">Victoires</span></div>
+                        <div><strong id="session_defeats">0</strong><span data-i18n="defeats">Défaites</span></div>
+                    </div>
+                </section>
+                <section class="sidebar-last" aria-labelledby="sidebar_last_title">
+                    <h2 id="sidebar_last_title" data-i18n="last_combat">Dernier combat</h2>
+                    <p id="sidebar_last_combat">Aucun combat enregistré.</p>
+                </section>
+                <div class="sidebar-summary">
+                    <div class="sidebar-summary-row"><span data-i18n="sidebar_tracking">Suivi</span><strong id="sidebar_tracking">Détection désactivée</strong></div>
+                    <div class="sidebar-summary-row"><span data-i18n="mode">Mode</span><strong id="sidebar_mode">Mode non déterminé</strong></div>
+                </div>
+
+            </div>
+            <div class="sidebar-guidance">
+            <div class="carde_info" info="languages">
+                <div class="header_carde_info">
+                        <h5 class="btr_1">Modifier votre languages</h5>
+                        <div class="carde_banner_info">
+                            <img src="{{ url_for('static', filename='icon-setting.png') }}"/>
+                        </div>
+                </div>
+                <p class="btr_2">Le système à besoin de savoir quel languages utilise votre jeux</p>
+         
+            </div>
+
+           
+
+            <div class="carde_info" info="pseudo">
+                <div class="header_carde_info">
+                        <h5 class="btr_3">Ajouter un pseudonyme</h5>
+                        <div class="carde_banner_info">
+                            <img src="{{ url_for('static', filename='icon-multi.png') }}"/>
+                        </div>
+                </div>
+                <p class="btr_4">Vous pouvez ajouter un pseudonyme pour que l'ont puisse vous reconnaitre</p>
+              
+            </div>
+
+            <div class="carde_info" info="avatar">
+                <div class="header_carde_info">
+                        <h5 class="btr_5">Ajouter un avatar</h5>
+                        <div class="carde_banner_info">
+                            <img src="{{ url_for('static', filename='icon-multi.png') }}"/>
+                        </div>
+                </div>
+                <p class="btr_6">Suivez les instructions et laisser le système capturer votre avatar du jeux</p>
+             
+            </div>
+            <div class="carde_info" info="niveau">
+                <div class="header_carde_info">
+                        <h5 class="btr_7">Modifier votre niveau</h5>
+                        <div class="carde_banner_info">
+                            <img src="{{ url_for('static', filename='icon-multi.png') }}"/>
+                        </div>
+                </div>
+                <p class="btr_8">Suivez les instructions et laisser le système capturer votre niveau du jeux</p>
+             
+            </div>
+            <div class="carde_info" info="captures">
+                <div class="header_carde_info">
+                        <h5 class="btr_9">Modifier vos captures</h5>
+                        <div class="carde_banner_info">
+                            <img src="{{ url_for('static', filename='icon-picture.png') }}"/>
+                        </div>
+                </div>
+                <p class="btr_10">Pour aider le système à améliorer ces performances, vous pouvez lui indiquez ou capturer les notifications</p>
+           
+            </div>
+            </div>
+
+
+        </div>
+    </div> 
+  
+    <div class="bg-fire-right">
+        <img src="{{ url_for('static', filename='border-right.png') }}"/>
+    </div>
+
+           <!-- LAUNCH FUNCTIONS -->
+           <script src="{{ url_for('static', filename='translate.js') }}"></script>
+    <script src="{{ url_for('static', filename='ui-packs.js') }}"></script>
+    <script src="{{ url_for('static', filename='ui-i18n.js') }}"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script src="{{ url_for('static', filename='game-language.js') }}"></script>
+    <script src="{{ url_for('static', filename='capture-speed.js') }}"></script>
+    <script src="{{ url_for('static', filename='notification-region.js') }}"></script>
+    <script src="{{ url_for('static', filename='country.js') }}"></script>
+    <script src="{{ url_for('static', filename='steam-peers.js') }}"></script>
+    <script src="{{ url_for('static', filename='players.js') }}"></script>
+    <script src="{{ url_for('static', filename='history.js') }}"></script>
+   
+    <div id="capture_viewer_overlay" class="capture-viewer-overlay" hidden>
+        <div class="capture-viewer-content" role="dialog" aria-label="Capture agrandie" data-i18n-aria="capture_viewer_title">
+            <button type="button" class="capture-viewer-close" aria-label="Fermer la capture" data-i18n-aria="close_capture">×</button>
+            <button type="button" class="capture-viewer-nav capture-viewer-prev" aria-label="Capture précédente" data-i18n-aria="previous_capture">‹</button>
+            <button type="button" class="capture-viewer-nav capture-viewer-next" aria-label="Capture suivante" data-i18n-aria="next_capture">›</button>
+        </div>
+    </div>
+  </body>
+</html>
+<!-- https://we.tl/t-lpm24C3ZBH -->

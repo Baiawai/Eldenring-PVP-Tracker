@@ -1,0 +1,58 @@
+/* Native selects retain their keyboard and screen-reader behaviour. */
+select,
+.dataTables_wrapper .dataTables_length select {
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    min-height: 38px;
+    padding: 8px 38px 8px 12px;
+    border: 1px solid #806c48;
+    border-radius: 2px;
+    background-color: #141310;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #d3b77d 50%),
+        linear-gradient(135deg, #d3b77d 50%, transparent 50%),
+        linear-gradient(#5c503b, #5c503b);
+    background-position: right 16px center, right 11px center, right 32px center;
+    background-size: 5px 5px, 5px 5px, 1px 20px;
+    background-repeat: no-repeat;
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, .65);
+    color: #e8d5ad;
+    font-family: 'optimus princeps', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.2;
+    letter-spacing: .02em;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+select:hover,
+.dataTables_wrapper .dataTables_length select:hover {
+    border-color: #d3b77d;
+    box-shadow: inset 0 0 12px rgba(0, 0, 0, .65), 0 0 8px rgba(166, 141, 96, .22);
+}
+
+select:focus-visible,
+.dataTables_wrapper .dataTables_length select:focus-visible {
+    outline: 2px solid #e1c487;
+    outline-offset: 2px;
+    border-color: #e1c487;
+}
+
+select option,
+.dataTables_wrapper .dataTables_length select option {
+    background-color: #181713;
+    color: #f2e4c5;
+    font-family: 'optimus princeps', Georgia, serif;
+}
+
+.stats-mode-picker select { font-size: 18px; }
+
+@media (max-width: 1200px) {
+    .stats-mode-picker select {
+        padding-left: 6px;
+        padding-right: 28px;
+        font-size: 18px;
+        background-position: right 12px center, right 7px center, right 24px center;
+    }
+}

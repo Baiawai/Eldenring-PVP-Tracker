@@ -1,0 +1,27 @@
+# Local environments and build output
+.venv/
+VENV/
+venv/
+__pycache__/
+*.py[cod]
+build/
+dist/
+output/
+
+# Local data, logs and secrets
+*.db
+*.sqlite
+*.sqlite3
+*.log
+.env
+.env.*
+
+# Runtime screenshots and profile images
+/application/simple_*.jpg
+/application/simple_notif_*.jpg
+/application/steam.jpg
+/application/template_notif.jpg
+/application/start_.jpg
+/application/finish_.jpg
+/application/user.jpg
+/application/user_panel.jpg
