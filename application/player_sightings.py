@@ -9,7 +9,7 @@ from contextlib import closing
 from datetime import datetime
 
 from application.init import database_capture
-from application.secur import app_get, app_insert, app_name
+from application.secur import decrypt_value, encrypt_value, encryption_key
 
 
 def _connect():
@@ -20,6 +20,7 @@ def _connect():
         event TEXT NOT NULL, observed_at TEXT NOT NULL
     )''')
     con.execute('CREATE INDEX IF NOT EXISTS player_sightings_lookup ON player_sightings (name_key, role, relation, mode, observed_at)')
+    con.execute('CREATE INDEX IF NOT EXISTS player_sightings_event_lookup ON player_sightings (name_key, role, event, observed_at DESC)')
     con.commit()
     return con
 
@@ -97,7 +98,7 @@ def record_sighting(sighting, observed_at=None):
     observed = datetime.fromisoformat(observed_at) if observed_at else datetime.now()
     timestamp = observed.strftime('%Y-%m-%d %H:%M:%S')
     name = unicodedata.normalize('NFKC', sighting['name']).strip()
-    key = hmac.new(app_name(), name.casefold().encode('utf-8'), hashlib.sha256).hexdigest()
+    key = hmac.new(encryption_key(), name.casefold().encode('utf-8'), hashlib.sha256).hexdigest()
     with closing(_connect()) as con:
         con.execute('BEGIN IMMEDIATE')
         previous = con.execute('''SELECT id, observed_at, relation, mode FROM player_sightings
@@ -119,7 +120,7 @@ def record_sighting(sighting, observed_at=None):
                 return False
         con.execute('''INSERT INTO player_sightings
             (name, name_key, role, relation, mode, event, observed_at) VALUES (?,?,?,?,?,?,?)''',
-            (app_insert(name), key, sighting['role'], sighting['relation'], sighting['mode'], sighting['event'], timestamp))
+            (encrypt_value(name), key, sighting['role'], sighting['relation'], sighting['mode'], sighting['event'], timestamp))
         con.commit()
     return True
 
@@ -127,7 +128,7 @@ def record_sighting(sighting, observed_at=None):
 def read_sightings():
     with closing(_connect()) as con:
         rows = con.execute('SELECT name, role, relation, mode, event, observed_at FROM player_sightings').fetchall()
-    return [{'name': app_get(row[0]).decode('utf-8'), 'role': row[1], 'relation': row[2],
+    return [{'name': decrypt_value(row[0]).decode('utf-8'), 'role': row[1], 'relation': row[2],
              'mode': row[3], 'event': row[4], 'date': row[5]} for row in rows]
 
 

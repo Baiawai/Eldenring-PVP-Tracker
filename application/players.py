@@ -7,7 +7,7 @@ from contextlib import closing
 from flask import jsonify
 from __main__ import app
 from application.init import database_capture
-from application.secur import renderArray
+from application.secur import decrypt_rows
 from application.player_sightings import read_sightings
 from application.detection_history import read_steam_history
 from application.geoip_country import country_code
@@ -35,7 +35,7 @@ def players():
         if value not in values:
             values.append(value)
 
-    decoded_records = renderArray(records)
+    decoded_records = decrypt_rows(records)
     steam_events = read_steam_history()
     arena_matches = []
     for row in decoded_records:

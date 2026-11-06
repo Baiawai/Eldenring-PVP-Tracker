@@ -21,6 +21,7 @@ from contextlib import closing
 from pathlib import Path
 from application.init import database_setting
 from application.geoip_country import country_code
+from application.runtime_paths import FROZEN
 
 HELPER = Path(__file__).with_name('steam_peers') / 'TrackerSteamPeersV4.exe'
 _lock = threading.Lock()
@@ -76,6 +77,8 @@ def _publish(status, peers=None, ping_mode='admin_required'):
 
 def activate_ping():
     global _ask_elevation, _auto_ping_pending, _seed_ids
+    if FROZEN:
+        return False
     if not enabled() or not ctypes.windll.user32.FindWindowW(None, 'ELDEN RING™'):
         return False
     with _lock:
@@ -99,6 +102,8 @@ def request_auto_ping():
     if not enabled():
         return False
     snapshot()  # Start the supervisor even if the page has not requested its status.
+    if FROZEN:
+        return True
     with _lock:
         if _snapshot.get('ping_mode') in ('active', 'requesting') or _ask_elevation:
             return True
@@ -139,6 +144,8 @@ def open_profile(steam_id, allow_historical=False):
 
 
 def _elevated_stream(log_path, seeds=()):
+    if FROZEN:
+        raise RuntimeError('Elevation is unavailable in the Store build')
     # A random local-only pipe carries results from the elevated helper.
     name = 'EldenTracker-' + uuid.uuid4().hex
     def make_pipe(pipe_name):
@@ -199,7 +206,7 @@ def _worker():
             time.sleep(5)
             continue
         with _lock:
-            elevated = _ask_elevation
+            elevated = _ask_elevation and not FROZEN
             seeds = list(_seed_ids)
             _ask_elevation = False
             _auto_ping_pending = False
@@ -263,5 +270,7 @@ def snapshot():
             threading.Thread(target=_worker, name='steam-peers', daemon=True).start()
         result = dict(_snapshot)
     result['enabled'] = enabled()
+    if FROZEN:
+        result['ping_mode'] = 'steam_only'
     return result
 

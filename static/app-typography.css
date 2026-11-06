@@ -45,7 +45,7 @@ html, body, body *, body *::before, body *::after {
 }
 
 /* Les boutons du menu principal utilisent Mantinia en majuscules. */
-body .list_menu li {
+body .main-menu li {
     font-family: var(--menu-font) !important;
     text-transform: uppercase;
 }

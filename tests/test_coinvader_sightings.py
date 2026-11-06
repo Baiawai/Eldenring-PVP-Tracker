@@ -13,7 +13,7 @@ def load_sightings():
     init = types.ModuleType('application.init')
     init.database_capture = ':memory:'
     secur = types.ModuleType('application.secur')
-    secur.app_get = secur.app_insert = secur.app_name = lambda *args: b''
+    secur.decrypt_value = secur.encrypt_value = secur.encryption_key = lambda *args: b''
     with patch.dict(sys.modules, {'application.init':init, 'application.secur':secur}):
         spec = importlib.util.spec_from_file_location('_test_coinvaders_sightings', ROOT/'application/player_sightings.py')
         module = importlib.util.module_from_spec(spec)

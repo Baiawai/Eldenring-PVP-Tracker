@@ -1,0 +1,92 @@
+/* Ranking page: the same warm, restrained palette as the statistics page. */
+.cadre_multi { overflow:auto; background:radial-gradient(ellipse at 50% 0%, #262116 0, #100f0c 40%, #080807 100%); }
+.cadre_multi .infoMulti, .cadre_multi .panel_status, .cadre_multi .panel_multi_body { height:auto; min-height:0; }
+.cadre_multi .panel_status { text-align:left; }
+.leaderboard-shell { box-sizing:border-box; width:100%; max-width:1280px; margin:0 auto; padding:40px 38px 70px; }
+.leaderboard-header { display:flex; justify-content:space-between; align-items:end; gap:20px; flex-wrap:wrap; padding-bottom:22px; border-bottom:1px solid #544a35; }
+.cadre_multi .leaderboard-eyebrow { margin:0 0 10px; color:#a38a5d; font-size:18px; letter-spacing:.18em; text-align:left; }
+.leaderboard-header h1 { margin:0; color:#f0e2c7; font-size:42px; line-height:1.1; font-weight:normal; }
+.cadre_multi .leaderboard-intro { width:auto; margin:12px 0 0; color:#c9bba2; font-size:18px; line-height:1.4; text-align:left; }
+#leaderboard_refresh { margin:0; padding:10px 18px; min-height:44px; color:#e8d5ad; background:#191711; border:1px solid #766542; font-size:18px; cursor:pointer; }
+#leaderboard_refresh:hover, #leaderboard_refresh:focus-visible { color:#fff0d3; border-color:#d4bd8f; outline-offset:3px; }
+#leaderboard_refresh:disabled { opacity:.55; cursor:wait; }
+.cadre_multi .leaderboard-status { width:auto; margin:20px 0 0; padding:14px 18px; border:1px solid rgba(205,171,111,.28); background:rgba(60,46,26,.35); color:#e8d6b5; font-size:18px; line-height:1.4; text-align:left; }
+.leaderboard-status[hidden] { display:none; }
+.cadre_multi .panel_multi { width:100%; overflow:visible; }
+.cadre_multi .leaderboard-table-wrap { box-sizing:border-box; width:100%; height:auto; margin-top:24px; overflow-x:auto; }
+.cadre_multi .dataTables_wrapper { width:100%; height:auto; color:#d8cdbb; font-size:18px; }
+.cadre_multi .dataTables_length, .cadre_multi .dataTables_filter, .cadre_multi .dataTables_info, .cadre_multi .dataTables_paginate { margin:0 0 18px; color:#d8cdbb; }
+.cadre_multi .dataTables_filter input, .cadre_multi .dataTables_length select { box-sizing:border-box; min-height:38px; padding:6px 9px; color:#f0e2c7; background:#17150f; border:1px solid #65583e; font:inherit; }
+.cadre_multi table.dataTable { min-width:1000px; height:auto; border-collapse:collapse !important; margin:8px 0 18px !important; }
+.cadre_multi table.dataTable thead th { padding:13px 26px 13px 10px; color:#d9c49d; background-color:#1d1a14; border-bottom:1px solid #665538; font-size:18px; white-space:nowrap; }
+.cadre_multi table.dataTable tbody td { padding:12px 10px; color:#eee1c9; background:#11100d; border-bottom:1px solid rgba(212,189,143,.12); box-shadow:none; font-size:18px; text-align:center; }
+.cadre_multi table.dataTable tbody tr:nth-child(even) td { background:#181610; }
+.cadre_multi table.dataTable tbody tr:hover td { background:#282318 !important; }
+.cadre_multi table.dataTable tbody td:nth-child(3) { text-align:left; overflow-wrap:anywhere; }
+.cadre_multi table.dataTable tbody td:first-child { color:#e5c990; }
+.cadre_multi table.dataTable tbody img { display:block; width:48px; max-width:48px; max-height:48px; object-fit:contain; margin:0 auto; }
+.cadre_multi table.dataTable tbody td:nth-child(4) img { width:54px; max-width:54px; height:54px; object-fit:cover; border:1px solid #665538; }
+.cadre_multi table.dataTable .fakeImageuser { box-sizing:border-box; width:54px; min-height:54px; margin:0 auto; padding:14px; color:#c2aa7d; border:1px solid #665538; }
+.cadre_multi .dataTables_paginate .paginate_button { color:#d8cdbb !important; }
+@media (max-width:1100px) { .leaderboard-shell { padding:32px 22px 50px; } }
+@media (max-width:760px) { .leaderboard-header h1 { font-size:36px; } }
+
+/* A player card shares the capture viewer's dark backdrop. */
+.cadre_multi table.dataTable tbody tr[tabindex] { cursor:pointer; }
+.cadre_multi table.dataTable tbody tr[tabindex]:focus-visible { outline:2px solid #e1c487; outline-offset:-2px; }
+.leaderboard-player-dialog { box-sizing:border-box; width:min(1020px, calc(100vw - 16px)); max-width:none; max-height:calc(100vh - 32px); padding:0; overflow:visible; color:#e8dfcd; border:0; background:transparent; box-shadow:none; }
+.leaderboard-player-dialog::backdrop { background:rgba(0,0,0,.82); }
+.leaderboard-player-card { position:relative; box-sizing:border-box; max-height:calc(100vh - 32px); margin:0 50px; padding:34px; overflow:auto; border:1px solid #76613d; background:radial-gradient(ellipse at 15% 0%, #292319, #100f0c 60%); box-shadow:0 16px 70px rgba(0,0,0,.7); }
+.leaderboard-player-dialog .leaderboard-player-close { position:absolute; z-index:2; right:53px; top:3px; width:44px; height:44px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; color:#e1c487; font-size:30px; line-height:1; cursor:pointer; }
+.leaderboard-player-dialog .leaderboard-player-close:hover { color:#fff; background:transparent; box-shadow:none; }
+.leaderboard-player-close:focus-visible, .leaderboard-player-nav:focus-visible { outline:2px solid #e1c487; outline-offset:2px; }
+.leaderboard-player-dialog .leaderboard-player-nav { position:absolute; top:50%; z-index:2; width:44px; height:58px; padding:0; transform:translateY(-50%); border:0; border-radius:0; background:transparent; box-shadow:none; color:#f2dfb6; font-size:40px; line-height:1; cursor:pointer; }
+.leaderboard-player-dialog .leaderboard-player-prev { left:0; }
+.leaderboard-player-dialog .leaderboard-player-next { right:0; }
+.leaderboard-player-dialog .leaderboard-player-nav:hover:not(:disabled) { color:#fff; background:transparent; box-shadow:none; }
+.leaderboard-player-dialog .leaderboard-player-nav:disabled { opacity:.35; cursor:default; }
+.leaderboard-player-identity { display:grid; grid-template-columns:minmax(180px, 260px) minmax(0, 1fr); gap:28px; align-items:center; padding:18px 40px 28px 0; border-bottom:1px solid #544a35; }
+.leaderboard-player-portrait { display:grid; place-items:center; box-sizing:border-box; min-height:220px; aspect-ratio:1; overflow:hidden; border:1px solid #76613d; background:#080807; color:#c9bba2; font-size:18px; text-align:center; }
+.leaderboard-player-portrait img { display:block; width:100%; height:100%; max-height:300px; object-fit:contain; }
+.leaderboard-player-portrait img[hidden] { display:none; }
+.leaderboard-player-eyebrow { margin:0 0 10px; color:#a38a5d; font-size:18px; letter-spacing:.16em; }
+.leaderboard-player-heading h2 { margin:0; color:#f0e2c7; font-size:36px; font-weight:normal; overflow-wrap:anywhere; }
+.leaderboard-player-meta { display:flex; flex-wrap:wrap; gap:12px 24px; margin-top:18px; color:#c9bba2; font-size:18px; }
+.leaderboard-player-meta strong { color:#f0dfbd; font-weight:normal; }
+.leaderboard-player-stats h3 { margin:25px 0 16px; color:#d4bd8f; font-size:22px; font-weight:normal; }
+.leaderboard-player-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.leaderboard-player-grid > div { box-sizing:border-box; min-width:0; padding:14px; border:1px solid rgba(201,174,119,.22); background:rgba(15,14,12,.82); }
+.leaderboard-player-grid span, .leaderboard-player-grid strong { display:block; font-size:18px; line-height:1.35; overflow-wrap:anywhere; }
+.leaderboard-player-grid span { color:#c9bba2; }
+.leaderboard-player-grid strong { margin-top:7px; color:#fff0d3; font-size:23px; font-weight:normal; }
+@media (max-width:600px) {
+    .leaderboard-player-card { margin:0 30px; padding:20px; }
+    .leaderboard-player-dialog .leaderboard-player-close { right:33px; }
+    .leaderboard-player-dialog .leaderboard-player-nav { width:30px; }
+    .leaderboard-player-identity { grid-template-columns:1fr; gap:18px; padding:32px 0 22px; }
+    .leaderboard-player-portrait { width:min(100%, 260px); min-height:180px; margin:auto; }
+    .leaderboard-player-heading h2 { font-size:30px; }
+    .leaderboard-player-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+/* DataTables must not reset the select's layered background or its arrow. */
+.cadre_multi .dataTables_wrapper .dataTables_length select {
+    appearance:none; -webkit-appearance:none; box-sizing:border-box;
+    width:auto; min-width:96px; min-height:42px; padding:8px 38px 8px 12px;
+    border:1px solid #806b45; border-radius:2px; color:#f0e1c4;
+    font-size:18px; line-height:1.2;
+    background-color:#181510;
+    background-image:linear-gradient(45deg,transparent 50%,#d3b77d 50%),
+        linear-gradient(135deg,#d3b77d 50%,transparent 50%),
+        linear-gradient(#5c503b,#5c503b),url("settings-field-texture.png") !important;
+    background-position:right 16px center,right 11px center,right 32px center,center;
+    background-size:5px 5px,5px 5px,1px 20px,cover; background-repeat:no-repeat;
+}
+
+.cadre_multi .dataTables_filter input[type="search"] {
+    box-sizing:border-box; min-height:42px; max-width:100%; padding:8px 12px;
+    border:1px solid #806b45; border-radius:2px; color:#f0e1c4;
+    background-color:#181510; background-image:url("settings-field-texture.png") !important;
+    background-position:center; background-size:cover;
+    box-shadow:inset 0 0 10px rgba(0,0,0,.45); font-size:18px;
+}

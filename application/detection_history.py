@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 from flask import jsonify, request
 from __main__ import app
 from application.init import database_capture
-from application.secur import app_insert, app_get
+from application.secur import encrypt_value, decrypt_value
 
 
 class _MessageText(HTMLParser):
@@ -70,7 +70,7 @@ def _consolidate_legacy_steam(con):
         if not encrypted:
             con.execute("UPDATE detection_history SET kind='steam_suppressed' WHERE id=?", (ident,))
             continue
-        data = json.loads(app_get(encrypted).decode('utf-8'))
+        data = json.loads(decrypt_value(encrypted).decode('utf-8'))
         sid = str(data.get('id', ''))
         group = active.get(sid)
         if kind == 'steam_connected' or group is None:
@@ -92,7 +92,7 @@ def _consolidate_legacy_steam(con):
         data = group['steam']
         text = 'Joueur Steam rencontré : ' + str(data.get('name') or data.get('id', ''))
         con.execute("UPDATE detection_history SET kind='steam_encounter', mode=?, message=?, metadata=? WHERE id=?",
-                    (group['mode'], app_insert(text), app_insert(json.dumps(data, ensure_ascii=False)), group['id']))
+                    (group['mode'], encrypt_value(text), encrypt_value(json.dumps(data, ensure_ascii=False)), group['id']))
         con.executemany("UPDATE detection_history SET kind='steam_suppressed' WHERE id=?", [(ident,) for ident in group['extra']])
     con.commit()
 
@@ -107,7 +107,7 @@ def _migrate_system_events(con):
     rows = con.execute("SELECT id,message FROM detection_history WHERE kind='detection'").fetchall()
     for ident, encrypted in rows:
         try:
-            text = app_get(encrypted).decode('utf-8')
+            text = decrypt_value(encrypted).decode('utf-8')
         except Exception:
             continue
         if text.startswith("Let's gooo !"):
@@ -123,10 +123,10 @@ def record_detection(message, mode, kind='detection', metadata=None):
     if text.startswith("Let's gooo !"):
         text, kind = 'Suivi démarré', 'monitor_start'
     mode = 'System' if kind in ('monitor_start', 'monitor_stop', 'monitor_error') else (mode if mode in ('Arena', 'Invasion', 'Defense') else 'Unknown')
-    encoded = app_insert(json.dumps(metadata, ensure_ascii=False)) if metadata is not None else None
+    encoded = encrypt_value(json.dumps(metadata, ensure_ascii=False)) if metadata is not None else None
     with closing(_connect()) as con:
         cursor = con.execute('INSERT INTO detection_history(recorded_at,mode,message,kind,metadata) VALUES (?,?,?,?,?)',
-                    (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), mode, app_insert(text), kind, encoded))
+                    (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), mode, encrypt_value(text), kind, encoded))
         con.commit()
         return cursor.lastrowid
 
@@ -136,13 +136,13 @@ def update_detection(event_id, message, mode=None, metadata=None):
     if not event_id or not text:
         return False
     with closing(_connect()) as con:
-        fields, values = ['message=?'], [app_insert(text)]
+        fields, values = ['message=?'], [encrypt_value(text)]
         if mode in ('Arena', 'Invasion', 'Defense'):
             fields.append('mode=?')
             values.append(mode)
         if metadata is not None:
             fields.append('metadata=?')
-            values.append(app_insert(json.dumps(metadata, ensure_ascii=False)))
+            values.append(encrypt_value(json.dumps(metadata, ensure_ascii=False)))
         values.append(event_id)
         cursor = con.execute('UPDATE detection_history SET ' + ','.join(fields) + ' WHERE id=?', values)
         con.commit()
@@ -173,12 +173,12 @@ def detection_history():
                            ' ORDER BY id DESC LIMIT 51', params).fetchall()
     events = []
     for row in rows[:50]:
-        text = app_get(row[3]).decode('utf-8')
+        text = decrypt_value(row[3]).decode('utf-8')
         kind = row[4]
         if text.startswith("Let's gooo !"):
             text, kind = 'Suivi démarré', 'monitor_start'
         event_mode = 'System' if kind in ('monitor_start', 'monitor_stop', 'monitor_error') else row[2]
-        metadata = json.loads(app_get(row[5]).decode('utf-8')) if row[5] else None
+        metadata = json.loads(decrypt_value(row[5]).decode('utf-8')) if row[5] else None
         events.append({'id':row[0], 'date':row[1], 'mode':event_mode, 'message':text,
                        'kind':kind, 'metadata':metadata})
     return jsonify({'request':'success', 'events':events, 'has_more':len(rows)>50})
@@ -187,5 +187,5 @@ def detection_history():
 def read_steam_history():
     with closing(_connect()) as con:
         rows = con.execute("SELECT id,recorded_at,mode,kind,metadata FROM detection_history WHERE kind='steam_encounter' ORDER BY id DESC").fetchall()
-    return [{'id':row[0], 'date':row[1], 'mode':row[2], 'event':row[3], 'steam':json.loads(app_get(row[4]).decode('utf-8'))}
+    return [{'id':row[0], 'date':row[1], 'mode':row[2], 'event':row[3], 'steam':json.loads(decrypt_value(row[4]).decode('utf-8'))}
             for row in rows if row[4]]

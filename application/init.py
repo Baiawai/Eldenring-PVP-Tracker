@@ -6,18 +6,16 @@ import wmi
 import pythoncom
 import ctypes
 import platform
+from contextlib import closing
 from __main__ import app
-from application.secur import app_insert, app_get, renderArray
+from application.secur import encrypt_value, decrypt_value, decrypt_rows
+from application.runtime_paths import image_dir, initialize_data_dir
 
 
 
 
-appdata_path = os.getenv("APPDATA")
-elden_counter_dir_name = "hid_el_cou"
-elden_counter_dir_path = os.path.join(appdata_path, elden_counter_dir_name)
-if not os.path.exists(elden_counter_dir_path):
-    os.makedirs(elden_counter_dir_path)
-    
+elden_counter_dir_path = str(initialize_data_dir())
+
 database_user = os.path.join(elden_counter_dir_path, "database_user.db")
 database_capture = os.path.join(elden_counter_dir_path, "database_capture.db")
 database_multi = os.path.join(elden_counter_dir_path, "database_multi.db")
@@ -27,7 +25,7 @@ database_setting = os.path.join(elden_counter_dir_path, "database_setting.db")
 
 
 
-def verifyIdentity():
+def verify_identity():
     system_info = platform.uname()
     pythoncom.CoInitialize()
     try:
@@ -36,7 +34,7 @@ def verifyIdentity():
         mac_address = adapter.MACAddress
     finally:
         pythoncom.CoUninitialize()
-    macId = app_insert(".".join([mac_address, system_info.node])).decode("utf-8")
+    macId = encrypt_value(".".join([mac_address, system_info.node])).decode("utf-8")
     
     con = sqlite3.connect(database_user) 
     cursor = con.cursor()
@@ -45,16 +43,16 @@ def verifyIdentity():
     delet_file = False
     
     if str(result) != "[]":  
-        user =  checkUser()[0]
+        user =  load_user()[0]
         user_macID = user[8]
        
-        if app_get(macId).decode("utf-8") != user_macID: 
+        if decrypt_value(macId).decode("utf-8") != user_macID:
             delet_file = True
     else:
             delet_file = True   
     
     if delet_file == True:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
+            base_dir = str(image_dir())
             path_user_img = os.path.join(base_dir, 'user.jpg')
             path_notif_template = os.path.join(base_dir, 'template_notif.jpg') 
             path_user_panel = os.path.join(base_dir, 'user_panel.jpg')  
@@ -84,70 +82,45 @@ def verifyIdentity():
 
 
 
-def con_user():
+def connect_user():
     return sqlite3.connect(database_user)
 
-def con_captures():
+def connect_captures():
     return sqlite3.connect(database_capture)
 
-def con_multi():
+def connect_multiplayer():
     return sqlite3.connect(database_multi)
 
-def con_setting():
+def connect_settings():
     return sqlite3.connect(database_setting)
 
-def creat_table():
-    cursor = con_user().cursor()
-    cursor.execute("CREATE TABLE tabel_user (id INTEGER PRIMARY KEY, name TEXT, victory TEXT, defeat TEXT, egality TEXT, language TEXT, base64 TEXT, ratio TEXT, macId TEXT, combats TEXT, noResult TEXT, fight_exit TEXT, abandon TEXT, maxVictory TEXT, maxDefeat TEXT, ratioTime TEXT, score TEXT, connexionError TEXT, gameExit TEXT, userLevel TEXT)")
-    con_user().commit()
-    con_user().close()
-    
-    cursor = con_captures().cursor()
-    cursor.execute("CREATE TABLE tabel_captures (id INTEGER PRIMARY KEY, name TEXT, victory BOOL, defeat BOOL, egality BOOL, time TEXT, date TEXT, mode TEXT, base64 TEXT)")
-    con_captures().commit()
-    con_captures().close()
-    
-    cursor = con_multi().cursor()
-    cursor.execute("CREATE TABLE table_multi (id INTEGER PRIMARY KEY, number TEXT, name TEXT, victory TEXT, defeat TEXT, egality TEXT, language TEXT, ratio TEXT, base64 TEXT, macId TEXT, combats TEXT, noResult TEXT, fight_exit TEXT, abandon TEXT, maxVictory TEXT, maxDefeat TEXT, ratioTime TEXT, score NUMBER, userLevel TEXT, connexionError TEXT, gameExit TEXT)")
-    con_multi().commit()
-    con_multi().close()
-    
-    cursor = con_setting().cursor()
-    cursor.execute("CREATE TABLE table_setting (id INTEGER PRIMARY KEY, resolutionHeight TEXT, resolutionWidth TEXT, scale TEXT, topCustom TEXT, bottomCustom TEXT, autoStart BOOL, apiLink TEXT, apiDont TEXT)")
-    con_multi().commit()
-    con_multi().close()
+def create_tables():
+    """Create missing base tables without replacing existing user data."""
+    schemas = (
+        (database_user, "CREATE TABLE IF NOT EXISTS tabel_user (id INTEGER PRIMARY KEY, name TEXT, victory TEXT, defeat TEXT, egality TEXT, language TEXT, base64 TEXT, ratio TEXT, macId TEXT, combats TEXT, noResult TEXT, fight_exit TEXT, abandon TEXT, maxVictory TEXT, maxDefeat TEXT, ratioTime TEXT, score TEXT, connexionError TEXT, gameExit TEXT, userLevel TEXT)"),
+        (database_capture, "CREATE TABLE IF NOT EXISTS tabel_captures (id INTEGER PRIMARY KEY, name TEXT, victory BOOL, defeat BOOL, egality BOOL, time TEXT, date TEXT, mode TEXT, base64 TEXT)"),
+        (database_multi, "CREATE TABLE IF NOT EXISTS table_multi (id INTEGER PRIMARY KEY, number TEXT, name TEXT, victory TEXT, defeat TEXT, egality TEXT, language TEXT, ratio TEXT, base64 TEXT, macId TEXT, combats TEXT, noResult TEXT, fight_exit TEXT, abandon TEXT, maxVictory TEXT, maxDefeat TEXT, ratioTime TEXT, score NUMBER, userLevel TEXT, connexionError TEXT, gameExit TEXT)"),
+        (database_setting, "CREATE TABLE IF NOT EXISTS table_setting (id INTEGER PRIMARY KEY, resolutionHeight TEXT, resolutionWidth TEXT, scale TEXT, topCustom TEXT, bottomCustom TEXT, autoStart BOOL, apiLink TEXT, apiDont TEXT)"),
+    )
+    for path, sql in schemas:
+        with closing(sqlite3.connect(path, timeout=10)) as con:
+            with con:
+                con.execute(sql)
 
 
-con = sqlite3.connect(database_user)
-cursor = con.cursor()
-cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tabel_user'")
-tables = cursor.fetchall()
-
-if not any(table[0] == 'tabel_user' for table in tables):
-    creat_table()
+create_tables()
 
 
-def updateSetting(resolutionHeight, resolutionWidth, scale, topCustom, bottomCustom, autoStart):
-    
-    con = sqlite3.connect(database_setting) 
-    cursor = con.cursor()
-    cursor.execute("SELECT * FROM table_setting")
-    result = cursor.fetchall()
-        
+def update_settings(resolutionHeight, resolutionWidth, scale, topCustom, bottomCustom, autoStart):
     sql = "UPDATE table_setting SET resolutionHeight = ?, resolutionWidth = ?, scale = ?, topCustom = ?, bottomCustom = ?, autoStart = ? WHERE id = ?"
     val = (resolutionHeight, resolutionWidth, scale, topCustom, bottomCustom, autoStart, 1)
-    con = sqlite3.connect(database_setting)
-    cur = con.cursor()
-    cur.execute(sql, val)
-    con.commit()
-    
-    
+    with closing(sqlite3.connect(database_setting)) as con:
+        with con:
+            con.execute(sql, val)
     return "ok"
-def checkSetting():
-    con = sqlite3.connect(database_setting) 
-    cursor = con.cursor()
-    cursor.execute("SELECT * FROM table_setting")
-    result = cursor.fetchall()
+def load_settings():
+    with closing(sqlite3.connect(database_setting)) as con:
+        result = con.execute("SELECT * FROM table_setting").fetchall()
    
     
     if str(result) == "[]":
@@ -162,19 +135,16 @@ def checkSetting():
         apiDont = "gAAAAABj8WSZN4uMMDsOI6Mt_7IXReqSXoAp3jF_Vpr4voHsSmjdM_iF73O0z5A_WSemQIGpjQlhM8CQBAD5FsD2WNgOgPDxGgw_B6QP7nj1-uDRWdiLQV0="
         sql = "INSERT INTO table_setting (id, resolutionHeight, resolutionWidth, scale, topCustom, bottomCustom, autoStart, apiLink, apiDont) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         val = (1, resolutionHeight, resolutionWidth, scale, topCustom, bottomCustom, autoStart, apiLink, apiDont)
-        con = sqlite3.connect(database_setting)
-        cur = con.cursor()
-        cur.execute(sql, val)
-        con.commit()
+        with closing(sqlite3.connect(database_setting)) as con:
+            with con:
+                con.execute(sql, val)
     
-    con = sqlite3.connect(database_setting)
-    cur = con.cursor()
-    cur.execute("SELECT * FROM table_setting")
-    resulta = cur.fetchall()
+    with closing(sqlite3.connect(database_setting)) as con:
+        resulta = con.execute("SELECT * FROM table_setting").fetchall()
     
     return resulta
 
-def checkUser():
+def load_user():
     
     con = sqlite3.connect(database_user) 
     cursor = con.cursor()
@@ -211,12 +181,12 @@ def checkUser():
         gameExit = 0
         userLevel = 0
         sql = "INSERT INTO tabel_user ( name, victory, defeat, egality, language, base64, ratio, macId, combats, noResult, fight_exit, abandon, maxVictory, maxDefeat, ratioTime, score, connexionError, gameExit, userLevel ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-        val = ( app_insert(name), app_insert(victory), app_insert(defeat), app_insert(egality), app_insert(language), app_insert(base64), app_insert(ratio), app_insert(macId), app_insert(combats), app_insert(noResult), app_insert(fight_exit), app_insert(abandon), app_insert(maxVictory), app_insert(maxDefeat), app_insert(ratioTime), app_insert(score), app_insert(connexionError), app_insert(gameExit), app_insert(userLevel))
+        val = ( encrypt_value(name), encrypt_value(victory), encrypt_value(defeat), encrypt_value(egality), encrypt_value(language), encrypt_value(base64), encrypt_value(ratio), encrypt_value(macId), encrypt_value(combats), encrypt_value(noResult), encrypt_value(fight_exit), encrypt_value(abandon), encrypt_value(maxVictory), encrypt_value(maxDefeat), encrypt_value(ratioTime), encrypt_value(score), encrypt_value(connexionError), encrypt_value(gameExit), encrypt_value(userLevel))
         con = sqlite3.connect(database_user)
         cur = con.cursor()
         cur.execute(sql, val)
         con.commit()
-        base_dir = os.path.dirname(os.path.abspath(__file__))
+        base_dir = str(image_dir())
         path_exemple_template = os.path.join(base_dir, 'template_notif.jpg') 
        
         if os.path.exists(path_exemple_template) == True:
@@ -227,23 +197,23 @@ def checkUser():
     cur.execute("SELECT * FROM tabel_user")
     result = cur.fetchall()
     
-    return renderArray(result)
+    return decrypt_rows(result)
 
 
-def langue_selected():
+def get_selected_language():
     con = sqlite3.connect(database_user)
     cur = con.cursor()
     cur.execute("SELECT * FROM tabel_user")
     result = cur.fetchall()
     
     if str(result) != "[]":
-        return app_get(result[0][5]).decode("utf-8")
+        return decrypt_value(result[0][5]).decode("utf-8")
     else:
         return 0
     
 def update_language(language_selected):
     sql = "UPDATE tabel_user SET language = ? WHERE id = ?"
-    val = (app_insert(language_selected), 1)
+    val = (encrypt_value(language_selected), 1)
     con = sqlite3.connect(database_user)
     cur = con.cursor()
     cur.execute(sql, val)
@@ -251,12 +221,12 @@ def update_language(language_selected):
 
 
 
-def addScore(victory, defeat, egality, combats, noResult, fight_exit, abandon, connexionError, gameExit):
+def apply_score(victory, defeat, egality, combats, noResult, fight_exit, abandon, connexionError, gameExit):
     con = sqlite3.connect(database_user) 
     cursor = con.cursor()
     cursor.execute("SELECT * FROM tabel_user")
     result = cursor.fetchall()
-    result = renderArray(result)[0]
+    result = decrypt_rows(result)[0]
     new_victory = int(result[2]) + victory
     new_defeat = int(result[3]) + defeat
     new_egality = int(result[4]) + egality
@@ -307,83 +277,66 @@ def addScore(victory, defeat, egality, combats, noResult, fight_exit, abandon, c
     new_score = round((((new_victory * victory_points) + (new_defeat * defeat_points) + (new_egality * egality_points) + (new_fight_exit * fight_exit_points) + (new_abandon * abandon_points) + (new_noResult * noResult_points) + (new_gameExit * gameExit_points)) / 3) / 10, 2)
         
     sql = "UPDATE tabel_user SET victory = ?, defeat = ?, egality = ?, ratio = ?, combats = ?, noResult = ?, fight_exit = ?, abandon = ?, maxVictory = ?, maxDefeat = ?, score = ?, connexionError = ? , gameExit = ? WHERE id = ?"
-    val = (app_insert(new_victory), app_insert(new_defeat), app_insert(new_egality), app_insert(new_ration), app_insert(new_combats), app_insert(new_noResult), app_insert(new_fight_exit), app_insert(new_abandon), app_insert(new_maxVictory), app_insert(new_maxDefeat), app_insert(new_score), app_insert(new_connexionError), app_insert(new_gameExit), 1)
+    val = (encrypt_value(new_victory), encrypt_value(new_defeat), encrypt_value(new_egality), encrypt_value(new_ration), encrypt_value(new_combats), encrypt_value(new_noResult), encrypt_value(new_fight_exit), encrypt_value(new_abandon), encrypt_value(new_maxVictory), encrypt_value(new_maxDefeat), encrypt_value(new_score), encrypt_value(new_connexionError), encrypt_value(new_gameExit), 1)
     con = sqlite3.connect(database_user)
     cur = con.cursor()
     cur.execute(sql, val)
     con.commit()
     
-@app.route("/allCapturesChart", methods={"GET"})
-def allCapturesChart():
+def _load_captures(selected_mode, include_images):
+    """Filter encrypted modes before decrypting the potentially large images."""
+    columns = '*' if include_images else 'id, name, victory, defeat, egality, time, date, mode'
+    filter_mode = selected_mode in ('Arena', 'Invasion', 'Defense')
+    captures = []
+    with closing(sqlite3.connect(database_capture, timeout=10)) as con:
+        for row in con.execute('SELECT ' + columns + ' FROM tabel_captures'):
+            if filter_mode and decrypt_rows([(0, row[7])])[0][1] != selected_mode:
+                continue
+            captures.append(decrypt_rows([row])[0])
+    return captures
 
-    con = sqlite3.connect(database_capture)
-    cur = con.cursor()
-    cur.execute("SELECT id, name, victory, defeat, egality, time, date, mode FROM tabel_captures")
-    result = cur.fetchall()
-    
-    captures = renderArray(result)
-    selected_mode = request.args.get('mode')
-    if selected_mode in ('Arena', 'Invasion', 'Defense'):
-        captures = [capture for capture in captures if capture[7] == selected_mode]
-    return jsonify({"request": "success", "captures": captures})    
-    
-@app.route("/allCaptures", methods={"GET"})
-def allCaptures():
 
-    con = sqlite3.connect(database_capture)
-    cur = con.cursor()
-    cur.execute("SELECT * FROM tabel_captures")
-    result = cur.fetchall()
-   
-    captures = renderArray(result)
-    selected_mode = request.args.get('mode')
-    if selected_mode in ('Arena', 'Invasion', 'Defense'):
-        captures = [capture for capture in captures if capture[7] == selected_mode]
-    return jsonify({"request": "success", "captures": captures})
+@app.route("/allCapturesChart", endpoint="allCapturesChart", methods={"GET"})
+def all_captures_chart():
+    return jsonify({"request": "success", "captures": _load_captures(request.args.get('mode'), False)})
 
-def checkCaptures(space, captur_send):
 
-    con = sqlite3.connect(database_capture)
-    cur = con.cursor()
-    cur.execute("SELECT COUNT(*) FROM tabel_captures")
-    count = cur.fetchone()
-   
-    space_ligne = space
-    actual_offset = count[0] - (space * captur_send)
- 
-    if actual_offset < 0:
-        actual_offset = 0
-        space_ligne = count[0] - (space * (captur_send - 1))
-    con = sqlite3.connect(database_capture)
-    cur = con.cursor()
-    cur.execute("SELECT * FROM tabel_captures LIMIT "+str(space_ligne)+" OFFSET "+str(actual_offset))
-    result = cur.fetchall()
-    
-    
-    return [renderArray(result), space, count]
+@app.route("/allCaptures", endpoint="allCaptures", methods={"GET"})
+def all_captures():
+    return jsonify({"request": "success", "captures": _load_captures(request.args.get('mode'), True)})
+
+def get_capture_page(space, captur_send):
+    with closing(sqlite3.connect(database_capture, timeout=10)) as con:
+        count = con.execute("SELECT COUNT(*) FROM tabel_captures").fetchone()
+        space_ligne = space
+        actual_offset = count[0] - (space * captur_send)
+        if actual_offset < 0:
+            actual_offset = 0
+            space_ligne = count[0] - (space * (captur_send - 1))
+        result = con.execute("SELECT * FROM tabel_captures LIMIT ? OFFSET ?", (space_ligne, actual_offset)).fetchall()
+    return [decrypt_rows(result), space, count]
 
  
-def addCapture(name, victory, defeat, egality, time, date, mode, base64):
+def add_capture(name, victory, defeat, egality, time, date, mode, base64):
     
     sql = "INSERT INTO tabel_captures (name, victory, defeat, egality, time, date, mode, base64) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    val = (app_insert(name), app_insert(victory), app_insert(defeat), app_insert(egality), app_insert(time), app_insert(date), app_insert(mode), app_insert(base64))
-    con = sqlite3.connect(database_capture)
-    cur = con.cursor()
-    cur.execute(sql, val)
-    con.commit()
+    val = (encrypt_value(name), encrypt_value(victory), encrypt_value(defeat), encrypt_value(egality), encrypt_value(time), encrypt_value(date), encrypt_value(mode), encrypt_value(base64))
+    with closing(sqlite3.connect(database_capture, timeout=10)) as con:
+        with con:
+            con.execute(sql, val)
     
     return "ok"
 
 
 
-@app.route("/addUser", methods={"POST"})
-def addUser():
+@app.route("/addUser", endpoint="addUser", methods={"POST"})
+def update_user_name():
     pseudo_select = request.form.get("pseudo")
     if len(pseudo_select) >= 3 and len(pseudo_select) <= 21 and bool(re.match('^[a-zA-Z0-9]+$', pseudo_select)):
         
 
             sql = "UPDATE tabel_user SET name = ? WHERE id = ?"
-            val = (app_insert(pseudo_select), 1)
+            val = (encrypt_value(pseudo_select), 1)
             con = sqlite3.connect(database_user)
             cur = con.cursor()
             cur.execute(sql, val)
@@ -396,10 +349,10 @@ def addUser():
    
   
 
-def addImgUser(img_b64):
+def update_user_image(img_b64):
     
             sql = "UPDATE tabel_user SET base64 = ? WHERE id = ?"
-            val = (app_insert(img_b64), 1)
+            val = (encrypt_value(img_b64), 1)
             con = sqlite3.connect(database_user)
             cur = con.cursor()
             cur.execute(sql, val)
@@ -413,10 +366,10 @@ def addImgUser(img_b64):
             con.commit()
 
             
-def addLVLUser(img_b64):
+def update_user_level(img_b64):
     
             sql = "UPDATE tabel_user SET userLevel = ? WHERE id = ?"
-            val = (app_insert(img_b64), 1)
+            val = (encrypt_value(img_b64), 1)
             con = sqlite3.connect(database_user)
             cur = con.cursor()
             cur.execute(sql, val)
@@ -437,7 +390,7 @@ def get_ratio():
     cur.execute("SELECT * FROM tabel_user")
     result = cur.fetchall()
         
-    return app_get(result[0][7]) 
+    return decrypt_value(result[0][7])
 
 
 def get_zoom_level():
@@ -465,16 +418,16 @@ def get_zoom_level():
 
 
 
-def initSetting():
+def initialize_display_settings():
 
-    settings = checkSetting()[0]
+    settings = load_settings()[0]
   
     
     user32 = ctypes.windll.user32
     width = user32.GetSystemMetrics(0)
     height = user32.GetSystemMetrics(1)
-    updateSetting(height, width, get_zoom_level(), settings[4], settings[5], settings[6])
-    settings = checkSetting()[0]
+    update_settings(height, width, get_zoom_level(), settings[4], settings[5], settings[6])
+    settings = load_settings()[0]
     
         
     return settings

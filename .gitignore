@@ -25,3 +25,8 @@ output/
 /application/finish_.jpg
 /application/user.jpg
 /application/user_panel.jpg
+
+# Temporary data-transfer copies, never publish user data
+/tracker-data-transfer.tmp/
+/tracker-transfer-script.tmp.ps1
+/tracker-transfer-status.tmp

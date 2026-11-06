@@ -1,7 +1,8 @@
-.cadre_history[hidden] { display:none; }
-.cadre_history { position:absolute; inset:0; z-index:1450; overflow:auto; text-align:left; color:#e8dfcd; background:#000 linear-gradient(to bottom, transparent, #a68d60); }
+.history-panel[hidden] { display:none; }
+.history-panel { position:absolute; inset:0; z-index:1450; overflow:auto; text-align:left; color:#e8dfcd; background:#000 linear-gradient(to bottom, transparent, #a68d60); }
 .history-controls { display:flex; align-items:center; gap:14px; margin-top:26px; color:#e1d8c9; font:18px Arial,sans-serif; }
-.history-controls select { width:220px; max-width:75%; }
+.history-controls { flex-wrap:wrap; }
+.history-controls select { box-sizing:border-box; flex:0 1 280px; width:280px; max-width:100%; min-height:42px; padding:8px 38px 8px 12px; border:1px solid #806b45; border-radius:2px; color:#f0e1c4; font-size:18px; line-height:1.2; }
 .history-list { display:grid; gap:10px; }
 .history-entry { display:grid; grid-template-columns:140px minmax(0,1fr) 130px; align-items:start; gap:18px; padding:17px 10%; }
 .history-entry time, .history-mode { color:#ded1b7; text-shadow:0 1px 3px #000; font:18px/1.5 Arial,sans-serif; }

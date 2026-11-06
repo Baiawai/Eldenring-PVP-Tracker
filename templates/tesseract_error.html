@@ -6,7 +6,7 @@
     <script src="{{ url_for('static', filename='jquery.js') }}"></script>
     
 
-    <link rel="shortcut icon" href="{{ url_for('static', filename='baia.webp') }}" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='tracker-eye.ico') }}" />
 
   <style>
  
@@ -91,7 +91,7 @@ overflow-y: auto;
 ul li{
   color:rgb(199, 199, 199);
 }
-.img_elden2{
+.app-logo{
     max-height:200px;
     margin:0px auto;
     position: relative;
@@ -210,7 +210,7 @@ function googleTranslateElementInit() {
 </script>
 
 <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-<img class="img_elden2" src="{{ url_for('static', filename='EldenTracker.png') }}"/>
+<img class="app-logo" src="{{ url_for('static', filename='EldenTracker.png') }}"/>
       <!-- <h1>Eldenring counter pvp</h1> -->
       <h2>ERROR TESSERACT</h2>
       <h3><b><u>Tesseract is not installed and/or cannot be found</u></b></h3>
@@ -299,8 +299,8 @@ function googleTranslateElementInit() {
                 if(val >= -1){
                 $(".sprit").css("background-position", val+"% 50%").css("background-size", new_width+"px 100% ");
                 val -= 4.54;
-                    if(val > 50 && $(".nav_menu").css("opacity") != "1" && $(".nav_menu").css("opacity") != 1){
-                    $(".nav_menu").css("opacity","1");   
+                    if(val > 50 && $(".app-header").css("opacity") != "1" && $(".app-header").css("opacity") != 1){
+                    $(".app-header").css("opacity","1");
                     }
                 } else {
             

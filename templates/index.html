@@ -10,13 +10,15 @@
     <script type="text/javascript" src="{{ url_for('static', filename='datatables.min.js') }}"></script>
  
     <script type="text/javascript" src="{{ url_for('static', filename='chart.min.js') }}"></script>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='baia.webp') }}" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='tracker-eye.ico') }}" />
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ url_for('static', filename='statistique.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ url_for('static', filename='selects.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ url_for('static', filename='players.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ url_for('static', filename='history.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ url_for('static', filename='stats-page.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='leaderboard.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='information.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ url_for('static', filename='app-typography.css') }}" rel="stylesheet" type="text/css" />
     <style>
         .notranslate {
@@ -38,7 +40,7 @@
       </style>
   
   </head>
-  <body class="profile-sidebar-open">
+  <body class="profile-sidebar-open" data-store-build="{{ 'true' if store_build else 'false' }}">
     <div class="sprit">
         
         <div class="main">
@@ -47,14 +49,14 @@
                 <span class="ripple pinkBg"></span>
                 <span class="ripple pinkBg"></span>
                 <span class="ripple pinkBg"></span>
-                <img src="{{ url_for('static', filename='eldenring-sign2.webp') }}">
+                <img src="{{ url_for('static', filename='loader-classic-eye.png') }}" alt="">
             </span>
             
     
         </div>
     
     </div>
-    <div class="nav_menu">
+    <div class="app-header">
         <div class="bg-fire-left">
             <img src="{{ url_for('static', filename='border-left.png') }}"/>
             
@@ -63,22 +65,9 @@
 
             <img src="{{ url_for('static', filename='eldenring-sign1.webp') }}"/>
         </div> -->
-        <img class="img_elden2" src="{{ url_for('static', filename='EldenTracker.png') }}"/>
-        <!-- <h1> Elden Ring<br><span> pvp counteur</span></h1> -->
-        <div class="counteur">
-            <ul>
-                <li>
-                    <span class="victory" >Victory</span><span class="victory_count">0</span>
-                </li>
-                <li>
-                    <span class="defeat">Defeat</span><span class="defeat_count">0</span>
-                </li>
-                <li>
-                    <span class="egality">Egality</span><span class="egality_count">0</span>
-                </li>
-            </ul>
-        </div>
-        <ul class="list_menu">
+        <img class="app-logo" src="{{ url_for('static', filename='home-logo-classic-eye.png') }}" alt="Elden Ring PvP Tracker"/>
+        <!-- <h1> Elden Ring<br><span> pvp scoreboard</span></h1> -->
+        <ul class="main-menu">
             <li id="start">
                 Start
             </li>
@@ -100,10 +89,45 @@
             <li id="menu_button_settings">
                 Settings
             </li>
+            <li id="menu_button_information" role="button" tabindex="0" data-i18n="information_title">Informations</li>
         </ul>
         
     </div>
-    <div class="containeur">
+    <div class="app-content">
+
+        <section id="information_panel" class="information-page" aria-labelledby="information_title" hidden>
+            <div class="information-shell">
+                <header class="information-header"><p class="information-eyebrow">FAQ</p><h1 id="information_title" data-i18n="information_title">Informations</h1></header>
+                <div class="faq-list">
+                    <details class="faq-item"><summary data-i18n="faq_q_01">Comment démarrer le suivi ?</summary><p data-i18n="faq_a_01">Lance le tracker et Elden Ring, puis clique sur Start. Stop arrête le suivi.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_02">Le jeu doit-il rester visible ?</summary><p data-i18n="faq_a_02">Garde Elden Ring au premier plan pendant la détection. Les notifications masquées ou absentes ne peuvent pas être lues.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_03">Quels modes sont suivis ?</summary><p data-i18n="faq_a_03">L’arène 1v1, les invasions et les défenses sont séparées. Les égalités concernent uniquement l’arène.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_04">Pourquoi un résultat manque-t-il ?</summary><p data-i18n="faq_a_04">La reconnaissance lit les messages à l’écran et peut se tromper. Vérifie la langue du jeu et la zone des notifications.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_05">Comment choisir la langue ?</summary><p data-i18n="faq_a_05">Dans les paramètres, sélectionne la langue utilisée dans le jeu. Le réglage adapte l’interface et la reconnaissance, pas le jeu lui-même.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_06">Comment régler les captures ?</summary><p data-i18n="faq_a_06">Dans les paramètres, adapte la zone des notifications et l’intervalle de capture. Une prévisualisation apparaît quand le jeu est capturé.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_07">Comment lire les statistiques ?</summary><p data-i18n="faq_a_07">Choisis un mode. Le taux de victoire utilise les résultats connus ; le graphique utilise les captures de résultats enregistrées.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_08">Que montre la page Joueurs ?</summary><p data-i18n="faq_a_08">Elle regroupe les noms reconnus et les profils Steam observés. Un nom de personnage et un profil Steam ne sont pas automatiquement associés.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_09">Comment fonctionne le ping ?</summary><p data-i18n="faq_a_09">Les informations Steam et le ping ne sont affichés que s’ils sont disponibles. Une adresse peut être celle d’un relais.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_10">Où sont mes données ?</summary><p data-i18n="faq_a_10">Les statistiques, réglages, captures et historiques sont stockés sur ton PC. Sauvegarde le dossier %APPDATA%\Elden Ring PvP Tracker lorsque le tracker est arrêté.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_11">Le classement est-il disponible ?</summary><p data-i18n="faq_a_11">Le classement distant est désactivé dans la version Store. La version de développement conserve l’ancien service, qui peut être indisponible.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_12">Faut-il installer Python ou Tesseract ?</summary><p data-i18n="faq_a_12">Pour la version Store, non. Pour exécuter le projet depuis ses sources, Python et Tesseract doivent être installés.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_13">Fermer l’onglet arrête-t-il le suivi ?</summary><p data-i18n="faq_a_13">Non. Pour arrêter le programme, utilise le bouton prévu dans les paramètres. La session en mémoire repart de zéro au redémarrage.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_14">Comment protéger mes informations ?</summary><p data-i18n="faq_a_14">Les captures et historiques peuvent contenir des noms ou adresses réseau. Protège tes sauvegardes avant de les partager.</p></details>
+                </div>
+                <p class="information-contact"><span data-i18n="faq_contact">Une question ? Écris-nous :</span> <a href="mailto:gael.pitras@gmail.com">gael.pitras@gmail.com</a></p>
+                <section class="environment-details" aria-labelledby="info_environment_title">
+                    <h2 id="info_environment_title" data-i18n="environment_title">Version et environnement</h2>
+                    <p class="environment-status" role="status" data-details-status></p>
+                    <div class="environment-rows" data-details-environment hidden>
+                        <div class="environment-row"><span data-i18n="environment_tracker">Version du tracker</span><strong data-environment="tracker">—</strong></div>
+                        <div class="environment-row"><span>Python</span><strong data-environment="python">—</strong></div>
+                        <div class="environment-row"><span>Tesseract OCR</span><strong data-environment="tesseract">—</strong></div>
+                        <div class="environment-row"><span data-i18n="environment_os">Système</span><strong data-environment="os">—</strong></div>
+                        <div class="environment-row"><span data-i18n="environment_data_path">Dossier des données</span><strong data-environment="data_path">—</strong></div>
+                    </div>
+                </section>
+            </div>
+        </section>
 
         <section id="stats_panel" class="stats-page" aria-labelledby="stats_title" hidden>
             <div class="stats-shell">
@@ -120,45 +144,47 @@
                 </header>
                 <p id="stats_mode_error" role="status"></p>
                 <div class="stats-overview">
-                    <div class="stat-card tracker-frame"><span data-i18n="victories">Victoires</span><strong class="victory_count">0</strong></div>
-                    <div class="stat-card tracker-frame"><span data-i18n="defeats">Défaites</span><strong class="defeat_count">0</strong></div>
+                    <div class="stat-card stat-card--wins tracker-frame"><span data-i18n="victories">Victoires</span><strong class="victory_count">0</strong></div>
+                    <div class="stat-card stat-card--losses tracker-frame"><span data-i18n="defeats">Défaites</span><strong class="defeat_count">0</strong></div>
                     <div class="stat-card tracker-frame"><span data-i18n="fights">Combats</span><strong class="combats_count">0</strong></div>
-                    <div class="stat-card tracker-frame"><span class="ratio">Ratio</span><strong><span class="ratio_count">0</span> %</strong></div>
+                    <div class="stat-card stat-card--rate tracker-frame"><span data-i18n="stats_win_rate">Taux de victoire</span><strong><span class="ratio_count">0</span> %</strong></div>
                 </div>
                 <div class="stats-layout">
                     <section class="stats-graph tracker-frame"><h2 data-i18n="stats_evolution">Évolution des résultats</h2>
-                    <div class="containeur_chart">
+                    <p class="stats-chart-note" data-i18n="stats_capture_explanation">Graphique basé sur les captures de résultats enregistrées.</p>
+                    <div class="chart-container">
                         <div class="btn-chart">
-                            <button type="button" mode="modal" class="chartResize">[ ]</button>
+                            <button type="button" mode="modal" class="chartResize" aria-label="Agrandir le graphique" data-i18n-aria="stats_chart_expand">⛶</button>
 
                             <button type="button" mode="24h">24h</button>
                             <button type="button" mode="48h">48h</button>
                             <button type="button" mode="7j" class="active">7j</button>
                             <button type="button" mode="30j">30j</button>
-                            <button type="button" mode="all">all</button>
+                            <button type="button" mode="all" data-i18n="all">Tout</button>
                         </div>
-                        <div class="cadre_chartJs">
-                            <div class="load_chart"></div>
+                        <p class="chart-status" role="status" hidden></p>
+                        <div class="chart-canvas-container">
+                            <div class="chart-loader"></div>
                             
                         </div>
                     </div>
                     </section>
                     <section class="stats-details tracker-frame"><h2 data-i18n="stats_details">Détails des combats</h2>
-                        <div class="stat-detail-row"><span class="score">Score</span><strong class="score_count">0</strong></div>
-                        <div class="stat-detail-row arena-draw-row"><span class="egality">Égalités</span><strong class="egality_count">0</strong></div>
-                        <div class="stat-detail-row"><span class="serie_victory">Série de victoires</span><strong class="serie_victory_count">0</strong></div>
-                        <div class="stat-detail-row"><span class="serie_defeat">Série de défaites</span><strong class="serie_defeat_count">0</strong></div>
-                        <div class="stat-detail-row"><span class="noResult">Sans résultat</span><strong class="noResult_count">0</strong></div>
-                        <div class="stat-detail-row"><span class="abandons">Abandons</span><strong class="abandons_count">0</strong></div>
-                        <div class="stat-detail-row"><span class="fight_exit">Adversaires partis</span><strong class="fight_exit_count">0</strong></div>
-                        <div class="stat-detail-row"><span class="connexionError">Erreurs de connexion</span><strong class="connexionError_count">0</strong></div>
-                        <div class="stat-detail-row"><span class="gameExit">Jeu fermé en combat</span><strong class="gameExit_count">0</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="stats_score">Score</span><strong class="score_count">0</strong></div>
+                        <div class="stat-detail-row arena-draw-row"><span data-i18n="draw">Égalité</span><strong class="egality_count">0</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="stats_current_win_streak">Série actuelle de victoires</span><strong class="serie_victory_count">0</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="stats_current_loss_streak">Série actuelle de défaites</span><strong class="serie_defeat_count">0</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="no_result">Sans résultat</span><strong class="noResult_count">0</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="stats_abandons">Abandons</span><strong class="abandons_count">0</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="stats_opponent_left">Adversaires partis</span><strong class="fight_exit_count">0</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="stats_connection_errors">Erreurs de connexion</span><strong class="connexionError_count">0</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="stats_game_closed">Jeu fermé en combat</span><strong class="gameExit_count">0</strong></div>
                     </section>
                 </div>
             </div>
         </section>
 
-        <section class="cadre_history" id="history_panel" aria-labelledby="history_title" hidden>
+        <section class="history-panel" id="history_panel" aria-labelledby="history_title" hidden>
             <div class="players-shell history-shell">
                 <header class="players-header">
                     <p class="players-eyebrow" data-i18n="history_eyebrow">JOURNAL DU COMPTEUR</p>
@@ -183,7 +209,7 @@
             </div>
         </section>
 
-        <section class="cadre_players" id="players_panel" aria-labelledby="players_title" hidden>
+        <section class="players-panel" id="players_panel" aria-labelledby="players_title" hidden>
             <div class="players-shell">
                 <header class="players-header">
                     <div>
@@ -217,30 +243,33 @@
 
         <div class="modal_chart hide">
             <div class="btn-chart">
-                <button type="button" mode="normal" class="chartResize activax">[ ]</button>
+                <button type="button" mode="normal" class="chartResize activax" aria-label="Réduire le graphique" data-i18n-aria="stats_chart_collapse">×</button>
 
                 <button type="button" mode="24h">24h</button>
                 <button type="button" mode="48h">48h</button>
                 <button type="button" mode="7j" class="active">7j</button>
                 <button type="button" mode="30j">30j</button>
-                <button type="button" mode="all">all</button>
+                <button type="button" mode="all" data-i18n="all">Tout</button>
             </div>
-            <div class="cadre_chartJs">
-                <div class="load_chart"></div>
+            <p class="chart-status" role="status" hidden></p>
+            <div class="chart-canvas-container">
+                <div class="chart-loader"></div>
                 
             </div>
         </div>
         <div class="cadre_multi">
             <div class="infoMulti">
-                
-
-                <!-- PANEL USER -->
-                <div class="panel_status panel_user hide">
-             
+                <div class="panel_status panel_user">
+                    <div class="leaderboard-shell">
+                    <header class="leaderboard-header">
+                        <div><p class="leaderboard-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p><h1 data-i18n="leaderboard_title">Classement</h1><p class="leaderboard-intro" data-i18n="leaderboard_intro">Retrouve les résultats des combattants de l’arène.</p></div>
+                        <button type="button" id="leaderboard_refresh" data-i18n="leaderboard_refresh">Actualiser</button>
+                    </header>
+                    <p id="leaderboard_status" class="leaderboard-status" role="status" aria-live="polite" hidden></p>
                     <div class="panel_multi panel_multi_body">
 
                      
-                        <div class="containuer_multi_cadre" cadre="sync_multi">
+                        <div class="containuer_multi_cadre leaderboard-table-wrap" cadre="sync_multi" tabindex="0">
                             <table id="table_multi" class="display" style="width:100%">
                                 <thead>
                                     <tr>
@@ -262,15 +291,9 @@
 
                                 </tbody>                           
                             </table>
-                            <a target="_blank" href="https://www.google.com/search?q=eldenring+tracker" class="moreStats" data-i18n="more_stats">Plus de statistiques</a>
                         </div>
-                    
-                        
                     </div>
-                    <!-- <div class="sub_carde_user">
-
-                    </div> -->
-
+                    </div>
                 </div>
 
             </div>
@@ -285,7 +308,7 @@
             <div class="cadre_resu">
                 <div class="presentation">
                     <div class="img_eldenring">
-                        <img src="{{ url_for('static', filename='EldenTracker.png') }}"/>
+                        <img src="{{ url_for('static', filename='home-logo-classic-eye.png') }}" alt="Elden Ring PvP Tracker"/>
                      
                     </div>
      
@@ -321,7 +344,7 @@
             </div>
             
         </div>
-        <div class="cadre_settings">
+        <div class="settings-panel">
             <div class="cadre_settings_sub">
                 <div class="header_settings"></div>
                 <div class="contente_header_settings">
@@ -330,6 +353,7 @@
                     <div class="btn_menu_settings" menu="2"><img  src="{{ url_for('static', filename='icon-picture.png') }}"/></div>
                     <div class="btn_menu_settings" menu="3"><img  src="{{ url_for('static', filename='icon-multi.png') }}"/></div>
                     <div class="btn_menu_settings steam-peer-tab" menu="5" title="Steam P2P">P2P</div>
+                    <button type="button" class="btn_menu_settings steam-peer-tab diagnostics-tab" menu="6" aria-label="Diagnostic" data-i18n-aria="diagnostics_title"><span class="diagnostics-icon"><img src="{{ url_for('static', filename='icon-diagnostics.png') }}" alt=""></span></button>
                     <div class="btn_menu_settings" menu="4"><img  src="{{ url_for('static', filename='icon-exit.png') }}"/></div>
                 </div>
                 <div class="contente_settings" setting="0">
@@ -516,7 +540,7 @@
                         <label for="steam_peer_enabled" data-i18n="steam_settings_toggle">Détection des joueurs Steam</label>
                         <select id="steam_peer_enabled"><option value="true" data-i18n="steam_enabled">Activée</option><option value="false" data-i18n="steam_disabled">Désactivée</option></select>
                         <div class="steam-ping-setting">
-                            <p data-i18n="steam_ping_help">La mesure avancée démarre avec le suivi. Accepte la demande administrateur Windows si elle apparaît ; tu peux aussi la lancer ici.</p>
+                            <p id="steam_ping_help" data-i18n="steam_ping_help">La mesure avancée démarre avec le suivi. Accepte la demande administrateur Windows si elle apparaît ; tu peux aussi la lancer ici.</p>
                             <button type="button" id="steam_ping_activate" data-i18n="steam_ping_activate">Activer la mesure des pings</button>
                             <p id="steam_ping_status" role="status"></p>
                         </div>
@@ -530,6 +554,58 @@
                         </details>
                     </div>
                 </div>
+                <section class="contente_settings hide diagnostics-settings" setting="6" aria-labelledby="diagnostics_title">
+                    <h2 id="diagnostics_title" data-i18n="diagnostics_title">Diagnostic</h2>
+                    <p data-i18n="diagnostics_note">Mesures locales depuis le lancement actuel. Le CPU et la mémoire concernent le processus du tracker.</p>
+                    <p id="diagnostics_status" role="status"></p>
+                    <div id="diagnostics_content" hidden>
+                        <div class="stat-detail-row"><span>CPU</span><strong id="diag_cpu">—</strong></div>
+                        <div class="stat-detail-row"><span>RAM</span><strong id="diag_ram">—</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="diagnostics_ocr">Temps OCR moyen par lecture</span><strong id="diag_ocr">—</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="diagnostics_ocr_errors">Lectures OCR / erreurs techniques</span><strong id="diag_ocr_errors">—</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="diagnostics_monitor_errors">Arrêts du suivi sur erreur</span><strong id="diag_errors">—</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="diagnostics_ping">Ping Steam moyen disponible</span><strong id="diag_ping">—</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="diagnostics_sync">Synchronisations API réussies / échouées</span><strong id="diag_sync">—</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="diagnostics_sync_time">Durée moyenne de synchronisation</span><strong id="diag_sync_time">—</strong></div>
+                        <div class="stat-detail-row"><span data-i18n="diagnostics_version">Version</span><strong id="diag_version">—</strong></div>
+                    </div>
+                    <p data-i18n="diagnostics_limit">Le taux de détection et les plantages complets ne peuvent pas être déterminés avec ces mesures.</p>
+                    <section class="storage-details" aria-labelledby="storage_title">
+                        <h2 id="storage_title" data-i18n="storage_title">Stockage local</h2>
+                        <p data-i18n="storage_note">Les captures et l’historique sont inclus dans la base de captures. Les fichiers temporaires SQLite sont comptés avec leur base.</p>
+                        <p id="storage_status" role="status"></p>
+                        <div id="storage_content" hidden>
+                            <div class="stat-detail-row"><span data-i18n="storage_database_total">Bases de données au total</span><strong id="storage_database_total">—</strong></div>
+                            <div class="stat-detail-row"><span data-i18n="storage_disk_free">Espace libre sur le disque</span><strong id="storage_disk_free">—</strong></div>
+                            <h3 data-i18n="storage_database_details">Détail des bases</h3><div id="storage_databases"></div>
+                        </div>
+                    </section>
+                    <section class="environment-details" aria-labelledby="diagnostics_environment_title">
+                        <h2 id="diagnostics_environment_title" data-i18n="environment_title">Version et environnement</h2>
+                        <p class="environment-status" role="status" data-details-status></p>
+                        <div class="environment-rows" data-details-environment hidden>
+                            <div class="environment-row"><span data-i18n="environment_tracker">Version du tracker</span><strong data-environment="tracker">—</strong></div>
+                            <div class="environment-row"><span>Python</span><strong data-environment="python">—</strong></div>
+                            <div class="environment-row"><span>Tesseract OCR</span><strong data-environment="tesseract">—</strong></div>
+                            <div class="environment-row"><span data-i18n="environment_os">Système</span><strong data-environment="os">—</strong></div>
+                            <div class="environment-row"><span data-i18n="environment_data_path">Dossier des données</span><strong data-environment="data_path">—</strong></div>
+                        </div>
+                    </section>
+                    <section class="usage-settings" aria-labelledby="usage_title">
+                        <h2 id="usage_title" data-i18n="usage_title">Utilisation du tracker</h2>
+                        <p class="stats-chart-note" data-i18n="usage_note">Données locales depuis l’activation de cette version. Une session correspond à un lancement du tracker.</p>
+                        <p id="usage_status" role="status"></p>
+                        <div id="usage_content" hidden>
+                            <div class="stat-detail-row"><span data-i18n="usage_total">Temps total</span><strong id="usage_total">—</strong></div>
+                            <div class="stat-detail-row"><span data-i18n="usage_sessions">Sessions</span><strong id="usage_sessions">—</strong></div>
+                            <div class="stat-detail-row"><span data-i18n="usage_average">Durée moyenne par session</span><strong id="usage_average">—</strong></div>
+                            <div class="stat-detail-row"><span data-i18n="usage_streak">Jours consécutifs d’utilisation</span><strong id="usage_streak">—</strong></div>
+                            <h3 data-i18n="usage_recent_sessions">Sessions récentes</h3><div id="usage_recent_sessions"></div>
+                            <h3 data-i18n="usage_features">Pages les plus consultées</h3><div id="usage_features"></div>
+                            <h3 data-i18n="usage_modes">Combats par mode</h3><div id="usage_modes"></div>
+                        </div>
+                    </section>
+                </section>
                 <div class="contente_settings hide" setting="4">
                     <div class="form_single form_bg">
                         <div class="form_single">
@@ -549,7 +625,7 @@
                     </div>
                     <div class="form_single form_btn">
                         <button type="button" id="close_nav">Fermer l'onglet du navigateur</button>
-                        <button type="button" id="close_app">Arreter le programme</button>
+                        <button type="button" id="close_app">Arrêter le programme</button>
                     </div>
 
                 </div>
@@ -557,7 +633,7 @@
 
             </div>
         </div>
-        <div class="cardre_captures">
+        <div class="captures-panel">
             <div class="capture-toolbar">
                 <div class="up_capture">
                     <div class="sub_up">
@@ -587,26 +663,31 @@
         </div>
        
     </div>  
-    <button type="button" id="sidebar_toggle" class="sidebar-toggle" aria-controls="profile_sidebar" aria-expanded="true" aria-label="Fermer le panneau de profil" data-i18n-aria="sidebar_close"><img src="{{ url_for('static', filename='sidebar-chevron.png') }}" alt="" aria-hidden="true"></button>
-    <div class="containeur_info" id="profile_sidebar">
+    <button type="button" id="sidebar_toggle" class="sidebar-toggle" aria-controls="profile_sidebar" aria-expanded="true" aria-label="Fermer le panneau de profil" data-i18n-aria="sidebar_close"><img src="{{ url_for('static', filename='sidebar-chevron-bronze.png') }}" alt="" aria-hidden="true"></button>
+    <div class="profile-sidebar" id="profile_sidebar">
         <div class="cadreInfo">
 
           
 
-            <div class="cadre_user ">
-                <div class="header_carde img_user">
+            <div class="profile-card ">
+                <div class="profile-card-header img_user">
                     <div class="fakeImageuser">?</div>
                 <h5><span class="userName">???</span> <span class="niv_tr"><br>niveau: </span> <span class="userLvl_count">0</span></h5> 
                 </div>
                 <p id="sidebar_legend" class="sidebar-legend" hidden></p>
-                <section class="sidebar-session" aria-labelledby="sidebar_session_title">
-                    <h2 id="sidebar_session_title" data-i18n="session_title">Session en cours</h2>
-                    <div class="sidebar-session-metrics">
-                        <div><strong id="session_combats">0</strong><span data-i18n="fights">Combats</span></div>
-                        <div><strong id="session_victories">0</strong><span data-i18n="victories">Victoires</span></div>
-                        <div><strong id="session_defeats">0</strong><span data-i18n="defeats">Défaites</span></div>
-                    </div>
-                </section>
+                <div class="scoreboard sidebar-scoreboard" role="group" aria-label="Statistiques" data-i18n-aria="stats_title">
+                    <ul>
+                        <li>
+                            <span class="victory" >Victory</span><span class="victory_count">0</span>
+                        </li>
+                        <li>
+                            <span class="defeat">Defeat</span><span class="defeat_count">0</span>
+                        </li>
+                        <li>
+                            <span class="egality">Egality</span><span class="egality_count">0</span>
+                        </li>
+                    </ul>
+                </div>
                 <section class="sidebar-last" aria-labelledby="sidebar_last_title">
                     <h2 id="sidebar_last_title" data-i18n="last_combat">Dernier combat</h2>
                     <p id="sidebar_last_combat">Aucun combat enregistré.</p>
@@ -682,10 +763,45 @@
         <img src="{{ url_for('static', filename='border-right.png') }}"/>
     </div>
 
+    <dialog id="leaderboard_player_dialog" class="leaderboard-player-dialog" aria-labelledby="leaderboard_player_name">
+        <button type="button" class="leaderboard-player-nav leaderboard-player-prev" aria-label="Joueur précédent" data-i18n-aria="leaderboard_previous_player">‹</button>
+        <button type="button" class="leaderboard-player-nav leaderboard-player-next" aria-label="Joueur suivant" data-i18n-aria="leaderboard_next_player">›</button>
+        <button type="button" class="leaderboard-player-close" aria-label="Fermer la fiche" data-i18n-aria="leaderboard_close_card">×</button>
+        <div class="leaderboard-player-card">
+            <div class="leaderboard-player-identity">
+                <div class="leaderboard-player-portrait"><img id="leaderboard_player_avatar" alt="" hidden><span id="leaderboard_player_no_avatar" data-i18n="leaderboard_no_avatar">Aucun avatar</span></div>
+                <div class="leaderboard-player-heading">
+                    <p class="leaderboard-player-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p>
+                    <h2 id="leaderboard_player_name"></h2>
+                    <div class="leaderboard-player-meta"><span><span data-i18n="leaderboard_rank">Rang</span> <strong id="leaderboard_player_rank"></strong></span><span><span data-i18n="leaderboard_level">Niveau</span> <strong id="leaderboard_player_level"></strong></span></div>
+                </div>
+            </div>
+            <section class="leaderboard-player-stats" aria-labelledby="leaderboard_player_stats_title">
+                <h3 id="leaderboard_player_stats_title" data-i18n="stats_title">Statistiques</h3>
+                <div class="leaderboard-player-grid">
+                    <div><span data-i18n="victories">Victoires</span><strong data-player-stat="victories">0</strong></div>
+                    <div><span data-i18n="defeats">Défaites</span><strong data-player-stat="defeats">0</strong></div>
+                    <div><span data-i18n="draw">Égalité</span><strong data-player-stat="draws">0</strong></div>
+                    <div><span data-i18n="fights">Combats</span><strong data-player-stat="fights">0</strong></div>
+                    <div><span data-i18n="stats_win_rate">Taux de victoire</span><strong data-player-stat="rate">0 %</strong></div>
+                    <div><span data-i18n="stats_score">Score</span><strong data-player-stat="score">0</strong></div>
+                    <div><span data-i18n="stats_current_win_streak">Série actuelle de victoires</span><strong data-player-stat="win-streak">0</strong></div>
+                    <div><span data-i18n="stats_current_loss_streak">Série actuelle de défaites</span><strong data-player-stat="loss-streak">0</strong></div>
+                    <div><span data-i18n="no_result">Sans résultat</span><strong data-player-stat="no-result">0</strong></div>
+                    <div><span data-i18n="stats_opponent_left">Adversaires partis</span><strong data-player-stat="opponent-left">0</strong></div>
+                    <div><span data-i18n="stats_abandons">Abandons</span><strong data-player-stat="abandons">0</strong></div>
+                    <div><span data-i18n="stats_connection_errors">Erreurs de connexion</span><strong data-player-stat="connection-errors">0</strong></div>
+                    <div><span data-i18n="stats_game_closed">Jeu fermé en combat</span><strong data-player-stat="game-closed">0</strong></div>
+                </div>
+            </section>
+        </div>
+    </dialog>
+
            <!-- LAUNCH FUNCTIONS -->
            <script src="{{ url_for('static', filename='translate.js') }}"></script>
     <script src="{{ url_for('static', filename='ui-packs.js') }}"></script>
     <script src="{{ url_for('static', filename='ui-i18n.js') }}"></script>
+    <script src="{{ url_for('static', filename='stats-calculations.js') }}"></script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
     <script src="{{ url_for('static', filename='game-language.js') }}"></script>
     <script src="{{ url_for('static', filename='capture-speed.js') }}"></script>
@@ -694,6 +810,9 @@
     <script src="{{ url_for('static', filename='steam-peers.js') }}"></script>
     <script src="{{ url_for('static', filename='players.js') }}"></script>
     <script src="{{ url_for('static', filename='history.js') }}"></script>
+    <script src="{{ url_for('static', filename='information.js') }}"></script>
+    <script src="{{ url_for('static', filename='usage-metrics.js') }}"></script>
+    <script src="{{ url_for('static', filename='system-details.js') }}"></script>
    
     <div id="capture_viewer_overlay" class="capture-viewer-overlay" hidden>
         <div class="capture-viewer-content" role="dialog" aria-label="Capture agrandie" data-i18n-aria="capture_viewer_title">

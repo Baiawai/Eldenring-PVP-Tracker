@@ -2,8 +2,9 @@
 import os
 import sqlite3
 from contextlib import closing
+from application.runtime_paths import data_dir
 
-DATABASE = os.path.join(os.environ['APPDATA'], 'hid_el_cou', 'database_user.db')
+DATABASE = str(data_dir() / 'database_user.db')
 MODES = ('Arena', 'Invasion', 'Defense')
 FIELDS = ('victory', 'defeat', 'egality', 'combats', 'noResult', 'fight_exit',
           'abandon', 'maxVictory', 'maxDefeat', 'ratioTime', 'score',
@@ -61,13 +62,13 @@ def add_mode_score(mode, victory, defeat, egality, combats, no_result, fight_exi
 def correct_invasion_no_result(event_id, expected_text, replacement_text):
     """Atomically reclassify one known history entry and its mode totals."""
     from application.init import database_capture
-    from application.secur import app_get, app_insert
+    from application.secur import decrypt_value, encrypt_value
     with closing(sqlite3.connect(DATABASE, timeout=10)) as con:
         con.execute('ATTACH DATABASE ? AS capture_db', (database_capture,))
         con.execute('BEGIN IMMEDIATE')
         event = con.execute('SELECT mode,message FROM capture_db.detection_history WHERE id=?', (event_id,)).fetchone()
         row = con.execute('SELECT victory,defeat,egality,noResult,fight_exit,abandon,connexionError,gameExit FROM mode_stats WHERE mode=?', ('Invasion',)).fetchone()
-        if not event or event[0] != 'Invasion' or app_get(event[1]).decode('utf-8') != expected_text or not row or row[3] < 1:
+        if not event or event[0] != 'Invasion' or decrypt_value(event[1]).decode('utf-8') != expected_text or not row or row[3] < 1:
             con.rollback()
             return False
         victory, defeat, draw, no_result, fight_exit, abandon, connection_error, game_exit = row
@@ -77,6 +78,6 @@ def correct_invasion_no_result(event_id, expected_text, replacement_text):
         con.execute('UPDATE mode_stats SET noResult=?, connexionError=?, score=? WHERE mode=?',
                     (no_result, connection_error, score, 'Invasion'))
         con.execute('UPDATE capture_db.detection_history SET message=? WHERE id=?',
-                    (app_insert(replacement_text), event_id))
+                    (encrypt_value(replacement_text), event_id))
         con.commit()
         return True

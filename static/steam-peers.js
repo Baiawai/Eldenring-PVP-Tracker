@@ -6,6 +6,7 @@
     const enabled = document.getElementById('steam_peer_enabled');
     const pingStatus = document.getElementById('steam_ping_status');
     const pingButton = document.getElementById('steam_ping_activate');
+    const pingHelp = document.getElementById('steam_ping_help');
     let state = null;
     let pingPending = false;
     function tr(key, fallback) { return window.uiT ? window.uiT(key, fallback) : fallback; }
@@ -29,6 +30,7 @@
         enabled.value = state.enabled ? 'true' : 'false';
         if (['active', 'unavailable', 'denied'].includes(state.ping_mode)) pingPending = false;
         const pingMessages = {
+            steam_only: tr('steam_ping_steam_only', 'Le ping Steam est affiché lorsqu’il est disponible.'),
             active: tr('steam_ping_active', 'Mesure avancée des pings active.'),
             unavailable: tr('steam_ping_unavailable', 'La mesure réseau Windows est indisponible.'),
             denied: tr('steam_ping_denied', 'Autorisation administrateur refusée ou mesure indisponible.'),
@@ -36,11 +38,13 @@
             admin_required: tr('steam_ping_required', 'Mesure avancée désactivée.')
         };
         const pingMessage = pingPending ? pingMessages.requesting : (pingMessages[state.ping_mode] || pingMessages.admin_required);
-        const p2pReady = state.status === 'active' && state.ping_mode === 'active' && !pingPending;
+        const p2pReady = state.status === 'active' && ['active', 'steam_only'].includes(state.ping_mode) && !pingPending;
         status.textContent = state.status !== 'active' ? message(state.status) :
             (peers.length === 0 ? message('active') : (p2pReady ? '' : pingMessage));
         status.classList.toggle('steam-empty', state.status === 'starting' || (state.status === 'active' && peers.length === 0));
         pingStatus.textContent = pingMessage;
+        pingHelp.hidden = state.ping_mode === 'steam_only';
+        pingButton.hidden = state.ping_mode === 'steam_only';
         pingButton.disabled = pingPending || state.ping_mode === 'active' || state.ping_mode === 'requesting';
         peers.forEach(function(peer) {
             const item = document.createElement('li');

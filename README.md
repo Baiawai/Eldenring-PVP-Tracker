@@ -16,7 +16,7 @@ La reconnaissance dépend de l’OCR et des notifications réellement visibles. 
 
 - Windows, avec Elden Ring et Steam pour l’utilisation en jeu.
 - Python 3.12 64 bits pour exécuter le projet depuis ses sources.
-- Tesseract OCR installé à l’emplacement actuellement attendu par l’application : `C:\Program Files\Tesseract-OCR\tesseract.exe`. Les modèles de reconnaissance supplémentaires sont dans `application/locales/tessdata/`.
+- Tesseract OCR installé à l’emplacement actuellement attendu par l’application : `C:\Program Files\Tesseract-OCR\tesseract.exe`. Les modèles de reconnaissance utilisés par le projet sont dans `application/locales/tessdata/`.
 
 La mesure de ping utilise les composants Steam/P2P du projet et peut demander une autorisation administrateur Windows. Une adresse affichée peut être celle d’un relais ; sa géolocalisation est indicative.
 
@@ -47,9 +47,11 @@ L’environnement virtuel existant est lié à son installation Python et à son
 
 ## Données locales
 
-Les bases SQLite de profil, paramètres, captures, historique et statistiques se trouvent dans `%APPDATA%\hid_el_cou\`. Les captures temporaires et images générées pendant le suivi peuvent aussi apparaître dans `application/`. Ces fichiers personnels et les environnements virtuels sont exclus du dépôt par `.gitignore`.
+Les bases SQLite de profil, paramètres, captures, historique et statistiques se trouvent dans `%APPDATA%\Elden Ring PvP Tracker\`. Les captures temporaires et images générées pendant le suivi peuvent aussi apparaître dans `application/`. Ces fichiers personnels et les environnements virtuels sont exclus du dépôt par `.gitignore`.
 
-Pour conserver vos données, sauvegardez le dossier `%APPDATA%\hid_el_cou\` lorsque le tracker est arrêté. Les adresses IP et informations Steam détectées peuvent faire partie de l’historique : protégez vos sauvegardes en conséquence.
+Les statistiques d’utilisation sont enregistrées localement dans `usage_metrics.db` à partir du premier lancement de cette version. Une session correspond à la durée de lancement du tracker, y compris lorsqu’il est en attente ; elle est mise à jour environ toutes les 30 secondes. Les consultations comptent les ouvertures de pages dans l’interface. Les combats par mode reprennent les compteurs existants. Les mesures du diagnostic sont temporaires et concernent le processus courant : les erreurs OCR sont des erreurs techniques, et non un taux de reconnaissance. Le ping Steam est une moyenne des mesures actuellement disponibles et les synchronisations API ne sont comptées que lorsqu’elles sont tentées.
+
+Pour conserver vos données, sauvegardez le dossier `%APPDATA%\Elden Ring PvP Tracker\` lorsque le tracker est arrêté. Les adresses IP et informations Steam détectées peuvent faire partie de l’historique : protégez vos sauvegardes en conséquence.
 
 ## Structure du projet
 
@@ -62,6 +64,8 @@ Pour conserver vos données, sauvegardez le dossier `%APPDATA%\hid_el_cou\` lors
 - `templates/index.html` et `static/` : interface, styles et scripts du navigateur.
 - `tests/` : tests automatisés du projet.
 
+Les fonctions Python utilisent `snake_case`. Les classes CSS de structure ajoutées ou renommées utilisent des noms descriptifs en anglais séparés par des tirets ; les sélecteurs HTML, JavaScript et CSS doivent évoluer ensemble. Les noms historiques des routes HTTP et des colonnes SQLite restent conservés pour la compatibilité.
+
 ## Tests
 
 ```powershell
@@ -69,3 +73,5 @@ Pour conserver vos données, sauvegardez le dossier `%APPDATA%\hid_el_cou\` lors
 ```
 
 Pour les changements visuels ou de détection, complétez les tests automatisés par une vérification dans l’interface ou sur une partie adaptée. Les instructions de travail pour les assistants figurent dans [AGENTS.md](AGENTS.md).
+
+Les principaux résultats et limites de l’audit de développement sont indiqués dans [AUDIT.md](AUDIT.md).

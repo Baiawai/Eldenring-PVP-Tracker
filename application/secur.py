@@ -12,20 +12,19 @@ key_str = '_Elden_ring_Pvp_' * 2
 key_bytes = key_str.encode('utf-8')
 key = base64.urlsafe_b64encode(key_bytes)
 key = key.ljust(32, b'=')
+_fernet = Fernet(key)
    
 
-def app_name():
+def encryption_key():
     global key
     return key
 
-def app_insert(donnees_a_chiffrer):
-    fernet = Fernet(app_name())
-    donnees_chiffrees = fernet.encrypt(str(donnees_a_chiffrer).encode('utf-8'))
+def encrypt_value(donnees_a_chiffrer):
+    donnees_chiffrees = _fernet.encrypt(str(donnees_a_chiffrer).encode('utf-8'))
     return donnees_chiffrees
 
-def app_get(donnees_chiffrees):
-    fernet = Fernet(app_name())
-    donnees_dechiffrees = fernet.decrypt(donnees_chiffrees)
+def decrypt_value(donnees_chiffrees):
+    donnees_dechiffrees = _fernet.decrypt(donnees_chiffrees)
     return donnees_dechiffrees
 
 
@@ -40,7 +39,7 @@ def clean_decrypted(decoded):
     return decoded
 
 
-def renderArray(Array):
+def decrypt_rows(Array):
     new_array = []
     for ligne in Array:
         if isinstance(ligne, (int, str)):
@@ -49,7 +48,7 @@ def renderArray(Array):
                 new_array.append(1)
             else:
                 if isinstance(ligne, float) == False and len(str(ligne)) > 10:
-                    decoded = app_get(ligne).decode('utf-8')
+                    decoded = decrypt_value(ligne).decode('utf-8')
                     cleaned = clean_decrypted(decoded)
                 else:
                     cleaned = ligne
@@ -65,7 +64,7 @@ def renderArray(Array):
               
                     if element != "":
                         if isinstance(element, float) == False and len(str(element)) > 10:
-                            decoded = app_get(element).decode('utf-8')
+                            decoded = decrypt_value(element).decode('utf-8')
                             cleaned = clean_decrypted(decoded)
                         else:
                             cleaned = element

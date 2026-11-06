@@ -140,7 +140,7 @@ window.interface_fr = ["Victoire", "Defaite", "Egalite", "Captures", "Parametres
 "Niveau sauvegardée avec succès",
 "Niveau",
 "Fermer l'onglet du navigateur",
-"Arreter le programme",
+"Arrêter le programme",
 "Aucune capture disponible",
 "Modifier votre languages",
 "Le système à besoin de savoir quel languages utilise votre jeux",

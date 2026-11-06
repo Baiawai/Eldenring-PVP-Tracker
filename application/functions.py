@@ -25,7 +25,7 @@ import sqlite3
 from __main__ import app
 
 
-from application.init import checkUser, checkSetting, initSetting, updateSetting, verifyIdentity, langue_selected, update_language, addScore as add_arena_score, addCapture, checkCaptures, get_ratio, addImgUser, addLVLUser
+from application.init import load_user, load_settings, initialize_display_settings, update_settings, verify_identity, get_selected_language, update_language, apply_score as add_arena_score, add_capture, get_capture_page, get_ratio, update_user_image, update_user_level
 from application.mode_stats import mode_user, add_mode_score, correct_invasion_no_result
 from application.player_sightings import SightingTracker, record_sighting
 from application.detection_history import record_detection, update_detection, message_text, read_steam_history
@@ -34,8 +34,10 @@ from application import game_language, capture_speed, notification_region, peer_
 from application.session_summary import SessionSummary
 from application.browser_language import browser_language
 from application.ui_localization import packs as ui_packs, localize_counter
-from application.multi import checkMulti
-from application.secur import app_insert, app_get, renderArray
+from application.runtime_paths import image_dir, RESOURCE_DIR, tesseract_path, data_dir
+from application import usage_metrics
+from application.multi import sync_leaderboard_data
+from application.secur import encrypt_value, decrypt_value, decrypt_rows
 #  _   __   _   _   _____  
 # | | |  \ | | | | |_   _| 
 # | | |   \| | | |   | |   
@@ -43,19 +45,19 @@ from application.secur import app_insert, app_get, renderArray
 # | | | | \  | | |   | |   
 # |_| |_|  \_| |_|   |_|   
 
-user = checkUser()[0]
-settings = checkSetting()[0]
+user = load_user()[0]
+settings = load_settings()[0]
 
 
 # Keep the database unset until the first browser request supplies its language.
 language_default = not str(user[5]).strip()
-langue_select = 'eng' if language_default else langue_selected()
+langue_select = 'eng' if language_default else get_selected_language()
 first_language_lock = threading.Lock()
 game_locale = game_language.UI_TO_GAME.get(langue_select, 'engus')
 # Freeze the existing game language before the UI language can be changed.
 game_language.save(game_locale)
 capture_interval_seconds = capture_speed.load()
-_legacy_preview = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'template_notif.jpg')
+_legacy_preview = os.path.join(image_dir(), 'template_notif.jpg')
 try:
     with Image.open(_legacy_preview) as _legacy_image:
         _legacy_height = _legacy_image.height
@@ -138,7 +140,7 @@ def _latest_saved_capture():
             row = con.execute('SELECT id,name,victory,defeat,egality,mode FROM tabel_captures ORDER BY id DESC LIMIT 1').fetchone()
         if not row:
             return None
-        _, name, victory, defeat, draw, mode = renderArray([row])[0]
+        _, name, victory, defeat, draw, mode = decrypt_rows([row])[0]
         result = 'victory' if str(victory) in ('1', 'True') else 'defeat' if str(defeat) in ('1', 'True') else 'draw' if str(draw) in ('1', 'True') else None
         return {'mode':mode if mode in ('Arena', 'Invasion', 'Defense') else 'Arena', 'opponent':name, 'result':result} if result else None
     except (sqlite3.Error, ValueError, TypeError):
@@ -147,7 +149,7 @@ def _latest_saved_capture():
 
 session_summary = SessionSummary(_latest_saved_capture())
 
-def addScore(*args):
+def apply_score(*args):
     result = add_arena_score(*args) if mode_select == 'Arena' else add_mode_score(mode_select, *args)
     if args[3]:
         session_summary.combat_started(mode_select, opponent_name if mode_select != 'Arena' else '')
@@ -245,7 +247,7 @@ else:
     detect_mod_active, detect_text_active = detect_mod_fr, detect_text_fr
      
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = str(image_dir())
 path_finish_fight = os.path.join(base_dir, 'finish_.jpg')   
 path_start_fight = os.path.join(base_dir, 'start_.jpg')          
         
@@ -268,7 +270,7 @@ def languages(requested_language=None):
     if fight:
         return jsonify({'request':'error', 'reason':'combat_active'}), 409
     model = game_language.LANGUAGES[locale][1]
-    path = os.path.join(base_dir, 'locales', 'tessdata', model + '.traineddata')
+    path = os.path.join(RESOURCE_DIR, 'locales', 'tessdata', model + '.traineddata')
     if not os.path.isfile(path):
         return jsonify({'request':'error', 'reason':'model_missing'}), 503
     game_language.save(locale)
@@ -537,7 +539,7 @@ def game_language_setting():
 
 
 
-def resetInit():
+def reset_monitor_state():
     global mode_select, mode_detected
     global invasion_phase, invasion_search_extent, invasion_search_history_id, invasion_return_pending, recent_invasion_no_result, opponent_name, ally_summoning_last_seen, inventory_warning_seen
     recent_invasion_no_result = None
@@ -590,17 +592,17 @@ def init():
     global language_default
     # Opening or reloading another browser tab must not stop an active monitor.
     if not run_monitor and not monitor_lock.locked():
-        resetInit()
+        reset_monitor_state()
     captur_send = 1
-    verifiy = verifyIdentity()
-    user = mode_user(checkUser()[0], mode_select)
-    captures = checkCaptures(50 , captur_send)
-    settings = initSetting()
-    langue_select = langue_selected()
-    addScore(0, 0, 0, 0, 0, 0, 0, 0, 0)
+    verifiy = verify_identity()
+    user = mode_user(load_user()[0], mode_select)
+    captures = get_capture_page(50 , captur_send)
+    settings = initialize_display_settings()
+    langue_select = get_selected_language()
+    apply_score(0, 0, 0, 0, 0, 0, 0, 0, 0)
     
     
-    checkMulti()
+    sync_leaderboard_data()
 
 
 
@@ -624,11 +626,11 @@ def init():
         notif_base64 = ""               
         return jsonify({"request": "success", "captures":captures, "user":user, "notif": notif_base64, "settings":settings, "language_default": language_default})
 
-@app.route("/nextCaptures", methods={"GET"})
-def nextCaptures():
+@app.route("/nextCaptures", endpoint="nextCaptures", methods={"GET"})
+def next_captures():
     global captur_send
     captur_send = captur_send +1 
-    captures = checkCaptures(50, captur_send)
+    captures = get_capture_page(50, captur_send)
     
     return jsonify({"request": "success", "captures":captures})
 
@@ -659,10 +661,11 @@ def _run_monitor():
         pass
     except Exception:
         monitor_error = True
+        usage_metrics.record_monitor_error()
         details = traceback.format_exc()
         app.logger.error('Capture monitor failed: %s', details)
         try:
-            directory = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'hid_el_cou')
+            directory = str(data_dir())
             os.makedirs(directory, exist_ok=True)
             with open(os.path.join(directory, 'tracker-errors.log'), 'a', encoding='utf-8') as log:
                 log.write(datetime.now().isoformat(timespec='seconds') + ' - capture monitor\n' + details + '\n')
@@ -720,27 +723,27 @@ def stop():
     tampo_text = ""
     run_monitor = False
     peer_tracking.cancel_auto_ping()
-    resetInit()
+    reset_monitor_state()
     return jsonify({"request": "success"})
 
-@app.route("/autoStart", methods={"POST"})
-def autoStart():
+@app.route("/autoStart", endpoint="autoStart", methods={"POST"})
+def set_auto_start():
     
     auto_start = request.form.get("auto_start")
-    settings = checkSetting()[0]
-    updateSetting(settings[1], settings[2], settings[3], settings[4], settings[5], auto_start)
+    settings = load_settings()[0]
+    update_settings(settings[1], settings[2], settings[3], settings[4], settings[5], auto_start)
     return jsonify({"request": "success"})
 
 @app.route("/capture", methods={"GET"})
 def capture_select():
     global captures
-    user = checkUser()[0]
+    user = load_user()[0]
     victory = user[2]
     defeat = user[3]
     egality = user[4]
     ratio = user[7]
     global captures_stats
-    checkMulti()
+    sync_leaderboard_data()
     
     last = captures_stats[-1]
     if len(last) > 5:
@@ -788,7 +791,7 @@ def interval():
     global time_start
     global fight
     global game_detected
-    user = mode_user(checkUser()[0], mode_select)
+    user = mode_user(load_user()[0], mode_select)
     time_actuel = time.time() - time_start
     array_tampo = array_stats.copy()
     if tampo_text == array_tampo["text"]:
@@ -839,11 +842,11 @@ def mode_stats_view():
     if selected not in ('Arena', 'Invasion', 'Defense'):
         return jsonify({'request': 'error'}), 400
     return jsonify({'request': 'success', 'mode': selected,
-                    'user': mode_user(checkUser()[0], selected)})
+                    'user': mode_user(load_user()[0], selected)})
 
 
 #Define path to tessaract.exe
-path_to_tesseract = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+path_to_tesseract = tesseract_path()
 #Point tessaract_cmd to tessaract.exe
 pytesseract.tesseract_cmd = path_to_tesseract
 
@@ -868,7 +871,7 @@ for m in get_monitors():
         width_screen = m.width
         
 
-def prunt(text):
+def emit_tracking_event(text):
     global array_stats, invasion_search_history_id
     marker = ''
     for candidate in ('<!--search-start-->', '<!--search-update-->', '<!--invasion-no-result-->', '<!--connection-correction-->'):
@@ -916,8 +919,8 @@ def get_window_text(hwnd):
 
 def get_foreground_app():
     hwnd = get_foreground_window()
-    app_name = get_window_text(hwnd)
-    return app_name
+    encryption_key = get_window_text(hwnd)
+    return encryption_key
 
 
 def get_zoom_level():
@@ -988,10 +991,22 @@ def kmp_search(pattern, text):
             return i - m + 1
     return -1
 
+def measured_game_ocr(*args, **kwargs):
+    started = time.monotonic()
+    failed = False
+    try:
+        return pytesseract.image_to_string(*args, **kwargs)
+    except Exception:
+        failed = True
+        raise
+    finally:
+        usage_metrics.record_ocr(time.monotonic() - started, failed)
+
+
 def game_ocr_data_config():
-    if game_locale in ('frafr', 'engus'):
-        return ''
-    return ' --tessdata-dir "' + os.path.join(base_dir, 'locales', 'tessdata') + '"'
+    # TESSDATA_PREFIX is configured at startup. Passing a quoted path through
+    # pytesseract on Windows leaves literal quotes in the subprocess argument.
+    return ''
 
 
 def normalise_ocr(text):
@@ -1017,7 +1032,7 @@ def handle_invasion(text, path_video_simple, original_grey):
             if correct_invasion_no_result(previous['id'], expected, replacement):
                 session_summary.correct_connection_error()
                 recent_invasion_no_result = None
-                prunt('<!--connection-correction-->' + error_message)
+                emit_tracking_event('<!--connection-correction-->' + error_message)
                 return True
         else:
             recent_invasion_no_result = None
@@ -1036,9 +1051,9 @@ def handle_invasion(text, path_video_simple, original_grey):
         original_image = cv2.imread(path_video_simple)
         height, width = original_image.shape[:2]
         cv2.imwrite(path_start_fight, original_image[0:int(height / 3), int(width / 4):int(width - width / 4)])
-        addScore(0, 0, 0, 1, 0, 0, 1, 0, 0)
+        apply_score(0, 0, 0, 1, 0, 0, 1, 0, 0)
         safe_name = html.escape(opponent_name.replace(',', ' '))
-        prunt('Monde envahi : combat contre ' + safe_name)
+        emit_tracking_event('Monde envahi : combat contre ' + safe_name)
         return True
     if not fight and "vous tentez d'envahir un autre monde" in text:
         mode_select = 'Invasion'
@@ -1056,17 +1071,17 @@ def handle_invasion(text, path_video_simple, original_grey):
             message = "Vous tentez d'envahir un autre monde"
             if extent:
                 message += " · Étendue : " + extent
-            prunt('<!--search-start-->' + message)
+            emit_tracking_event('<!--search-start-->' + message)
         elif extent and extent != invasion_search_extent:
             invasion_search_extent = extent
-            prunt("<!--search-update-->Vous tentez d'envahir un autre monde · Étendue : " + extent)
+            emit_tracking_event("<!--search-update-->Vous tentez d'envahir un autre monde · Étendue : " + extent)
         return True
     if not fight and "invasion d'un autre monde" in text and 'terrassez' not in text:
         mode_select = 'Invasion'
         mode_detected = True
         if invasion_phase != 'loading':
             invasion_phase = 'loading'
-            prunt("Invasion d'un autre monde…")
+            emit_tracking_event("Invasion d'un autre monde…")
         return True
     if not fight and "invasion d'un autre monde" in text and 'terrassez' in text and 'hote des doigts' in text:
         fight = True
@@ -1084,9 +1099,9 @@ def handle_invasion(text, path_video_simple, original_grey):
         original_image = cv2.imread(path_video_simple)
         height, width = original_image.shape[:2]
         cv2.imwrite(path_start_fight, original_image[0:int(height / 3), int(width / 4):int(width - width / 4)])
-        addScore(0, 0, 0, 1, 0, 0, 1, 0, 0)
+        apply_score(0, 0, 0, 1, 0, 0, 1, 0, 0)
         safe_name = html.escape(opponent_name.replace(',', ' '))
-        prunt(('Vous avez envahi le monde de ' + safe_name) if safe_name else 'Vous avez envahi un autre monde')
+        emit_tracking_event(('Vous avez envahi le monde de ' + safe_name) if safe_name else 'Vous avez envahi un autre monde')
         return True
 
     if not fight or mode_select not in ('Invasion', 'Defense'):
@@ -1104,14 +1119,14 @@ def handle_invasion(text, path_video_simple, original_grey):
                 break
         defeat = 'vous avez peri' in text
     if connection_problem and not (victory or defeat):
-        addScore(0, 0, 0, 0, 0, 0, 0, 1, 0)
+        apply_score(0, 0, 0, 0, 0, 0, 0, 1, 0)
         fight = False
         stape = 0
         connexion_error = True
         invasion_phase = 'finished'
         invasion_return_pending = None
         recent_invasion_no_result = None
-        prunt(error_message)
+        emit_tracking_event(error_message)
         return True
     if mode_select == 'Invasion' and not (victory or defeat):
         if 'retour dans votre monde' in text and invasion_return_pending is None:
@@ -1120,12 +1135,12 @@ def handle_invasion(text, path_video_simple, original_grey):
         if invasion_return_pending is not None and time.monotonic() - invasion_return_pending >= 4:
             time_end = time.time()
             time_result = time_end - time_start
-            addScore(0, 0, 0, 0, 1, 0, 0, 0, 0)
+            apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
             fight = False
             stape = 0
             invasion_phase = 'finished'
             invasion_return_pending = None
-            event_id = prunt('<!--invasion-no-result-->Retour dans votre monde · Combat sans résultat')
+            event_id = emit_tracking_event('<!--invasion-no-result-->Retour dans votre monde · Combat sans résultat')
             recent_invasion_no_result = {'id':event_id, 'deadline':time.monotonic() + 30} if event_id else None
             return True
     if victory or defeat:
@@ -1135,14 +1150,14 @@ def handle_invasion(text, path_video_simple, original_grey):
         with open(path_video_simple, 'rb') as image_file:
             image = b64encode(image_file.read()).decode('utf-8')
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        addCapture(opponent_name, int(victory), int(defeat), 0, str(math.ceil(time_result)), now, mode_select, image)
-        addScore(int(victory), int(defeat), 0, 0, 0, 0, 0, 0, 0)
+        add_capture(opponent_name, int(victory), int(defeat), 0, str(math.ceil(time_result)), now, mode_select, image)
+        apply_score(int(victory), int(defeat), 0, 0, 0, 0, 0, 0, 0)
         captures_stats.append([victory, str(math.ceil(time_result)), now, mode_select, opponent_name, image])
         cv2.imwrite(path_finish_fight, original_grey)
         fight = False
         stape = 0
         invasion_phase = 'finished'
-        prunt(correspondly_active[10 if victory else 12] + '<br> Time: ' + str(math.ceil(time_result)) + ' s')
+        emit_tracking_event(correspondly_active[10 if victory else 12] + '<br> Time: ' + str(math.ceil(time_result)) + ' s')
     return True
 
 
@@ -1156,7 +1171,7 @@ def inventory_limit_item(text):
     return item if any(c.isalnum() for c in item) else None
 
 
-def correspondly(text_simple, path_video_simple, original_grey, notification_text=None):
+def process_game_text(text_simple, path_video_simple, original_grey, notification_text=None):
     global array_stats
     global detect_text_active
     global error
@@ -1194,7 +1209,7 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
         now = time.monotonic()
         if key not in inventory_warning_seen or now - inventory_warning_seen[key] > 12:
             safe_item = html.escape(item.replace(',', ' '))
-            prunt('Impossible d’acquérir ' + safe_item + '.<br><span class="inventory-warning">Pensez à retirer une partie de cet objet de votre inventaire ou de votre stockage pour ne pas gêner la détection.</span>')
+            emit_tracking_event('Impossible d’acquérir ' + safe_item + '.<br><span class="inventory-warning">Pensez à retirer une partie de cet objet de votre inventaire ou de votre stockage pour ne pas gêner la détection.</span>')
         inventory_warning_seen[key] = now
     combined_ocr = normalise_ocr((text_simple or "") + "\n" + (notification_text or "")).replace("’", "'")
     if "invocation de l'allie" in combined_ocr and not (fight and mode_select in ("Invasion", "Arena")):
@@ -1203,7 +1218,7 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
             if not fight:
                 mode_select = "Defense"
                 mode_detected = True
-            prunt("Invocation de l’allié…")
+            emit_tracking_event("Invocation de l’allié…")
         ally_summoning_last_seen = now
     for sighting in sighting_tracker.observe(text_simple, notification_text, mode_select, mode_detected, in_combat=fight):
         try:
@@ -1218,7 +1233,7 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                     role = 'Autre envahisseur'
                 role += {'joined': ' arrivé', 'summoning': ' en cours d’invocation',
                          'left': ' reparti', 'dismissed': ' renvoyé dans son monde', 'died': ' mort', 'invaded': ' arrivé'}.get(sighting['event'], ' observé')
-                prunt(role + ' : ' + html.escape(sighting['name'].replace(',', ' ')))
+                emit_tracking_event(role + ' : ' + html.escape(sighting['name'].replace(',', ' ')))
         except Exception:
             app.logger.exception('Unable to record player sighting')
     if fight and mode_select == 'Invasion':
@@ -1257,8 +1272,8 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
             mod_launch = 0
             time_end = time.time()
             time_result = time_end - time_start
-            addScore(0, 0, 0, 0, 0, 1, 0, 0, 0)
-            prunt(correspondly_active[1]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+            apply_score(0, 0, 0, 0, 0, 1, 0, 0, 0)
+            emit_tracking_event(correspondly_active[1]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
         
         if kmp_search(detect_text_active[10], text_simple) != -1 and cant_fight == False:
             cant_fight = True
@@ -1267,7 +1282,7 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
             want_annul = False
             stape = 0
             mod_launch = 0
-            prunt(correspondly_active[2])
+            emit_tracking_event(correspondly_active[2])
         
         if kmp_search(detect_text_active[8], text_simple) != -1 and connexion_error == False and time.time() - time_start >= 8 and fight == True:
             # ERROR DE CONNEXION
@@ -1279,13 +1294,13 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
             mod_launch = 0
             fight = False
             stape = 0
-            addScore(0, 0, 0, 0, 0, 0, 0, 1, 0)
-            prunt(correspondly_active[3]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+            apply_score(0, 0, 0, 0, 0, 0, 0, 1, 0)
+            emit_tracking_event(correspondly_active[3]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
         
         if kmp_search(detect_text_active[7], text_simple) != -1 and wait_fighter == False:
             # EN ATTENTE DE JOUEURS
             if fight == False:
-                prunt(correspondly_active[4])
+                emit_tracking_event(correspondly_active[4])
                 fighter_exit = False
                 fighters_exit = False
                 wait_fighter = True
@@ -1304,16 +1319,16 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                 want_annul = False
                 fight = False
                 stape = 0
-                addScore(0, 0, 0, 0, 1, 0, 0, 0, 0)
-                prunt(correspondly_active[13])
+                apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
+                emit_tracking_event(correspondly_active[13])
         if kmp_search(detect_text_active[6], text_simple) != -1 and error == False:
-            prunt(correspondly_active[5])
+            emit_tracking_event(correspondly_active[5])
             error = True
             mod_launch = 0
             wait_fighter = False
             stape = 0
         if kmp_search(detect_text_active[5], text_simple) != -1 and error == False:
-            prunt(correspondly_active[6])
+            emit_tracking_event(correspondly_active[6])
             error = True
             mod_launch = 0
             wait_fighter = False
@@ -1321,7 +1336,7 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
             fighter_exit = False
             fighters_exit = False
         if kmp_search(detect_text_active[4], text_simple) != -1 and want_annul == False:
-            prunt(correspondly_active[7])
+            emit_tracking_event(correspondly_active[7])
             want_annul = True
             error = False
             mod_launch = 1
@@ -1329,7 +1344,7 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
             fighters_exit = False
         if kmp_search(detect_text_active[3], text_simple) != -1 and fighter_find == False:
             if fight == False:
-                prunt(correspondly_active[8])
+                emit_tracking_event(correspondly_active[8])
                 fighter_exit = False
                 fighter_find = True
                 error = False
@@ -1345,8 +1360,8 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                 want_annul = False
                 fight = False
                 stape = 0
-                addScore(0, 0, 0, 0, 1, 0, 0, 0, 0)
-                prunt(correspondly_active[13])
+                apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
+                emit_tracking_event(correspondly_active[13])
         if (kmp_search(detect_text_active[0], text_simple) != -1 or kmp_search(detect_text_active[13], text_simple) != -1) and fight == False:
         #    début du combat
             fight = True
@@ -1370,11 +1385,11 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
             top = 0
             right = int(width - (width / 4))
             bottom = int(height / 3)
-            addScore(0, 0, 0, 1, 0, 0, 1, 0, 0)
+            apply_score(0, 0, 0, 1, 0, 0, 1, 0, 0)
          
             croppedImage = original_image[top:bottom, left:right]
             start_fight = cv2.imwrite(path_start_fight, croppedImage)
-            prunt(correspondly_active[9])
+            emit_tracking_event(correspondly_active[9])
  
         elif (kmp_search(detect_text_active[1], text_simple) != -1 or kmp_search(detect_text_active[2], text_simple) != -1) and fight == True and time.time() - time_start >= 8 :
             # VICTORY
@@ -1392,8 +1407,8 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                 with open(path_start_fight, "rb") as f:
                     image_binary = f.read()
                     image = b64encode(image_binary).decode("utf-8")
-                    addCapture("", 1, 0, 0, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image)
-                addScore(1, 0, 0, 0, 0, 0, 0, 0, 0)
+                    add_capture("", 1, 0, 0, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image)
+                apply_score(1, 0, 0, 0, 0, 0, 0, 0, 0)
                 try:
                     if steam_history.finish_arena('victory', now.strftime('%Y-%m-%d %H:%M:%S')):
                         sightings_revision += 1
@@ -1404,10 +1419,10 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                 
                 
                 finish_fight = cv2.imwrite(path_finish_fight, original_grey)
-                prunt(correspondly_active[10]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+                emit_tracking_event(correspondly_active[10]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
             else:
                 
-                prunt(correspondly_active[11]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+                emit_tracking_event(correspondly_active[11]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
             time_start = time.time()
             time_end = time.time()
         
@@ -1429,8 +1444,8 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                 with open(path_start_fight, "rb") as f:
                     image_binary = f.read()
                     image = b64encode(image_binary).decode("utf-8")
-                    addCapture("", 0, 1, 0, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image)
-                addScore(0, 1, 0, 0, 0, 0, 0, 0, 0)
+                    add_capture("", 0, 1, 0, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image)
+                apply_score(0, 1, 0, 0, 0, 0, 0, 0, 0)
                 try:
                     if steam_history.finish_arena('defeat', now.strftime('%Y-%m-%d %H:%M:%S')):
                         sightings_revision += 1
@@ -1441,7 +1456,7 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                 
             
                 finish_fight = cv2.imwrite(path_finish_fight, original_grey)
-                prunt(correspondly_active[12]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+                emit_tracking_event(correspondly_active[12]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
             time_start = time.time()
             time_end = time.time()
         elif kmp_search(detect_text_active[15], text_simple) != -1  and fight == True :    
@@ -1461,8 +1476,8 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                 with open(path_start_fight, "rb") as f:
                     image_binary = f.read()
                     image = b64encode(image_binary).decode("utf-8")
-                    addCapture("", 0, 0, 1, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image)
-                addScore(0, 0, 1, 0, 0, 0, 0, 0, 0)
+                    add_capture("", 0, 0, 1, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image)
+                apply_score(0, 0, 1, 0, 0, 0, 0, 0, 0)
                 try:
                     if steam_history.finish_arena('draw', now.strftime('%Y-%m-%d %H:%M:%S')):
                         sightings_revision += 1
@@ -1473,7 +1488,7 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                 
             
                 finish_fight = cv2.imwrite(path_finish_fight, original_grey)
-                prunt(correspondly_active[20]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+                emit_tracking_event(correspondly_active[20]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
             time_start = time.time()
             time_end = time.time()
         if kmp_search(detect_text_active[12], text_simple) != -1 and fighter_exit == False and fight == True:
@@ -1487,8 +1502,8 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
             mod_launch = 0
             time_end = time.time()
             time_result = time_end - time_start
-            addScore(0, 0, 0, 0, 0, 1, 0, 0, 0)
-            prunt(correspondly_active[0]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+            apply_score(0, 0, 0, 0, 0, 1, 0, 0, 0)
+            emit_tracking_event(correspondly_active[0]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
             
         if kmp_search(detect_mod_active[0], text_simple) != -1 and mod_launch == 0:
             if kmp_search(detect_mod_active[1], text_simple) != -1 and mod_launch == 0:
@@ -1513,10 +1528,10 @@ def correspondly(text_simple, path_video_simple, original_grey, notification_tex
                     want_annul = False
                     fight = False
                     stape = 0
-                    addScore(0, 0, 0, 0, 1, 0, 0, 0, 0)
-                    prunt(correspondly_active[13])
+                    apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
+                    emit_tracking_event(correspondly_active[13])
                 else:
-                    prunt(text_mod)
+                    emit_tracking_event(text_mod)
                     mod_launch = 1
                     
 
@@ -1537,7 +1552,7 @@ def monitor():
    
 
     now = datetime.now()
-    prunt("Let's gooo ! [ "+str(now.strftime("%Y-%m-%d %H:%M:%S"))+" ]")
+    emit_tracking_event("Let's gooo ! [ "+str(now.strftime("%Y-%m-%d %H:%M:%S"))+" ]")
     global count
     global count_limit
     global cout_total
@@ -1556,9 +1571,9 @@ def monitor():
     global fight
     global monitor_user_img
     global monitor_user_lvl
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = str(image_dir())
     path_steam = os.path.join(base_dir, 'steam.jpg')        
-    path_logo_steam = os.path.join(base_dir, 'steam_logo.png') 
+    path_logo_steam = os.path.join(RESOURCE_DIR, 'steam_logo.png')
     logo = cv2.imread(path_logo_steam, cv2.IMREAD_GRAYSCALE)
     monitor_ready = bool(run_monitor)
     
@@ -1585,11 +1600,9 @@ def monitor():
                 0, int((height_screen - (height_screen / 2)) + (height_screen / 2.5)),
                 int(width_screen / 3.2), 100))
 
-            elden_find = False
             windows = pygetwindow.getAllWindows()
-            for window in windows:
-                if "ELDEN RING™" in window.title:
-                    elden_find = True
+            window_titles = [(window, window.title) for window in windows]
+            elden_find = any("ELDEN RING™" in title for _, title in window_titles)
             game_running = elden_find
                  
             
@@ -1603,14 +1616,12 @@ def monitor():
                     fight = False
                     stape = 0
                     if elden_find == False: 
-                        addScore(0, 0, 0, 0, 0, 0, 0, 0, 1)
-                        prunt(correspondly_active[21])
+                        apply_score(0, 0, 0, 0, 0, 0, 0, 0, 1)
+                        emit_tracking_event(correspondly_active[21])
                         mode_select = 'Arena'
                     else:
-                        addScore(0, 0, 0, 0, 1, 0, 0, 0, 0)
-                        prunt(correspondly_active[13])
-            
-            settings = checkSetting()[0]
+                        apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
+                        emit_tracking_event(correspondly_active[13])
             
             text_steam = pytesseract.image_to_string(img_steam)
             try:
@@ -1627,10 +1638,10 @@ def monitor():
             # if monitor_user_img == True or monitor_user_lvl == True:       
             #     max_val_runes = 1
             
-            game_windows = pygetwindow.getWindowsWithTitle('ELDEN RING')
+            game_windows = [(window, title) for window, title in window_titles if 'ELDEN RING' in title.upper()]
             foreground_hwnd = get_foreground_window()
             game_in_foreground = bool(game_windows) and get_window_text(foreground_hwnd) == "ELDEN RING™"
-            game_hwnd = next((window._hWnd for window in game_windows if window.title == "ELDEN RING™"), None)
+            game_hwnd = next((window._hWnd for window, title in game_windows if title == "ELDEN RING™"), None)
             overlay_window = bool(game_hwnd and not game_in_foreground and
                                   steam_overlay.is_steam_overlay_window(foreground_hwnd, game_hwnd))
             steam_overlay_open = overlay_detector.update(foreground_hwnd if game_in_foreground else None,
@@ -1689,17 +1700,17 @@ def monitor():
                     #Extract text from image
                     game_model = game_language.LANGUAGES[game_locale][1]
                     ocr_data = game_ocr_data_config()
-                    text_simple = pytesseract.image_to_string(original_grey, lang=game_model, config="--psm 12 --oem 1" + ocr_data)
-                    notification_text = pytesseract.image_to_string(notification_grey, lang=game_model, config="--psm 6 --oem 1" + ocr_data)
+                    text_simple = measured_game_ocr(original_grey, lang=game_model, config="--psm 12 --oem 1" + ocr_data)
+                    notification_text = measured_game_ocr(notification_grey, lang=game_model, config="--psm 6 --oem 1" + ocr_data)
                     if fight and mode_select == 'Defense':
                         frame = cv2.imread(path_video_simple)
                         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                         death_mask = cv2.inRange(hsv, (0, 70, 40), (12, 255, 255)) | cv2.inRange(hsv, (165, 70, 40), (179, 255, 255))
-                        death_text = pytesseract.image_to_string(death_mask, lang=game_model, config='--psm 6' + ocr_data)
+                        death_text = measured_game_ocr(death_mask, lang=game_model, config='--psm 6' + ocr_data)
                         if 'vous avez peri' in normalise_ocr(death_text):
                             text_simple += '\n' + death_text
                 
-                    correspondly(text_simple, path_video_simple, original_grey, notification_text)
+                    process_game_text(text_simple, path_video_simple, original_grey, notification_text)
                 
                 # try:
                 #     # Result(text_simple, "")
@@ -1747,7 +1758,7 @@ def sub_monitor():
                         
                     
                         user_img_tampo = ""
-                        base_dir = os.path.dirname(os.path.abspath(__file__))
+                        base_dir = str(image_dir())
                         path_user_img = os.path.join(base_dir, 'user.jpg')  
                         path_user_lvl = os.path.join(base_dir, 'user_lvl.jpg')  
                         path_user_img_panel = os.path.join(base_dir, 'user_panel.jpg')  
@@ -1787,7 +1798,7 @@ def sub_monitor():
                                 img_user.save(path_user_img, 'JPEG', optimize=True, quality=100)  
                                 
                             
-                                user = checkUser()[0]
+                                user = load_user()[0]
                                 tampo_base64 = user[6]
                                 with open(path_user_img, "rb") as f:
                                     image_binary_bis = f.read()
@@ -1838,10 +1849,10 @@ def monitor_user():
     if mod_select == "img_avatar":
         if monitor_user_img == False and user_img_tampo == "":
             monitor_user_img = True
-        user = checkUser()[0]
+        user = load_user()[0]
         tampo_base64 = user[6]
         if tampo_base64 != user_img_tampo and user_img_tampo != "":
-            addImgUser(user_img_tampo)
+            update_user_image(user_img_tampo)
             result = user_img_tampo
             user_img_tampo = ""
             return jsonify({"request": "success", "interval":result}) 
@@ -1852,7 +1863,7 @@ def monitor_user():
             monitor_user_lvl = True
         if user_img_tampo != "":
             monitor_user_lvl = False
-            addLVLUser(user_img_tampo)
+            update_user_level(user_img_tampo)
             result = user_img_tampo
             user_img_tampo = ""
             return jsonify({"request": "success", "interval":result}) 
@@ -1862,11 +1873,11 @@ def monitor_user():
  
                                    
                                 
-@app.route("/updateNotify", methods={"POST"})
-def updateNotify():
+@app.route("/updateNotify", endpoint="updateNotify", methods={"POST"})
+def update_notification_region():
     top = request.form.get("top")
     bottom = request.form.get("bottom")
-    settings = checkSetting()[0]
+    settings = load_settings()[0]
    
-    updateSetting(settings[1], settings[2], settings[3], str(top), str(bottom), settings[6])
+    update_settings(settings[1], settings[2], settings[3], str(top), str(bottom), settings[6])
     return jsonify({"request": "success", "settings": settings})

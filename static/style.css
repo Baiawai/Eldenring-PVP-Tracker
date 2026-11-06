@@ -114,16 +114,16 @@ ul li span{
     margin-left:10px;
     
 }
-.counteur{
+.scoreboard{
     height:auto;
     position:relative;
     margin-top:10px;
     margin-bottom:0px;
 }
-.counteur ul li:first-child {
+.scoreboard ul li:first-child {
     filter: drop-shadow(rgb(255, 218, 150) 0px 0px 10px);
 }
-.img_elden2:hover{
+.app-logo:hover{
     filter: drop-shadow(rgba(255, 218, 150, 0.5) 0px 0px 5px);
 }
 button{
@@ -140,7 +140,7 @@ button{
 p{
     font-size:20px;
 }
-.cadre_settings{
+.settings-panel{
     position: absolute;
     top:0px;
     left:0px;
@@ -238,7 +238,7 @@ p{
     background-color: rgba(0,0,0,0.8);
     
 }
-.nav_menu{
+.app-header{
    position:relative;
     min-width:250px;
     z-index:1000;
@@ -248,7 +248,7 @@ p{
     overflow-y:auto;
     opacity:0;
 }
-.containeur{
+.app-content{
     display:inline-block;
     position:relative;
     width:calc(100% - 250px);
@@ -262,7 +262,7 @@ p{
     /* background-image:url("/static/Colesseum.jpg"); */
  
 }
-.containeur_info{
+.profile-sidebar{
     width:20%;
     height:100%;
     background: RGB(14, 14, 14);
@@ -319,7 +319,7 @@ p{
     overflow:hidden;
     z-index:1020;
 }
-.cardre_captures{
+.captures-panel{
     display:none;
     width:100%;
     height:0%;
@@ -332,10 +332,10 @@ p{
     overflow:hidden;
     flex-direction:column;
 }
-.nav_menu:has(#menu_button_captures.active) ~ .containeur .cardre_captures {
+.app-header:has(#menu_button_captures.active) ~ .app-content .captures-panel {
     display:flex;
 }
-.cardre_captures .capture-toolbar {
+.captures-panel .capture-toolbar {
     position:relative;
     flex:0 0 auto;
 }
@@ -633,7 +633,7 @@ margin:0px;
     margin-bottom:10px;
     animation:none  !important;
 }
-.list_menu{
+.main-menu{
     z-index:1000;
     height:auto;
     position:relative;
@@ -641,7 +641,7 @@ margin:0px;
     overflow:hidden;
     
 }
-.list_menu li{
+.main-menu li{
     padding:5%;
     margin-top:10%;
     background-color:#000  ;
@@ -651,18 +651,20 @@ margin:0px;
     cursor:pointer;
     z-index:1000;
 }
-/* .list_menu li:first-child , .list_menu li.active:first-child{
+body[data-store-build="true"] #menu_button_multi,
+body[data-store-build="true"] .cadre_multi { display: none !important; }
+/* .main-menu li:first-child , .main-menu li.active:first-child{
     background-color:#a68d60 !important;  
     color: #000 !important;
     -webkit-text-fill-color: rgb(0, 0, 0,1);
     font-weight:bold;
  
 } */
-.list_menu li.mode-indicator {
+.main-menu li.mode-indicator {
     margin-top:15%;
     cursor:default;
 }
-.list_menu li.mode-indicator div{
+.main-menu li.mode-indicator div{
     display:inline-block;
     width:30%;
     height:60px;
@@ -672,37 +674,37 @@ margin:0px;
     padding:0px;
     border:1px solid rgb(166, 141, 96,0.5);
 }
-.list_menu li.mode-indicator p{
+.main-menu li.mode-indicator p{
     margin:0px auto;
     margin-bottom:10px;
 }
-.list_menu li.mode-indicator div img{
+.main-menu li.mode-indicator div img{
     width:100%;
     height:100%;
     padding:0px;
     margin:0px;
     
 }
-.list_menu li.mode-indicator div.active img{
+.main-menu li.mode-indicator div.active img{
     width:100%;
     height:100%;
     padding:0px;
     margin:0px;
     filter: drop-shadow(rgb(255, 218, 150) 0px 0px 10px);
 }
-.list_menu li.mode-indicator div.active img:active{
+.main-menu li.mode-indicator div.active img:active{
     filter: drop-shadow(rgb(255, 218, 150) 0px 0px 15px);
 }
-.list_menu li.active{
+.main-menu li.active{
     -webkit-text-fill-color: rgb(212, 176, 107);
     transform:scale(1.1);
     filter: drop-shadow(0 0 .25vw black) drop-shadow(0 0 .25vw black) drop-shadow(0 0 0.75rem #a68d60);
 }
-.list_menu li:hover{
+.main-menu li:hover{
     transform:scale(1.1);
     filter: drop-shadow(0 0 .25vw black) drop-shadow(0 0 .25vw black) drop-shadow(0 0 0.75rem #a68d60);
 }
-.list_menu li.mode-indicator:hover{
+.main-menu li.mode-indicator:hover{
     transform:scale(1);
     filter: drop-shadow(0 0 .25vw black) drop-shadow(0 0 .25vw black);
 }
@@ -753,7 +755,7 @@ margin:0px;
     overflow-y: auto;
     overflow-x: hidden;
 }
-.img_elden2{
+.app-logo{
     margin-top:10px;
     transition: all 0.5s;
 }
@@ -818,7 +820,7 @@ position:relative;
     background: RGB(26, 26, 26);
 }
 
-.img_elden2{
+.app-logo{
 
 max-width:180px;
 
@@ -1737,7 +1739,7 @@ input[type=range] {
     font-family: optimus princeps;
 }
 
-.cadre_user{
+.profile-card{
     /* position:absolute; */
     bottom:25px;
     right:25px;
@@ -1755,10 +1757,10 @@ input[type=range] {
     overflow: hidden;
     transition: all 0.5s;
 }
-.cadre_user:hover{
+.profile-card:hover{
 opacity:1;
 }
-.cadre_user img{
+.profile-card img{
     max-width:90%;
     max-height:90%;
     margin-top:5%;
@@ -1766,7 +1768,7 @@ opacity:1;
     position: relative;
 }
 
-.cadre_user p{
+.profile-card p{
 margin:0px auto;
 text-align:left;
 font-size:18px;
@@ -1777,7 +1779,7 @@ width:90%;
 margin-bottom:5px;
 color:#999;
 }
-.cadre_user .stats-left{
+.profile-card .stats-left{
 display:inline-block;
 vertical-align: top;
 width:calc(70% - 10px);
@@ -1787,7 +1789,7 @@ font-size:18px;
 text-align:left;
 padding-left:10px;
 }
-.cadre_user .stats-right{
+.profile-card .stats-right{
     display:inline-block;
     vertical-align: top;
     width:calc(25% - 20px);
@@ -1797,7 +1799,7 @@ padding-left:10px;
     text-align:right;
     padding-right:20px;
 }
-.cadre_user h5{
+.profile-card h5{
     margin:0px;
     margin-bottom:0px;
     width:90%;
@@ -1812,11 +1814,11 @@ padding-left:10px;
     position: relative;
 }
 
-.cadre_user h5 span:nth-child(2){
+.profile-card h5 span:nth-child(2){
     font-size:18px;
     color:#fff;
 }
-.header_carde{
+.profile-card-header{
     width:100%;
 }
 .scroll_card{
@@ -1947,11 +1949,12 @@ font-family: optimus princeps;
     -webkit-animation-delay: 0.6s;
   }
   .intro-banner-vdo-play-btn img{
+    content: url("loader-classic-eye.png");
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(50%, 50%);
-    filter: brightness(0%);
+    object-fit: contain;
     width: 100px;
     height: 100px;
   }
@@ -2252,7 +2255,7 @@ font-family: optimus princeps;
     width: min(100%, 25.78vh);
     aspect-ratio: 8 / 9;
     margin: 0 auto;
-    background: #080706;
+    background: #000;
     border: 1px solid rgba(166,141,96,.55);
     box-shadow: 0 0 2px #a68d60;
     overflow: hidden;
@@ -2261,8 +2264,9 @@ font-family: optimus princeps;
 .steam-ping-setting { margin: 18px 0; }
 .steam-ping-setting p { margin: 8px 0; }
 #steam_ping_activate { font-size: 18px; padding: 7px 10px; }
+#steam_ping_activate[hidden], #steam_ping_help[hidden] { display: none; }
 #steam_ping_status { color: #d4bd8f; }
-.live > b { margin-top: 10px; }
+.live > b { margin-top: 20px; }
 #steam_peer_list li { display: block; }
 .steam-peer-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 #steam_peer_list .steam-peer-name { display: block; flex: 1; min-width: 0; border: 0; border-radius: 0; padding: 0; margin: 0; color: #d4bd8f; font: 18px/1.3 Arial,sans-serif; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2273,7 +2277,7 @@ font-family: optimus princeps;
 .live-preview-loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .live-preview-ripple { position: absolute; width: 125px; height: 125px; border-radius: 50%; background: rgb(140,119,81); opacity: 0; animation: ripple 1.8s infinite; }
 .live-preview-ripple:nth-child(2) { animation-delay: .6s; }
-.live-preview-emblem { position: relative; width: 66px; height: 66px; background: url('/static/eldenring-sign2.webp') center / contain no-repeat; filter: brightness(0%); }
+.live-preview-emblem { position: relative; width: 66px; height: 66px; background: url('/static/loader-classic-eye.png') center / contain no-repeat; }
 .live .live-preview img { display: none; position: relative; z-index: 1; }
 .live-preview.has-image img { display: block; }
 .live-preview.has-image .live-preview-loader { display: none; }
@@ -2284,3 +2288,25 @@ font-family: optimus princeps;
 
 #steam_manual_setup { margin-top: 12px; color: #d4bd8f; }
 #steam_manual_setup summary { cursor: pointer; }
+
+/* Session controls in settings. */
+.settings-panel .form_single.form_btn { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; height:auto; padding:18px 4%; }
+.settings-panel .form_single.form_btn button { box-sizing:border-box; flex:1 1 220px; width:auto; max-width:360px; min-height:50px; height:auto; margin:0; padding:11px 18px; border:1px solid #806b45; border-radius:2px; background:linear-gradient(145deg,#302a1e,#17140f); box-shadow:none; color:#f0dfbd; font-size:18px; line-height:1.35; white-space:normal; cursor:pointer; }
+.settings-panel .form_single.form_btn #close_app { border-color:#8b5b4e; background:linear-gradient(145deg,#3a241e,#1e1511); }
+.settings-panel .form_single.form_btn button:hover { border-color:#d4bd8f; background:#423726; box-shadow:0 0 12px rgba(212,189,143,.2); }
+.settings-panel .form_single.form_btn #close_app:hover { border-color:#cb9280; background:#4a2b23; }
+.settings-panel .form_single.form_btn button:focus-visible { outline:2px solid #e1c487; outline-offset:3px; }
+
+/* Ornamental frame around the live capture, extending beyond its edges. */
+.live-preview { border: 0; box-shadow: none; overflow: visible; }
+.live-preview::after {
+    content: "";
+    position: absolute;
+    inset: -14% -25%;
+    z-index: 2;
+    background: url("live-preview-arabesques.png") center / 100% 100% no-repeat;
+    pointer-events: none;
+}
+
+/* Keep the home logo current when the running server has cached the template. */
+.img_eldenring img { content: url('home-logo-classic-eye.png'); }

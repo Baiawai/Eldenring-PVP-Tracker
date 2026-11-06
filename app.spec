@@ -42,5 +42,5 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     version='file_version_info.txt',
-    icon=['baia.ico'],
+    icon=['static/tracker-eye.ico'],
 )

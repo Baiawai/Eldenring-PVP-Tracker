@@ -1,8 +1,66 @@
 import unittest
+import importlib.util
+import json
+import sys
+import types
+from pathlib import Path
+from unittest.mock import patch
 from application.locale_catalog import messages, classify, tracker_notifications, PLACEHOLDER, _EVENT_BY_ID
 
 
 class MultilingualCatalogTests(unittest.TestCase):
+    def test_statistics_translations_are_complete_and_synchronised(self):
+        root = Path(__file__).resolve().parents[1]
+        packs = json.loads((root / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        script = (root / 'static/ui-packs.js').read_text(encoding='utf-8')
+        self.assertEqual(packs, json.loads(script.removeprefix('window.ELDEN_UI_PACKS = ').strip().removesuffix(';')))
+        keys = ('stats_win_rate', 'stats_rate_explanation', 'stats_capture_explanation',
+                'stats_chart_empty', 'stats_chart_error', 'stats_chart_expand', 'stats_chart_collapse',
+                'stats_current_win_streak', 'stats_current_loss_streak', 'stats_score', 'stats_abandons',
+                'stats_opponent_left', 'stats_connection_errors', 'stats_game_closed')
+        for language, pack in packs.items():
+            for key in keys:
+                with self.subTest(language=language, key=key):
+                    self.assertTrue(pack['modern'].get(key))
+
+    def test_leaderboard_translations_are_complete(self):
+        root = Path(__file__).resolve().parents[1]
+        packs = json.loads((root / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        keys = ('leaderboard_eyebrow', 'leaderboard_title', 'leaderboard_intro',
+                'leaderboard_refresh', 'leaderboard_loading', 'leaderboard_profile_required', 'leaderboard_error',
+                'leaderboard_rank', 'leaderboard_level', 'leaderboard_close_card', 'leaderboard_no_avatar', 'leaderboard_open_card',
+                'leaderboard_previous_player', 'leaderboard_next_player')
+        for language, pack in packs.items():
+            for key in keys:
+                with self.subTest(language=language, key=key):
+                    self.assertTrue(pack['modern'].get(key))
+
+    def test_information_faq_has_all_translations(self):
+        root = Path(__file__).resolve().parents[1]
+        packs = json.loads((root / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            self.assertTrue(pack['modern'].get('information_title'))
+            self.assertTrue(pack['modern'].get('faq_contact'))
+            for index in range(1, 15):
+                for kind in ('q', 'a'):
+                    with self.subTest(language=language, question=index, kind=kind):
+                        self.assertTrue(pack['modern'].get(f'faq_{kind}_{index:02d}'))
+
+    def test_every_interface_language_has_a_game_catalog_and_ocr_model(self):
+        root = Path(__file__).resolve().parents[1]
+        init = types.ModuleType('application.init')
+        init.database_setting = ':memory:'
+        spec = importlib.util.spec_from_file_location('_test_game_language', root / 'application/game_language.py')
+        game_language = importlib.util.module_from_spec(spec)
+        with patch.dict(sys.modules, {'application.init': init}):
+            spec.loader.exec_module(game_language)
+        packs = json.loads((root / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        self.assertEqual(set(game_language.UI_TO_GAME), set(packs) | {'fra'})
+        self.assertEqual(set(game_language.UI_TO_GAME.values()), set(messages()))
+        self.assertEqual(set(game_language.LANGUAGES), set(messages()))
+        for _, model in game_language.LANGUAGES.values():
+            self.assertTrue((root / 'application/locales/tessdata' / (model + '.traineddata')).is_file(), model)
+
     def test_all_catalog_messages_map_to_their_intended_events(self):
         catalog = messages()
         self.assertEqual(len(catalog), 15)

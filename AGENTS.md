@@ -8,7 +8,7 @@ Lire [README.md](README.md) avant une modification importante. Ne pas supposer q
 
 ## Données et partie en cours
 
-- Les données réelles se trouvent dans `%APPDATA%\hid_el_cou\`. Ne pas effacer ni modifier les statistiques, captures, historiques ou paramètres pour tester, sauf demande explicite.
+- Les données réelles se trouvent dans `%APPDATA%\Elden Ring PvP Tracker\`. Ne pas effacer ni modifier les statistiques, captures, historiques ou paramètres pour tester, sauf demande explicite.
 - Les fichiers `application/simple_*.jpg`, `simple_notif_*.jpg`, `steam.jpg`, `template_notif.jpg`, `start_.jpg`, `finish_.jpg`, `user.jpg` et `user_panel.jpg` sont des images générées par le suivi ; ne pas les publier comme ressources du projet.
 - Avant de redémarrer le serveur ou d’interrompre le suivi, vérifier si un combat est en cours. S’il y en a un, attendre sa fin avec l’utilisateur. Une recherche d’invasion seule n’est pas un combat commencé. Attention : la lecture de `/interval` consomme des messages en attente ; éviter les interrogations répétées pendant une partie.
 - Le redémarrage du tracker réinitialise la session en mémoire. Préférer un simple rafraîchissement pour les changements CSS/JS lorsqu’il suffit.

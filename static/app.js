@@ -5,7 +5,7 @@ Chart.defaults.font.size = 18;
 $('#menu_button_info').insertAfter('#menu_button_multi');
 
 // Older pages cached by the running server receive the same separate scroll area.
-const captureContainer = document.querySelector('.cardre_captures');
+const captureContainer = document.querySelector('.captures-panel');
 if (captureContainer && !captureContainer.querySelector('.capture-scroll')) {
     const scrollArea = document.createElement('div');
     scrollArea.className = 'capture-scroll';
@@ -41,8 +41,8 @@ $( document ).ready(function() {
                 if(val >= -1){
                 $(".sprit").css("background-position", val+"% 50%").css("background-size", new_width+"px 100% ");
                 val -= 4.54;
-                    if(val > 50 && $(".nav_menu").css("opacity") != "1" && $(".nav_menu").css("opacity") != 1){
-                    $(".nav_menu").css("opacity","1");  
+                    if(val > 50 && $(".app-header").css("opacity") != "1" && $(".app-header").css("opacity") != 1){
+                    $(".app-header").css("opacity","1");
                   
                    
                     }
@@ -225,237 +225,58 @@ var day_heb = ["יום שני", "יום שלישי", "יום רביעי", "יו�
 var days_active = "";
 
 
-function launchLanguages(language){
-    if(language == "eng"){
-        text_active = text_en;
-        interface_active = interface_en;
-        days_active = day_eng;
-            $('#table_multi').DataTable().destroy();
-            $('#table_multi').DataTable();
+// TABLE_LANGUAGE_START
+// Ignore late translation responses after the user changes languages again.
+function createTableLanguageSetter(jquery) {
+    const files = {fra:'fra', spa:'spa', spaes:'spa', spaar:'spa', ita:'ita', deu:'deu',
+        rus:'rus', jap:'jap', chi:'chi', por:'por', nld:'nld', nor:'nor', fin:'fin',
+        dan:'dan', tur:'tur', kor:'kor', ell:'ell', pol:'pol', ces:'ces', ron:'ron',
+        ara:'ara', heb:'heb', zht:'zht', tha:'tha'};
+    let generation = 0;
+    function apply(data) {
+        const table = jquery('#table_multi');
+        table.DataTable().destroy();
+        table.DataTable(data ? {language:data} : undefined);
     }
-    if(language == "fra"){
-        text_active = text_fr
-        interface_active = interface_fr;
-        days_active = day_fra;
-            $.getJSON("/static/table_fra.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "spa"){
-        text_active = text_fr
-        interface_active = interface_spa;
-        days_active = day_spa;
-            $.getJSON("/static/table_spa.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "ita"){
-        text_active = text_ita
-        interface_active = interface_ita;
-        days_active = day_ita;
-            $.getJSON("/static/table_ita.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "deu"){
-        text_active = text_deu
-        interface_active = interface_deu;
-        days_active = day_deu;
-            $.getJSON("/static/table_deu.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "rus"){
-        text_active = text_rus
-        interface_active = interface_rus;
-        days_active = day_rus;
-            $.getJSON("/static/table_rus.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "jap"){
-        text_active = text_jap
-        interface_active = interface_jap;
-        days_active = day_jap;
-            $.getJSON("/static/table_jap.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "chi"){
-        text_active = text_chi
-        interface_active = interface_chi;
-        days_active = day_chi;
-            $.getJSON("/static/table_chi.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "por"){
-        text_active = text_por
-        interface_active = interface_por;
-        days_active = day_por;
-            $.getJSON("/static/table_por.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "nld"){
-        text_active = text_nld
-        interface_active = interface_nld;
-        days_active = day_nld;
-            $.getJSON("/static/table_nld.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
- 
-    if(language == "nor"){
-        text_active = text_nor
-        interface_active = interface_nor;
-        days_active = day_nor;
-            $.getJSON("/static/table_nor.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "fin"){
-        text_active = text_fin
-        interface_active = interface_fin;
-        days_active = day_fin;
-            $.getJSON("/static/table_fin.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "dan"){
-        text_active = text_dan
-        interface_active = interface_dan;
-        days_active = day_dan;
-            $.getJSON("/static/table_dan.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "tur"){
-        text_active = text_tur
-        interface_active = interface_tur;
-        days_active = day_tur;
-            $.getJSON("/static/table_tur.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "kor"){
-        text_active = text_kor
-        interface_active = interface_kor;
-        days_active = day_kor;
-            $.getJSON("/static/table_kor.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "ell"){
-        text_active = text_ell
-        interface_active = interface_ell;
-        days_active = day_ell;
-            $.getJSON("/static/table_ell.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "pol"){
-        text_active = text_pol
-        interface_active = interface_pol;
-        days_active = day_pol;
-            $.getJSON("/static/table_pol.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "ces"){
-        text_active = text_ces
-        interface_active = interface_ces;
-        days_active = day_ces;
-            $.getJSON("/static/table_ces.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-  
-    if(language == "ron"){
-        text_active = text_ron
-        interface_active = interface_ron;
-        days_active = day_ron;
-            $.getJSON("/static/table_ron.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "ara"){
-        text_active = text_ara
-        interface_active = interface_ara;
-        days_active = day_ara;
-            $.getJSON("/static/table_ara.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
-    if(language == "heb"){
-        text_active = text_heb
-        interface_active = interface_heb;
-        days_active = day_heb;
-            $.getJSON("/static/table_heb.json", function(data){
-                    $('#table_multi').DataTable().destroy();
-                    $('#table_multi').DataTable({
-                        "language": data     
-                    });      
-            });
-    }
+    return function setTableLanguage(language) {
+        const current = ++generation;
+        const file = Object.prototype.hasOwnProperty.call(files, language) ? files[language] : null;
+        if (!file) { apply(null); return; }
+        jquery.getJSON('/static/table_' + file + '.json')
+            .done(function (data) { if (current === generation) apply(data); })
+            .fail(function () { if (current === generation) apply(null); });
+    };
+}
+// TABLE_LANGUAGE_END
+const setLeaderboardLanguage = createTableLanguageSetter($);
 
+function launchLanguages(language){
+    const legacyLanguages = {
+        eng:[text_en, interface_en, day_eng],
+        fra:[text_fr, interface_fr, day_fra],
+        spa:[text_fr, interface_spa, day_spa],
+        ita:[text_ita, interface_ita, day_ita],
+        deu:[text_deu, interface_deu, day_deu],
+        rus:[text_rus, interface_rus, day_rus],
+        jap:[text_jap, interface_jap, day_jap],
+        chi:[text_chi, interface_chi, day_chi],
+        por:[text_por, interface_por, day_por],
+        nld:[text_nld, interface_nld, day_nld],
+        nor:[text_nor, interface_nor, day_nor],
+        fin:[text_fin, interface_fin, day_fin],
+        dan:[text_dan, interface_dan, day_dan],
+        tur:[text_tur, interface_tur, day_tur],
+        kor:[text_kor, interface_kor, day_kor],
+        ell:[text_ell, interface_ell, day_ell],
+        pol:[text_pol, interface_pol, day_pol],
+        ces:[text_ces, interface_ces, day_ces],
+        ron:[text_ron, interface_ron, day_ron],
+        ara:[text_ara, interface_ara, day_ara],
+        heb:[text_heb, interface_heb, day_heb]
+    };
+    const legacy = legacyLanguages[language] || legacyLanguages.eng;
+    [text_active, interface_active, days_active] = legacy;
+    setLeaderboardLanguage(language);
     const localePack = window.ELDEN_UI_PACKS && window.ELDEN_UI_PACKS[language];
     if (localePack) {
         interface_active = localePack.legacy;
@@ -464,13 +285,6 @@ function launchLanguages(language){
         text_active[3] = localePack.modern.detection_enabled;
         const formatter = new Intl.DateTimeFormat(localePack.html_lang, {weekday:'long', timeZone:'UTC'});
         days_active = Array.from({length:7}, (_, i) => formatter.format(new Date(Date.UTC(2024, 0, 1 + i))));
-    }
-    if(interface_active == undefined){
-        text_active = text_en;
-        interface_active = interface_en;
-        days_active = day_eng;
-            $('#table_multi').DataTable().destroy();
-            $('#table_multi').DataTable();
     }
     $(".languages span").addClass("hide");
     $(".languages span[lang="+language+"]").removeClass("hide");
@@ -500,7 +314,7 @@ function launchLanguages(language){
     $(".btn-chart button[mode='48h']").text(interface_active[26]);
     $(".btn-chart button[mode='7j']").text(interface_active[27]);
     $(".btn-chart button[mode='30j']").text(interface_active[28]);
-    $(".btn-chart button[mode='all']").text(interface_active[29]);
+    $(".btn-chart button[mode='all']").not('[data-i18n]').text(interface_active[29]);
     $(".panel_user table .tb-1").text(interface_active[30]);
     $(".panel_user table .tb-2").text(interface_active[31]);
     $(".panel_user table .tb-3").text(interface_active[32]);
@@ -575,7 +389,7 @@ list_lang = ["eng", "fra", "deu", "ita", "spaes", "spaar", "por", "pol", "rus", 
 let start_ready = true;
 $("#start").click(function(){
     if(start_ready == true){
-    if (!$(this).hasClass("active") && $(".cadre_settings").is(":visible")) {
+    if (!$(this).hasClass("active") && $(".settings-panel").is(":visible")) {
         $("#menu_button_settings").click();
     }
     start_ready = false;
@@ -622,10 +436,10 @@ $("#start").click(function(){
     $(".cadreStats").append($("<p class='elden-on simple monitor-status monitor-starting'>").text(text_active[4]));
     setTimeout(function() {
         $('.cadreStats').scrollTop($('.cadreStats')[0].scrollHeight);
-        if($(".cadre_user").is(":hidden")){
-            $(".cadre_user").show();
-            $(".cadre_user img").css("max-height",($(".cadre_user").height() / 3)+"px");
-            $(".cadre_user .scroll_card").css("height",($(".cadre_user").height() - $(".header_carde.img_user").height()) - 5+"px");
+        if($(".profile-card").is(":hidden")){
+            $(".profile-card").show();
+            $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
+            $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
         }
     }, 200);
     runApp = setInterval(intervall, 3000);
@@ -653,7 +467,7 @@ $("#start").click(function(){
 }
 if(!$(".modal_chart").hasClass("hide")){
     $(".modal_chart").addClass("hide");
-    $(".containeur_chart").show();
+    $(".chart-container").show();
     launchChart(mode_chart, 1);
 }
 if($("#menu_button_captures").hasClass("active")){
@@ -664,8 +478,8 @@ if($("#menu_button_captures").hasClass("active")){
 
 $( window ).resize(function() {
    
-    $(".cadre_user img").css("max-height",($(".cadre_user").height() / 3)+"px");
-    $(".cadre_user .scroll_card").css("height",($(".cadre_user").height() - $(".header_carde.img_user").height()) - 5+"px");
+    $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
+    $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
     initSetting();
 });
 
@@ -674,6 +488,7 @@ $( window ).resize(function() {
 var selected_stats_mode = 'Arena';
 var detected_stats_mode = null;
 var stats_request_version = 0;
+var stats_last_chart_snapshot = null;
 
 function appT(key, french) { return window.uiT ? window.uiT(key, french) : french; }
 function statsModeLabel(mode) {
@@ -682,7 +497,7 @@ function statsModeLabel(mode) {
 
 function renderInfoStats(user) {
     const fields = {
-        ratio_count: 7, score_count: 16, abandons_count: 12, combats_count: 9,
+        score_count: 16, abandons_count: 12, combats_count: 9,
         noResult_count: 10, fight_exit_count: 11, victory_count: 2, defeat_count: 3,
         egality_count: 4, serie_victory_count: 13, serie_defeat_count: 14,
         connexionError_count: 17, gameExit_count: 18
@@ -690,6 +505,14 @@ function renderInfoStats(user) {
     Object.keys(fields).forEach(function(field) {
         $('#stats_panel .' + field).text(user[fields[field]]);
     });
+    const ratio = window.TrackerStats.winRate(user, selected_stats_mode);
+    $('#stats_panel .ratio_count').text(new Intl.NumberFormat(document.documentElement.lang || undefined, {maximumFractionDigits: 2}).format(ratio));
+    const snapshot = {mode:selected_stats_mode, results:[user[2], user[3], user[4]].join('|')};
+    if (stats_last_chart_snapshot && stats_last_chart_snapshot.mode === snapshot.mode &&
+        stats_last_chart_snapshot.results !== snapshot.results && !document.getElementById('stats_panel').hidden) {
+        launchChart(mode_chart, mode_window);
+    }
+    stats_last_chart_snapshot = snapshot;
     $('#stats_mode_error').hide();
 }
 
@@ -714,7 +537,7 @@ $('#stats_mode_choice').on('change', function() {
     selected_stats_mode = choice === 'auto' ? (detected_stats_mode || 'Arena') : choice;
     updateStatsModeVisibility();
     refreshInfoStats();
-    launchChart(mode_chart, 1);
+    launchChart(mode_chart, mode_window);
 });
 
 function intervall(){
@@ -754,12 +577,12 @@ function intervall(){
             renderSidebar();
             renderMonitorStatus();
             renderSessionSummary(response.session_summary);
-            $('.counteur .egality').closest('li').toggle(effectiveMode === 'Arena');
+            $('.scoreboard .egality').closest('li').toggle(effectiveMode === 'Arena');
             $('#stats_mode_choice option[value="auto"]').text(detectedMode ? appT('automatic', 'Automatique') + ' · ' + statsModeLabel(detectedMode) : appT('automatic_detection', 'Détection automatique'));
             if ($('#stats_mode_choice').val() === 'auto' && selected_stats_mode !== effectiveMode) {
                 selected_stats_mode = effectiveMode;
                 updateStatsModeVisibility();
-                launchChart(mode_chart, 1);
+                launchChart(mode_chart, mode_window);
             }
             time_actuel = Math.ceil(invasion ? time_actuel : time_max - time_actuel)
             if(fight == true){
@@ -812,9 +635,9 @@ function intervall(){
             let gameExit = response["user"][18];
             let ratio = response["user"][7];
             let userLvl = response["user"][19];
-            $(".counteur .victory_count").text(victory);
-            $(".counteur .defeat_count").text(defeat);
-            $(".counteur .egality_count").text(egality);
+            $(".scoreboard .victory_count").text(victory);
+            $(".scoreboard .defeat_count").text(defeat);
+            $(".scoreboard .egality_count").text(egality);
             if ($('#stats_mode_choice').val() === 'auto') {
                 stats_request_version++;
                 renderInfoStats(response.user);
@@ -978,7 +801,7 @@ function getCapture(result, Time){
             }
         syncMulti();  
           $(".modal_chart").addClass("hide");
-          $(".containeur_chart").show();
+          $(".chart-container").show();
           launchChart(mode_chart, 1);
      
           let date_select = response["date"];
@@ -1028,12 +851,12 @@ function getCapture(result, Time){
 
 
 
-$(".cadre_sign img, .nav_menu h1").hover(function(){
-    $(".nav_menu h1").css("filter"," drop-shadow(0 0 20px #a68d60)");
+$(".cadre_sign img, .app-header h1").hover(function(){
+    $(".app-header h1").css("filter"," drop-shadow(0 0 20px #a68d60)");
     $(".cadre_sign img").css("filter"," drop-shadow(0 0 20px #a68d60)");
 
 }, function(){
-    $(".nav_menu h1").css("filter"," none");
+    $(".app-header h1").css("filter"," none");
     $(".cadre_sign img").css("filter"," none");
 });
 
@@ -1046,9 +869,6 @@ let sidebarSession = null;
 function renderSessionSummary(data) {
     if (data) sidebarSession = data;
     if (!sidebarSession) return;
-    $('#session_combats').text(sidebarSession.combats);
-    $('#session_victories').text(sidebarSession.victories);
-    $('#session_defeats').text(sidebarSession.defeats);
     const last = sidebarSession.last;
     const label = document.getElementById('sidebar_last_combat');
     if (!last) {
@@ -1152,8 +972,11 @@ function setSidebarOpen(open) {
     try { localStorage.setItem('trackerProfileSidebarOpen', open ? '1' : '0'); } catch (_) {}
     if (myChart && typeof myChart.resize === 'function') setTimeout(() => myChart.resize(), 670);
 }
-let initialSidebarOpen = true;
-try { initialSidebarOpen = localStorage.getItem('trackerProfileSidebarOpen') !== '0'; } catch (_) {}
+let initialSidebarOpen = !window.matchMedia('(max-width: 760px)').matches;
+try {
+    const preference = localStorage.getItem('trackerProfileSidebarOpen');
+    if (preference !== null) initialSidebarOpen = preference !== '0';
+} catch (_) {}
 setSidebarOpen(initialSidebarOpen);
 document.getElementById('sidebar_toggle').addEventListener('click', function() {
     setSidebarOpen(!document.body.classList.contains('profile-sidebar-open'));
@@ -1164,13 +987,14 @@ document.addEventListener('ui-language-change', function() {
     renderSessionSummary();
     const button = document.getElementById('sidebar_toggle');
     button.setAttribute('aria-label', appT(button.dataset.i18nAria, button.dataset.i18nAriaFr));
+    if (!document.getElementById('stats_panel').hidden && typeof mode_chart !== 'undefined') launchChart(mode_chart, mode_window);
 });
 function closeStatistics() {
     document.getElementById('stats_panel').hidden = true;
     document.getElementById('menu_button_info').classList.remove('active');
     if (!$('.modal_chart').hasClass('hide')) {
         $('.modal_chart').addClass('hide');
-        $('.containeur_chart').show();
+        $('.chart-container').show();
         mode_window = 1;
         launchChart(mode_chart, 1);
     }
@@ -1201,10 +1025,10 @@ $("#menu_button_settings").click(function(){
         }
         $(".cadre_resu").fadeIn();
         $(this).removeClass("active");
-        $(".cadre_settings").css("display","none");
+        $(".settings-panel").css("display","none");
         setTimeout(function() {
-            $(".cadre_user img").css("max-height",($(".cadre_user").height() / 3)+"px");
-            $(".cadre_user .scroll_card").css("height",($(".cadre_user").height() - $(".header_carde.img_user").height()) - 5+"px");
+            $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
+            $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
         }, 200);
         menu_settings = false;
     } else {
@@ -1219,7 +1043,7 @@ $("#menu_button_settings").click(function(){
         }
         $(".cadre_resu").hide();
         $(this).addClass("active");
-        $(".cadre_settings").css("display","flex");
+        $(".settings-panel").css("display","flex");
         menu_settings = true
         $(".contente_header_settings .btn_menu_settings").first().click();
         $(".setting_user_detail").addClass("hide");
@@ -1237,12 +1061,12 @@ $("#menu_button_settings").click(function(){
         clearInterval(runUser);
     }
     setTimeout(function() {
-        $(".cadre_user img").css("max-height",($(".cadre_user").height() / 3)+"px");
-        $(".cadre_user .scroll_card").css("height",($(".cadre_user").height() - $(".header_carde.img_user").height()) - 5+"px");
+        $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
+        $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
     }, 200);
     if(!$(".modal_chart").hasClass("hide")){
         $(".modal_chart").addClass("hide");
-        $(".containeur_chart").show();
+        $(".chart-container").show();
         launchChart(mode_chart, 1);
     }
 });
@@ -1252,7 +1076,7 @@ $("#menu_button_multi").click(function(){
     if(menu_multi == true){
         $(this).removeClass("active");
         $(".cadre_multi").hide();
-        // $(".sub_carde_user .cadre_user").remove();
+        // $(".sub_carde_user .profile-card").remove();
         menu_multi = false;
     } else {
         if($("#menu_button_captures").hasClass("active")){
@@ -1263,12 +1087,12 @@ $("#menu_button_multi").click(function(){
         }
         if(!document.body.classList.contains("profile-sidebar-open")){
             $(".modal_chart").addClass("hide");
-            $(".containeur_chart").show();
+            $(".chart-container").show();
             launchChart(mode_chart, 1);
         }
         $("#sync_multi").click();
-        // $(".sub_carde_user .cadre_user").remove();
-        // $(".sub_carde_user").append($(".cadre_user ").clone());
+        // $(".sub_carde_user .profile-card").remove();
+        // $(".sub_carde_user").append($(".profile-card ").clone());
         $(this).addClass("active");
         $(".cadre_multi").show();
         menu_multi = true
@@ -1279,12 +1103,12 @@ $("#menu_button_multi").click(function(){
         }, 200);
     }
    setTimeout(function() {
-        $(".cadre_user img").css("max-height",($(".cadre_user").height() / 3)+"px");
-        $(".cadre_user .scroll_card").css("height",($(".cadre_user").height() - $(".header_carde.img_user").height()) - 5+"px");
+        $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
+        $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
     }, 200);
     if(!$(".modal_chart").hasClass("hide")){
         $(".modal_chart").addClass("hide");
-        $(".containeur_chart").show();
+        $(".chart-container").show();
         launchChart(mode_chart, 1);
     }
 });
@@ -1295,8 +1119,8 @@ $("#menu_button_captures").click(function(){
         $(this).removeClass("active");
         $(".cadre").css("height","97.5%");
             $(".capture-toolbar").hide();
-        if($(".cadre_user").hasClass("hide")){
-            $(".cadre_user").removeClass("hide");
+        if($(".profile-card").hasClass("hide")){
+            $(".profile-card").removeClass("hide");
         }
         $(".up_capture .min_up").text("/\\");
         $(".up_capture .sub_up").attr("style","clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 70%, 0 100%);");
@@ -1306,6 +1130,7 @@ $("#menu_button_captures").click(function(){
         }
       
         up_capture = false;
+        $('.up_capture').removeClass('capture-expanded');
         menu_capture = false;
     } else {
         if($(".para_capture").length == 0){
@@ -1320,7 +1145,7 @@ $("#menu_button_captures").click(function(){
         $(".capture-toolbar").css('display', 'flex');
         $(this).addClass("active");
         $(".cadre").css("height","60%");
-        $(".cardre_captures").css("height","calc(40% - 20px)");
+        $(".captures-panel").css("height","calc(40% - 20px)");
         menu_capture = true
         setTimeout(function() {
             $('.cadreStats').scrollTop($('.cadreStats')[0].scrollHeight);
@@ -1331,13 +1156,13 @@ $("#menu_button_captures").click(function(){
         $('.capture-scroll').scrollTop(0);
     }, 100);
     setTimeout(function() {
-        $(".cadre_user img").css("max-height",($(".cadre_user").height() / 3)+"px");
-        $(".cadre_user .scroll_card").css("height",($(".cadre_user").height() - $(".header_carde.img_user").height()) - 5+"px");
+        $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
+        $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
        
     }, 300);
     if(!$(".modal_chart").hasClass("hide")){
         $(".modal_chart").addClass("hide");
-        $(".containeur_chart").show();
+        $(".chart-container").show();
         launchChart(mode_chart, 1);
     }
 });
@@ -1355,7 +1180,7 @@ $(function() {
 let captureViewerIndex = -1;
 
 function visibleCaptureCards() {
-    return $('.cardre_captures .para_capture:visible').toArray();
+    return $('.captures-panel .para_capture:visible').toArray();
 }
 
 function showCaptureViewer(index) {
@@ -1379,7 +1204,7 @@ function closeCaptureViewer() {
     captureViewerIndex = -1;
 }
 
-$(document).on('click', '.cardre_captures .para_capture', function() {
+$(document).on('click', '.captures-panel .para_capture', function() {
     const index = visibleCaptureCards().indexOf(this);
     if (index < 0) return;
     closeCaptureViewer();
@@ -1416,16 +1241,17 @@ $(".up_capture").click(function(){
         $(".up_capture .sub_up").attr("style","clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 70%, 0 100%);");
         $(".up_capture .min_up").attr("style","clip-path: polygon(10% 5%, 90% 5%, 90% 90%, 50% 59%, 10% 90%);")
         $(".cadre").css("height","60%");
-        $(".cardre_captures").css("height","calc(40% - 20px)");
+        $(".captures-panel").css("height","calc(40% - 20px)");
         up_capture = false;
     } else {
         $(".up_capture .min_up").text("\\/");
         $(".up_capture .sub_up").attr("style","clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);");
         $(".up_capture .min_up").attr("style","clip-path: polygon(10% 5%, 90% 5%, 90% 70%, 50% 90%, 10% 70%);")
         $(".cadre").css("height","10%");
-        $(".cardre_captures").css("height","calc(90% - 20px)");
+        $(".captures-panel").css("height","calc(90% - 20px)");
         up_capture = true
-    } 
+    }
+    $(this).toggleClass('capture-expanded', up_capture);
 
 });
 var firstInit = false;
@@ -1637,7 +1463,7 @@ $('.capture-scroll').on('scroll', function() {
                        
                         
                 }
-                $(".cardre_captures .next_captures_loader").remove();
+                $(".captures-panel .next_captures_loader").remove();
                 if(last_id <= 1){
                     scroll_request = null;
                 } else {
@@ -1848,63 +1674,155 @@ $("#changeLvl").click(function(){
    
 });
 
-function syncMulti(){
-    var table = $('#table_multi').DataTable();
-
-    $.get("/syncMulti", function(response){
-        if(response["request"] == "success"){
-            $("#multi_offline_notice").remove();
-            if (!response["online"]) {
-                $("#table_multi").before($('<p id="multi_offline_notice">').text(appT('leaderboard_offline', 'Classement indisponible : affichage des données locales.')));
-            }
-        
-            // $(".cadre_loading").css("display","none");
-            // $(".panel_multi_body table").removeClass("hide");
-           
-            datas = response["datas"]
-            table.clear();
-            
-            // $("#sync_multi").css("opacity","1");
-            for(let i=0;i<datas.length;i++){
-                let number = i +1;
-                let name = datas[i][2];
-                let victory = datas[i][3];
-                let defeat = datas[i][4];
-                let egality = datas[i][5];
-                let language = datas[i][6];
-                let ratio = datas[i][7];
-                let avatar = datas[i][8];
-                let combats = datas[i][10];
-                // let noResult = datas[i][11]
-                // let fight_exit = datas[i][12]
-                // let abandon = datas[i][13]
-                // let maxVictory = datas[i][14]
-                // let maxDefeat = datas[i][15]
-                // let ratioTime = datas[i][16]
-                let score = datas[i][17];
-                let userLvl = datas[i][18];
-                number = "<span user_id='"+datas[i][0]+"'>"+number+"</span>";
-                if(avatar != ""){
-                    avatar = "<img src='data:image/jpg;base64,"+avatar+"'/>";
-                } else {
-                    avatar = '<div class="fakeImageuser">?</div>';
-                }
-                if(language == "fra"){
-                    language = "<img title='"+language+"' src='/static/France.png'/>"
-                }
-                if(language == "eng"){
-                    language = "<img title='"+language+"' src='/static/English.png'/>"
-                }
-              
-                table.row.add([number, language, name, avatar, userLvl,score,victory,defeat,egality,ratio,combats]);
-                
-             }
-             table.draw(false);
-        }
-    }); 
-
-
+let leaderboardRequestVersion = 0;
+let leaderboardStatusKey = '';
+let leaderboardStatusFallback = '';
+let leaderboardPlayers = [];
+let leaderboardCurrentRank = null;
+function setLeaderboardStatus(key, fallback) {
+    leaderboardStatusKey = key;
+    leaderboardStatusFallback = fallback;
+    $('#leaderboard_status').text(key ? appT(key, fallback) : '').prop('hidden', !key);
 }
+function leaderboardText(value) {
+    return $('<span>').text(value == null ? '' : String(value)).html();
+}
+function syncMulti() {
+    if (document.body.dataset.storeBuild === 'true') return;
+    const version = ++leaderboardRequestVersion;
+    const refresh = $('#leaderboard_refresh').prop('disabled', true);
+    setLeaderboardStatus('leaderboard_loading', 'Chargement du classement…');
+    $.get('/syncMulti').done(function(response) {
+        if (version !== leaderboardRequestVersion) return;
+        const table = $('#table_multi').DataTable();
+        if (!response || response.request !== 'success' || !Array.isArray(response.datas)) {
+            leaderboardPlayers = [];
+            table.clear().draw(false);
+            setLeaderboardStatus('leaderboard_profile_required', 'Renseigne un pseudo et un avatar pour consulter le classement.');
+            return;
+        }
+        setLeaderboardStatus(response.online ? '' : 'leaderboard_offline', 'Classement indisponible : affichage des données locales.');
+        leaderboardPlayers = response.datas;
+        table.clear();
+        response.datas.forEach(function(row, index) {
+            const avatarValue = String(row[8] || '');
+            const avatar = avatarValue && /^[A-Za-z0-9+/]+={0,2}$/.test(avatarValue)
+                ? $('<img alt="">').attr('src', 'data:image/jpg;base64,' + avatarValue).prop('outerHTML')
+                : '<div class="fakeImageuser" aria-hidden="true">?</div>';
+            const lang = String(row[6] || '');
+            const flags = {fra:'France.png', eng:'English.png'};
+            const language = Object.prototype.hasOwnProperty.call(flags, lang)
+                ? $('<img>').attr({title:lang, alt:lang, src:'/static/' + flags[lang]}).prop('outerHTML')
+                : leaderboardText(lang);
+            table.row.add([index + 1, language, leaderboardText(row[2]), avatar,
+                leaderboardText(row[18]), leaderboardText(row[17]), leaderboardText(row[3]),
+                leaderboardText(row[4]), leaderboardText(row[5]), leaderboardText(row[7]), leaderboardText(row[10])]);
+        });
+        table.draw(false);
+    }).fail(function() {
+        if (version === leaderboardRequestVersion) setLeaderboardStatus('leaderboard_error', 'Impossible de charger le classement.');
+    }).always(function() {
+        if (version === leaderboardRequestVersion) refresh.prop('disabled', false);
+    });
+}
+$('#leaderboard_refresh').on('click', syncMulti);
+function leaderboardRowPlayer(row) {
+    const data = $('#table_multi').DataTable().row(row).data();
+    return data && leaderboardPlayers[Number(data[0]) - 1];
+}
+function markLeaderboardRows() {
+    if (!$.fn.DataTable.isDataTable('#table_multi')) return;
+    $('#table_multi tbody tr').each(function() {
+        const player = leaderboardRowPlayer(this);
+        if (player) $(this).attr({tabindex:0, 'aria-label':appT('leaderboard_open_card', 'Voir la fiche du joueur') + ': ' + String(player[2] || '')});
+    });
+}
+function leaderboardVisibleRanks() {
+    return $('#table_multi').DataTable().rows({search:'applied', order:'applied'}).data().toArray()
+        .map(data => Number(data[0])).filter(rank => Number.isInteger(rank) && leaderboardPlayers[rank - 1]);
+}
+function renderLeaderboardPlayer(rank) {
+    const player = leaderboardPlayers[rank - 1];
+    if (!player) return;
+    leaderboardCurrentRank = rank;
+    const dialog = document.getElementById('leaderboard_player_dialog');
+    const name = String(player[2] || '—');
+    const avatar = String(player[8] || '');
+    const validAvatar = !!avatar && /^[A-Za-z0-9+/]+={0,2}$/.test(avatar);
+    $('#leaderboard_player_name').text(name);
+    $('#leaderboard_player_rank').text(rank);
+    $('#leaderboard_player_level').text(player[18] == null || player[18] === '' ? '—' : player[18]);
+    const image = $('#leaderboard_player_avatar');
+    image.prop('hidden', !validAvatar).attr('alt', name);
+    if (validAvatar) image.attr('src', 'data:image/jpg;base64,' + avatar);
+    else image.removeAttr('src');
+    $('#leaderboard_player_no_avatar').prop('hidden', validAvatar);
+    const fields = {'victories':3, 'defeats':4, 'draws':5, 'fights':10, 'score':17,
+        'win-streak':14, 'loss-streak':15, 'no-result':11, 'opponent-left':12,
+        'abandons':13, 'connection-errors':19, 'game-closed':20};
+    Object.keys(fields).forEach(function(key) {
+        const value = player[fields[key]];
+        dialog.querySelector('[data-player-stat="' + key + '"]').textContent = value == null || value === '' ? '—' : value;
+    });
+    const rate = window.TrackerStats.winRate([0, 0, player[3], player[4], player[5]], 'Arena');
+    dialog.querySelector('[data-player-stat="rate"]').textContent = new Intl.NumberFormat(document.documentElement.lang || undefined, {maximumFractionDigits:2}).format(rate) + ' %';
+    const ranks = leaderboardVisibleRanks();
+    const index = ranks.indexOf(rank);
+    const previous = dialog.querySelector('.leaderboard-player-prev');
+    const next = dialog.querySelector('.leaderboard-player-next');
+    previous.disabled = index <= 0;
+    next.disabled = index < 0 || index >= ranks.length - 1;
+    if (dialog.open && document.activeElement === document.body) {
+        (previous.disabled ? (next.disabled ? dialog.querySelector('.leaderboard-player-close') : next) : previous).focus();
+    }
+    if (dialog.open) setTimeout(function() {
+        if (dialog.open && !dialog.contains(document.activeElement)) {
+            (previous.disabled ? (next.disabled ? dialog.querySelector('.leaderboard-player-close') : next) : previous).focus();
+        }
+    }, 0);
+    dialog.querySelector('.leaderboard-player-card').scrollTop = 0;
+}
+function openLeaderboardPlayer(row) {
+    const data = $('#table_multi').DataTable().row(row).data();
+    if (!data || !leaderboardRowPlayer(row)) return;
+    const dialog = document.getElementById('leaderboard_player_dialog');
+    renderLeaderboardPlayer(Number(data[0]));
+    row.focus();
+    if (!dialog.open) dialog.showModal();
+    dialog.querySelector('.leaderboard-player-close').focus();
+}
+$('#table_multi').on('draw.dt', markLeaderboardRows).on('click', 'tbody tr', function() {
+    openLeaderboardPlayer(this);
+}).on('keydown', 'tbody tr', function(event) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openLeaderboardPlayer(this);
+    }
+});
+const leaderboardPlayerDialog = document.getElementById('leaderboard_player_dialog');
+leaderboardPlayerDialog.querySelector('.leaderboard-player-close').addEventListener('click', function() { leaderboardPlayerDialog.close(); });
+function navigateLeaderboardPlayer(offset) {
+    const ranks = leaderboardVisibleRanks();
+    const index = ranks.indexOf(leaderboardCurrentRank);
+    const next = index + offset;
+    if (index >= 0 && next >= 0 && next < ranks.length) renderLeaderboardPlayer(ranks[next]);
+}
+leaderboardPlayerDialog.querySelector('.leaderboard-player-prev').addEventListener('click', function() { navigateLeaderboardPlayer(-1); });
+leaderboardPlayerDialog.querySelector('.leaderboard-player-next').addEventListener('click', function() { navigateLeaderboardPlayer(1); });
+document.addEventListener('keydown', function(event) {
+    if (leaderboardPlayerDialog.open && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+        event.preventDefault();
+        navigateLeaderboardPlayer(event.key === 'ArrowLeft' ? -1 : 1);
+    }
+});
+leaderboardPlayerDialog.addEventListener('click', function(event) {
+    const box = leaderboardPlayerDialog.getBoundingClientRect();
+    if (event.target === leaderboardPlayerDialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) leaderboardPlayerDialog.close();
+});
+document.addEventListener('ui-language-change', function() {
+    if (leaderboardStatusKey) setLeaderboardStatus(leaderboardStatusKey, leaderboardStatusFallback);
+    markLeaderboardRows();
+});
 
 counteur_loader = 22;
 $('.load_fire').css("background-image", "url('/static/split1.png')");
@@ -2027,9 +1945,9 @@ $(".sub_v, .sub_d, .sub_e").click(function(){
                     }
                     
             }
-            $(".cardre_captures .next_captures_loader").remove();
+            $(".captures-panel .next_captures_loader").remove();
             if (!$('.no_capture').length) $('.capture-scroll').append('<div class="no_capture">Aucune capture disponible</div>');
-            $('.no_capture').toggle($('.cardre_captures .para_capture').length === 0);
+            $('.no_capture').toggle($('.captures-panel .para_capture').length === 0);
             if(last_id <= 1){
                 scroll_request = null;
             } else {
@@ -2037,7 +1955,7 @@ $(".sub_v, .sub_d, .sub_e").click(function(){
             }
             
         } else {
-            $(".cardre_captures .next_captures_loader").remove();
+            $(".captures-panel .next_captures_loader").remove();
             if (!$('.no_capture').length) $('.capture-scroll').append('<div class="no_capture">Aucune capture disponible</div>');
             $('.no_capture').show();
 
@@ -2069,14 +1987,14 @@ $(".carde_info").click(function(){
     let info_selected = $(this).attr("info");
 
     if(info_selected == "languages"){
-        if($(".cadre_settings").is(":hidden")){
+        if($(".settings-panel").is(":hidden")){
             $("#menu_button_settings").click();
         } else {
             $(".btn_menu_settings[menu=0]").click();
         }
     }
     if(info_selected == "captures"){
-        if($(".cadre_settings").is(":hidden")){
+        if($(".settings-panel").is(":hidden")){
             $("#menu_button_settings").click();
             $(".btn_menu_settings[menu=2]").click();
         } else {
@@ -2087,7 +2005,7 @@ $(".carde_info").click(function(){
         }
     }
     if(info_selected == "niveau"){
-        if($(".cadre_settings").is(":hidden")){
+        if($(".settings-panel").is(":hidden")){
             $("#menu_button_settings").click();
             $(".btn_menu_settings[menu=3]").click();
         } else {
@@ -2096,7 +2014,7 @@ $(".carde_info").click(function(){
         $("#changeLvl").click();
     }
     if(info_selected == "pseudo" || info_selected == "avatar"){
-        if($(".cadre_settings").is(":hidden")){
+        if($(".settings-panel").is(":hidden")){
             $("#menu_button_settings").click();
             $(".btn_menu_settings[menu=3]").click();
         } else {
@@ -2119,7 +2037,7 @@ $(document).on("click",".chartResize",function() {
         mode_window = 1
         launchChart(mode_chart, mode_window);
        
-        $(".containeur_chart").show();
+        $(".chart-container").show();
     } else {
         if($("#menu_button_captures").hasClass("active")){
             $("#menu_button_captures").click();
@@ -2134,7 +2052,7 @@ $(document).on("click",".chartResize",function() {
         mode_window = 2
         launchChart(mode_chart, mode_window);
      
-        $(".containeur_chart").hide();
+        $(".chart-container").hide();
     }
 
 
@@ -2158,7 +2076,7 @@ $(document).on("click",".btn-chart button[mode]",function() {
         
         mode_chart = mode;
         if(mode == 1){
-            $(".containeur_chart").show();
+            $(".chart-container").show();
         }
         launchChart(mode, mode_window);
     }
@@ -2171,319 +2089,62 @@ $(document).on("click",".btn-chart button[mode]",function() {
 
 var chart_loaded = false;
 var myChart = 0;
-var mode_find = false;
-var window_chart_tampo = 0;
-function launchChart(mode, window){
-    mode_window = window
-    if(chart_loaded == false && window == 1){
-        $(".containeur_chart .cadre_chartJs canvas, #stats_user").remove();
-        $(".containeur_chart .load_chart").show().empty().append("<div class='next_captures_loader'><span></span><span></span><span></span></div>");
-        $(".modal_chart .cadre_chartJs canvas").remove();
-        $(".modal_chart .load_chart").empty();
-    }
-    if(chart_loaded == false && window == 2){
-        $(".containeur_chart .cadre_chartJs canvas, #stats_user").remove();
-        $(".containeur_chart .load_chart").empty();
-        $(".modal_chart .cadre_chartJs canvas").remove();
-        $(".modal_chart .load_chart").show().empty().append("<div class='next_captures_loader'><span></span><span></span><span></span></div>");
-    }
-
-    const chartStatsMode = selected_stats_mode;
-    $.get("/allCapturesChart", {mode: chartStatsMode}, function(response){
-        if (chartStatsMode !== selected_stats_mode) return;
-        if(response["request"] == "success"){
-                captures = response["captures"];
-                
-                if(mode == "7j"){
-
-                        mode_find = true;
-                        var today = new Date();
-                        var currentDay = today.getDay();
-                        var days_tampo = days_active.slice();
-                        var newDayOrder = days_tampo.splice(currentDay);
-                        var date_select = newDayOrder.concat(days_tampo);
-                    
-
-                    // Initialiser les tableaux pour les victoires, défaites et égalités
-                        var victoires = [0, 0, 0, 0, 0, 0, 0];
-                        var defaites = [0, 0, 0, 0, 0, 0, 0];
-                        var egalites = [0, 0, 0, 0, 0, 0, 0];
-
-                        var today = new Date();
-                        // Parcourir les entrées du tableau "captures"
-                     
-                        for (var i = 0; i < captures.length; i++) {
-                            // Récupérer la date de l'entrée
-                            let captureDate = new Date(new Date(captures[i][6]).setMinutes(0, 0, 0));
-                       
-                            let dayIndex = (captureDate.getDay() + 6) % 7;
-                       
-                            let day = days_active[dayIndex];
-                            let dayNumber = captureDate.getUTCDate();
-                            
-                            let diff = (today.getTime() - captureDate.getTime()) / 86400000;
-
-                            if (diff < 6) {
-                            
-                                if(day == undefined){
-                                    day = days_active[days_active.length - 1];
-                                }
-                              
-                                let formattedDate = day + " " + dayNumber ;
-                                // Vérifier si la date de l'entrée est dans les 7 derniers jours
-                                for (var j = 0; j < days_active.length; j++) {
-                               
-                                    if (day == days_active[j]) {
-                                        // Incrémenter le compteur de victoires, défaites ou égalités en fonction de la valeur de l'entrée
-                                        index = date_select.indexOf(days_active[j])
-                                        if(index == undefined){
-                                            index = 6
-                                        }
-
-                                        if (captures[i][2] == 1) {
-                                            victoires[index]++;
-                                        } else if (captures[i][3] == 1) {
-                                            defaites[index]++;
-                                        } else if (captures[i][4] == 1) {
-                                            egalites[index]++;
-                                        }
-                                        
-                                    } 
-                                }
-                            }
-                        }
-                } 
-                if(mode == "24h"){
-
-                    var victoires = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-                    var defaites = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-                    var egalites = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-                    var now = new Date();
-                    var twentyFourHoursAgo = new Date(new Date(now - 24 * 60 * 60 * 1000).setMinutes(0, 0, 0));
-                    var date_select = [];
-                    for (var i = 23; i >= 0; i--) {
-                    var date = new Date();
-                    date.setHours(date.getHours() - i - 1);
-                    var hours = date.getHours();
-                    var minutes = date.getMinutes();
-                    // date_select.push(hours + "h" + minutes + "m - "+ (hours + 1) + "h" + minutes+ "m");
-                    date_select.push((hours + 1) + "h");
-                    }
-
-                    for (var i = 0; i < captures.length; i++) {
-                    var captureDate = new Date(new Date(captures[i][6]).setMinutes(0, 0, 0));
-                   
-                    if (captureDate >= twentyFourHoursAgo) {
-                    var victoire_capture = parseInt(captures[i][2]);
-                    var defaites_capture = parseInt(captures[i][3]);
-                    var egalites_capture = parseInt(captures[i][4]);
-
-                    var index = Math.floor((now - captureDate) / (60 * 60 * 1000));
-
-                    if (index >= 0 && index < 24) {
-                    victoires[index] += victoire_capture;
-                    defaites[index] += defaites_capture;
-                    egalites[index] += egalites_capture;
-                    }
-                    }
-                    }
-                    victoires = victoires.reverse();
-                    defaites = defaites.reverse();
-                    egalites = egalites.reverse();
-
-                }
-                if(mode == "48h"){
-                    
-                    var victoires = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-                    var defaites = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-                    var egalites = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-                    var now = new Date();
-                    var HoursAgo = new Date(new Date(now - 48 * 60 * 60 * 1000).setMinutes(0, 0, 0));
-                    var date_select = [];
-                    for (var i = 47; i >= 0; i--) {
-                    var date = new Date();
-                    date.setHours(date.getHours() - i - 1);
-                    var hours = date.getHours();
-                    var minutes = date.getMinutes();
-                    date_select.push((hours + 1) + "h");
-                    }
-
-                    for (var i = 0; i < captures.length; i++) {
-                    var captureDate = new Date(new Date(captures[i][6]).setMinutes(0, 0, 0));
-                    if (captureDate >= HoursAgo) {
-                    var victoire_capture = parseInt(captures[i][2]);
-                    var defaites_capture = parseInt(captures[i][3]);
-                    var egalites_capture = parseInt(captures[i][4]);
-
-                    var index = Math.floor((now - captureDate) / (60 * 60 * 1000));
-
-                    if (index >= 0 && index < 48) {
-                    victoires[index] += victoire_capture;
-                    defaites[index] += defaites_capture;
-                    egalites[index] += egalites_capture;
-                    }
-                    }
-                    }
-                    victoires = victoires.reverse();
-                    defaites = defaites.reverse();
-                    egalites = egalites.reverse();
-                  
-
-                }
-                if(mode == "30j"){
-                    var victoires = [];
-                    var defaites = [];
-                    var egalites = [];
-                    var date_select = [];
-
-                    var now = new Date();
-                    var thirtyDaysAgo = new Date(now);
-                    thirtyDaysAgo.setMonth(now.getMonth() - 1);
-
-                    date_select.push(now.getDate() + "/" + (now.getMonth() + 1) + "/" + now.getFullYear().toString().slice(-2));
-                    victoires.push(0);
-                    defaites.push(0);
-                    egalites.push(0);
-
-                        for (var i = 0; i < 29; i++) {
-                            if(i != 0){
-                        var date = new Date();
-                        date.setDate(date.getDate() - i);
-                        if (date >= thirtyDaysAgo) {
-                            var day = date.getDate();
-                            var month = date.getMonth() + 1;
-                            var year = date.getFullYear();
-                            date_select.push(day + "/" + month + "/" + year.toString().slice(-2));
-                            victoires.push(0);
-                            defaites.push(0);
-                            egalites.push(0);
-                        }
-                        }
-                        }
-
-                        for (var i = 0; i < captures.length; i++) {
-                        var captureDate = new Date(captures[i][6]);
-                        if (captureDate >= thirtyDaysAgo) {
-                            var victoire_capture = parseInt(captures[i][2]);
-                            var defaites_capture = parseInt(captures[i][3]);
-                            var egalites_capture = parseInt(captures[i][4]);
-
-                            var index = date_select.findIndex(function(d) {
-                            return d === (captureDate.getDate() + "/" + (captureDate.getMonth() + 1) + "/" + captureDate.getFullYear().toString().slice(-2));
-                            });
-                          
-                            if (index >= 0) {
-                            victoires[index] += victoire_capture;
-                            defaites[index] += defaites_capture;
-                            egalites[index] += egalites_capture;
-                            }
-                        }
-                        }
-                    victoires=victoires.reverse();
-                    defaites=defaites.reverse();
-                    egalites=egalites.reverse();
-                    date_select = date_select.reverse();
-                }
-                if(mode == "all"){
-
-                    
-                    var victoires = [];
-                    var defaites = [];
-                    var egalites = [];
-                    var date_select = [];
-                  
-                    for (var i = 0; i < captures.length; i++) {
-                        var captureDate = new Date(captures[i][6]);
-                        var victoire_capture = parseInt(captures[i][2]);
-                        var defaites_capture = parseInt(captures[i][3]);
-                        var egalites_capture = parseInt(captures[i][4]);
-                        var formattedDate = captureDate.toLocaleDateString();
-                  
-                        var index = date_select.indexOf(formattedDate);
-                        if (index === -1) {
-                            date_select.push(formattedDate);
-                            index = date_select.length - 1;
-                            victoires[index] = 0;
-                            defaites[index] = 0;
-                            egalites[index] = 0;
-                        }
-                        victoires[index] += victoire_capture;
-                        defaites[index] += defaites_capture;
-                        egalites[index] += egalites_capture;
-                    }
-                   
-                }
-                if(chart_loaded == false || window_chart_tampo != window){
-                        window_chart_tampo = window;
-                        if(window == 1){ 
-                            $(".modal_chart canvas").remove();
-                            $(".containeur_chart canvas").remove();
-                            $(".containeur_chart .cadre_chartJs").append('<canvas id="stats_user"></canvas>');  
-                        }
-                        if(window == 2){ 
-                            $(".containeur_chart canvas").remove();
-                            $(".modal_chart canvas").remove();
-                            $(".modal_chart .cadre_chartJs").append('<canvas id="stats_user"></canvas>');
-                            
-                        }
-                var ctx_user = document.getElementById("stats_user").getContext('2d');
-            
-                    myChart = new Chart(ctx_user, {
-                        type: 'line',
-                        data: {
-                            labels: date_select,
-                            datasets: [
-                                {
-                                    label: appT('victories', 'Victoires'),
-                                    data: victoires, // Specify the data values array
-                                    fill: false,
-                                    borderColor: '#32CD32', // Add custom color border (Line)
-                                    backgroundColor: '#32CD32', // Add custom color background (Points and Fill)
-                                    borderWidth: 1 // Specify bar border width
-                                },
-                                {
-                                    label: appT('defeats', 'Défaites'),
-                                    data: defaites, // Specify the data values array
-                                    fill: false,
-                                    borderColor: 'RGB(137, 18, 15)', // Add custom color border (Line)
-                                    backgroundColor: 'RGB(137, 18, 15)', // Add custom color background (Points and Fill)
-                                    borderWidth: 1 // Specify bar border width
-                                },
-                                {
-                                    label: appT('draw', 'Égalité'),
-                                    data: egalites, // Specify the data values array
-                                    fill: false,
-                                    borderColor: '#fff', // Add custom color border (Line)
-                                    backgroundColor: '#fff', // Add custom color background (Points and Fill)
-                                    borderWidth: 1 // Specify bar border width
-                                }
-                        ]},
-                        options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { labels: { filter: function(item) {
-                            return item.datasetIndex !== 2 || selected_stats_mode === 'Arena';
-                        } } } }
-                        }
-                    });
-                    $(".load_chart").hide();
-                    chart_loaded = true;
-                   
-                } else {
-                
-                    myChart.data.datasets[0].data = victoires;
-                    myChart.data.datasets[1].data = defaites;
-                    myChart.data.datasets[2].data = egalites;
-                    
-                    myChart.data.labels = date_select;
-                }
-                myChart.setDatasetVisibility(2, chartStatsMode === 'Arena');
-                myChart.update();
+var chart_request_version = 0;
+function launchChart(period, windowSize) {
+    mode_window = windowSize;
+    const chartMode = selected_stats_mode;
+    const version = ++chart_request_version;
+    const container = windowSize === 2 ? $('.modal_chart') : $('.chart-container');
+    const status = container.find('.chart-status');
+    const loader = container.find('.chart-loader');
+    $('.btn-chart button[mode]').not('.chartResize').each(function() {
+        $(this).attr('aria-pressed', String($(this).attr('mode') === period));
+    });
+    status.prop('hidden', true).text('');
+    loader.show().html("<div class='next_captures_loader'><span></span><span></span><span></span></div>");
+    $.get('/allCapturesChart', {mode: chartMode}).done(function(response) {
+        if (version !== chart_request_version || chartMode !== selected_stats_mode || windowSize !== mode_window) return;
+        loader.hide().empty();
+        if (response.request !== 'success' || !Array.isArray(response.captures)) {
+            status.text(appT('stats_chart_error', 'Impossible de charger le graphique.')).prop('hidden', false);
+            return;
         }
+        const data = window.TrackerStats.aggregate(response.captures, period, new Date(), document.documentElement.lang);
+        if (myChart && typeof myChart.destroy === 'function') myChart.destroy();
+        $('.chart-canvas-container canvas').remove();
+        chart_loaded = false;
+        if (!data.total) {
+            myChart = 0;
+            status.text(appT('stats_chart_empty', 'Aucune capture de résultat sur cette période.')).prop('hidden', false);
+            return;
+        }
+        const canvas = $('<canvas id="stats_user" role="img">').attr('aria-label', appT('stats_evolution', 'Évolution des résultats'));
+        container.find('.chart-canvas-container').append(canvas);
+        myChart = new Chart(canvas[0].getContext('2d'), {
+            type: 'line',
+            data: {labels:data.labels, datasets:[
+                {label:appT('victories', 'Victoires'), data:data.victories, borderColor:'#b7c994', backgroundColor:'#b7c994'},
+                {label:appT('defeats', 'Défaites'), data:data.defeats, borderColor:'#c77b6d', backgroundColor:'#c77b6d'},
+                {label:appT('draw', 'Égalité'), data:data.draws, borderColor:'#d9cba9', backgroundColor:'#d9cba9'}
+            ]},
+            options: {
+                responsive:true, maintainAspectRatio:false,
+                elements:{line:{borderWidth:2, tension:0.15}, point:{radius:2, hoverRadius:5}},
+                scales:{x:{grid:{color:'rgba(212,189,143,.08)'}, ticks:{color:'#d6c6a7', maxTicksLimit:8}},
+                        y:{beginAtZero:true, grid:{color:'rgba(212,189,143,.12)'}, ticks:{color:'#d6c6a7', precision:0}}},
+                plugins:{legend:{labels:{color:'#e8dfcd', boxWidth:14, filter:function(item) {
+                    return item.datasetIndex !== 2 || chartMode === 'Arena';
+                }}}}
+            }
         });
-       
+        myChart.setDatasetVisibility(2, chartMode === 'Arena');
+        myChart.update();
+        chart_loaded = true;
+    }).fail(function() {
+        if (version !== chart_request_version) return;
+        loader.hide().empty();
+        status.text(appT('stats_chart_error', 'Impossible de charger le graphique.')).prop('hidden', false);
+    });
 }
 
 $('.full_screen').on('click', function(){
@@ -2512,3 +2173,9 @@ $('.full_screen').on('click', function(){
 
 
   });
+
+// Shortcuts from the Windows notification area open the requested section.
+$(window).on('load', function() {
+    const section = { '#statistics': 'menu_button_info', '#settings': 'menu_button_settings' }[window.location.hash];
+    if (section) document.getElementById(section).click();
+});

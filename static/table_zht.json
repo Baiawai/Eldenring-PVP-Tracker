@@ -1,0 +1,21 @@
+{
+  "search": "搜尋：",
+  "emptyTable": "尚無資料",
+  "zeroRecords": "找不到相符的資料",
+  "info": "顯示第 _START_ 至 _END_ 筆，共 _TOTAL_ 筆",
+  "infoEmpty": "顯示第 0 至 0 筆，共 0 筆",
+  "infoFiltered": "（從 _MAX_ 筆資料篩選）",
+  "lengthMenu": "顯示 _MENU_ 筆",
+  "loadingRecords": "載入中…",
+  "processing": "處理中…",
+  "paginate": {
+    "first": "首頁",
+    "previous": "上一頁",
+    "next": "下一頁",
+    "last": "末頁"
+  },
+  "aria": {
+    "sortAscending": "：啟用以遞增排序",
+    "sortDescending": "：啟用以遞減排序"
+  }
+}
