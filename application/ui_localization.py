@@ -21,6 +21,7 @@ def localize_counter(text, language):
     game = messages()[locale]
     exact = {
         'Invocation de l’allié…': ('game', '2300000'),
+        "Impossible d'invoquer l'allié.": ('game', '2490000'),
         "Invasion d'un autre monde…": ('game', '2301200'),
         'Retour dans votre monde · Combat sans résultat': ('modern', 'return_without_result'),
         'Une erreur de connexion est survenue.<br>Retour dans votre monde…': ('game', '2701200'),

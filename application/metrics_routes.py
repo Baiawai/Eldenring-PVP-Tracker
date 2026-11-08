@@ -2,6 +2,7 @@
 from __main__ import app
 from flask import jsonify, request
 from application import usage_metrics, peer_tracking, system_details
+from application.version import APP_VERSION
 
 
 @app.route('/usage-metrics', methods=['GET'])
@@ -34,7 +35,7 @@ def system_metrics_get():
     pings = [p['ping'] for p in peers if isinstance(p.get('ping'), (int, float)) and not isinstance(p['ping'], bool) and 0 <= p['ping'] < 60000]
     result['steam_ping_ms'] = sum(pings) / len(pings) if pings else None
     result['steam_peers_with_ping'] = len(pings)
-    result['version'] = 'BETA'
+    result['version'] = APP_VERSION
     return jsonify(request='success', system=result)
 
 

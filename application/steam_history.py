@@ -7,6 +7,17 @@ _lock = threading.Lock()
 _known = {}
 _arena = None
 
+
+def clear_history_transaction(operation):
+    """Serialize clearing history with Steam observations and forget stale IDs."""
+    global _arena
+    with _lock:
+        result = operation()
+        if result:
+            _known.clear()
+            _arena = None
+        return result
+
 def _clean(peer):
     sid = str(peer.get('id', ''))
     if len(sid) != 17 or not sid.isascii() or not sid.isdigit():

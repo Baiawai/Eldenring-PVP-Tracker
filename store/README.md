@@ -1,16 +1,16 @@
 # Construction et examen Store
 
-La préparation actuelle ne constitue pas une version prête à soumettre. Dans la version compilée, le classement en ligne et ses appels réseau sont désactivés. La mesure avec élévation est désactivée : seul le ping disponible auprès de Steam est affiché ; il peut être indisponible. La version lancée depuis les sources conserve son comportement. Vérifier les droits sur les ressources du jeu, les images, polices, données et toutes les licences des dépendances redistribuées, notamment les DLL Tesseract.
+La préparation actuelle ne constitue pas une version prête à soumettre. Dans la version compilée, le classement en ligne et ses appels réseau sont désactivés. La mesure avec élévation est désactivée : seul le ping disponible auprès de Steam est affiché ; il peut être indisponible. La version de développement permet la mesure avancée avec autorisation administrateur. Vérifier les droits sur les ressources du jeu, les images, polices, données et toutes les licences des dépendances redistribuées, notamment les DLL Tesseract.
 
-Sur Windows x64, installer Python 3.12, créer `.venv`, installer `requirements.txt` puis `pyinstaller==6.16.0`. Installer le SDK Windows avec MakeAppx et fournir une distribution Tesseract x64 complète avec ses licences dans `C:\Program Files\Tesseract-OCR` (ou utiliser `-TesseractDir`). Les modèles OCR du projet sont embarqués. La compilation n'inclut pas les captures personnelles présentes dans `application`.
+Sur Windows x64, installer Python 3.15, créer `.venv`, installer `requirements.txt` puis `pyinstaller==6.22.3`. Installer le SDK Windows avec MakeAppx et fournir une distribution Tesseract x64 complète avec ses licences dans `C:\Program Files\Tesseract-OCR` (ou utiliser `-TesseractDir`). Les modèles OCR du projet sont embarqués. La compilation n'inclut pas les captures personnelles présentes dans `application`.
 
 Après réservation du nom dans Partner Center, reprendre exactement le nom d'identité du package, le sujet Publisher et le nom d'éditeur communiqués par Partner Center :
 
 ```powershell
-.\store\build.ps1 -Identity 'IDENTITE_PARTNER_CENTER' -Publisher 'CN=SUJET_PARTNER_CENTER' -PublisherDisplay 'NOM_EDITEUR' -Version '1.0.2.0'
+.\store\build.ps1 -Identity 'IDENTITE_PARTNER_CENTER' -Publisher 'CN=SUJET_PARTNER_CENTER' -PublisherDisplay 'NOM_EDITEUR' -Version '1.0.3.0'
 ```
 
-Le fichier MSIX non signé est créé dans `dist/store/`. `-ExecutableOnly` construit uniquement l'exécutable et ses ressources. Une signature de test et un certificat approuvé sont nécessaires pour tester l'installation sur une machine ordinaire ; Microsoft signe le package publié après certification. Tester l'installation, le démarrage, les mises à jour, la désinstallation, les modes de suivi et la capture en plein écran avec Steam et le jeu avant la soumission. Ne pas lancer l'exécutable parallèlement à un tracker actif, car les deux utilisent le port 5000.
+Le paramètre `-Version` doit être fourni explicitement : la valeur par défaut du script est encore `1.0.2.0`. Le fichier MSIX non signé est créé dans `dist/store/`. `-ExecutableOnly` construit uniquement l'exécutable et ses ressources. Une signature de test et un certificat approuvé sont nécessaires pour tester l'installation sur une machine ordinaire ; Microsoft signe le package publié après certification. Tester l'installation, le démarrage, les mises à jour, la désinstallation, les modes de suivi et la capture en plein écran avec Steam et le jeu avant la soumission. Ne pas lancer l'exécutable parallèlement à un tracker actif, car les deux utilisent le port 5000.
 
 Le contrôle `.\.venv\Scripts\python.exe store\smoke_test.py` utilise un APPDATA temporaire et interroge l'interface sans ouvrir de port. Il nécessite l'accès à WMI ; il ne remplace pas un essai de capture en jeu ou du package installé.
 

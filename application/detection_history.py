@@ -51,6 +51,10 @@ def _connect():
                 raise
     con.execute('CREATE INDEX IF NOT EXISTS detection_history_mode_id ON detection_history(mode, id DESC)')
     con.execute('CREATE INDEX IF NOT EXISTS detection_history_kind_id ON detection_history(kind, id DESC)')
+    # Keep identifiers monotonic even after history is emptied: live Steam
+    # references and archived events must never point to a different event.
+    con.execute('CREATE TABLE IF NOT EXISTS detection_history_sequence (id INTEGER PRIMARY KEY CHECK(id=1), last_id INTEGER NOT NULL)')
+    con.execute('INSERT OR IGNORE INTO detection_history_sequence(id,last_id) SELECT 1,COALESCE(MAX(id),0) FROM detection_history')
     con.commit()
     _consolidate_legacy_steam(con)
     _migrate_system_events(con)
@@ -125,10 +129,14 @@ def record_detection(message, mode, kind='detection', metadata=None):
     mode = 'System' if kind in ('monitor_start', 'monitor_stop', 'monitor_error') else (mode if mode in ('Arena', 'Invasion', 'Defense') else 'Unknown')
     encoded = encrypt_value(json.dumps(metadata, ensure_ascii=False)) if metadata is not None else None
     with closing(_connect()) as con:
-        cursor = con.execute('INSERT INTO detection_history(recorded_at,mode,message,kind,metadata) VALUES (?,?,?,?,?)',
-                    (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), mode, encrypt_value(text), kind, encoded))
+        con.execute('BEGIN IMMEDIATE')
+        last_id = con.execute('SELECT MAX(last_id, (SELECT COALESCE(MAX(id),0) FROM detection_history)) FROM detection_history_sequence WHERE id=1').fetchone()[0]
+        next_id = last_id + 1
+        con.execute('UPDATE detection_history_sequence SET last_id=? WHERE id=1', (next_id,))
+        con.execute('INSERT INTO detection_history(id,recorded_at,mode,message,kind,metadata) VALUES (?,?,?,?,?,?)',
+                    (next_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), mode, encrypt_value(text), kind, encoded))
         con.commit()
-        return cursor.lastrowid
+        return next_id
 
 
 def update_detection(event_id, message, mode=None, metadata=None):

@@ -57,7 +57,9 @@
     "dialogue:334520": "ﻳﺗﻌﺫر اﻛﺗﺳﺎب ﺑﻌﺽ اﻟﻌﻧﺎﺻﺭ ﺣﻳﺙ إﻧﻬﺎ\nﺳﺗﺗﺟﺎوز اﻟﺣﺩ اﻷﻗﺻﻰ اﻟﺫي ﻳﻣﻛﻥ إﺑﻘﺎؤه ﻓﻲ اﻟﻣﺧﺯون\nواﻟﺗﺧﺯﻳﻥ",
     "game:331305": "ﻧﺎل اﻟﻣﻭت ﻣﻧﻙ",
     "2602250": "ﻗﺎم <?joinName?> اﻹﺻﺑﻊ اﻟﺩﻣﻭﻳﺔ ﺑﺎﻟﻐﺯو",
-    "2602260": "ﻗﺎم <?joinName?> اﻟﻣﺗﻣﺭد ﺑﺎﻟﻐﺯو"
+    "2602260": "ﻗﺎم <?joinName?> اﻟﻣﺗﻣﺭد ﺑﺎﻟﻐﺯو",
+    "2460000": "ﻳﺗﻌﺫر اﺳﺗﺩﻋﺎء اﻟﻣﺗﻌﺎون ﺑﺳﺑﺏ\nاﻧﺗﻬﺎء اﻟﻣﻬﻠﺔ",
+    "2490000": "ﻳﺗﻌﺫر اﺳﺗﺩﻋﺎء اﻟﻣﺗﻌﺎون"
   },
   "deude": {
     "2300000": "Gast wird herbeigerufen ...",
@@ -117,7 +119,9 @@
     "dialogue:334520": "Einige Objekte können nicht erlangt werden, \nda dies das Maximum von Inventar und Lager übersteigen würde.",
     "game:331305": "IHR SEID GESTORBEN",
     "2602250": "Blutiger Finger <?joinName?> ist eingedrungen.",
-    "2602260": "Rekusant <?joinName?> ist eingedrungen."
+    "2602260": "Rekusant <?joinName?> ist eingedrungen.",
+    "2460000": "Der Gast lässt sich nicht herbeirufen.\nGrund: Zeitüberschreitung",
+    "2490000": "Der Gast lässt sich nicht herbeirufen."
   },
   "engus": {
     "2300000": "Summoning cooperator...",
@@ -177,7 +181,9 @@
     "dialogue:334520": "Some items could not be acquired as they would\nexceed the maximum able to be held in inventory\nand storage",
     "game:331305": "YOU DIED",
     "2602250": "Bloody Finger <?joinName?> has invaded",
-    "2602260": "Recusant <?joinName?> has invaded"
+    "2602260": "Recusant <?joinName?> has invaded",
+    "2460000": "Unable to summon cooperator due to\ntime out",
+    "2490000": "Unable to summon cooperator"
   },
   "frafr": {
     "2300000": "Invocation de l'allié…",
@@ -237,7 +243,9 @@
     "dialogue:334520": "Impossible d'acquérir certains objets sans dépasser la limite d'inventaire et de stockage.",
     "game:331305": "VOUS AVEZ PÉRI",
     "2602250": "Invasion par le Doigt sanglant <?joinName?>.",
-    "2602260": "Invasion par le Réfractaire <?joinName?>."
+    "2602260": "Invasion par le Réfractaire <?joinName?>.",
+    "2460000": "Impossible d'invoquer l'allié.\nDélai expiré.",
+    "2490000": "Impossible d'invoquer l'allié."
   },
   "itait": {
     "2300000": "Evocazione alleato in corso...",
@@ -297,7 +305,9 @@
     "dialogue:334520": "Impossibile ottenere alcuni oggetti, in quanto\nsupererebbero i limiti di inventario o deposito.",
     "game:331305": "SEI MORTO",
     "2602250": "Invasione del Dito sanguinante <?joinName?>",
-    "2602260": "Invasione del dissidente <?joinName?>"
+    "2602260": "Invasione del dissidente <?joinName?>",
+    "2460000": "Impossibile evocare un alleato.\nTempo scaduto.",
+    "2490000": "Impossibile evocare un alleato"
   },
   "jpnjp": {
     "2300000": "協力者を召喚しています",
@@ -357,7 +367,9 @@
     "dialogue:334520": "所持および格納上限を超えてしまうため\n入手できなかったアイテムがあります",
     "game:331305": "YOU DIED",
     "2602250": "血の指<?joinName?>が侵入しました",
-    "2602260": "背律者<?joinName?>が侵入しました"
+    "2602260": "背律者<?joinName?>が侵入しました",
+    "2460000": "協力者を召喚できませんでした\n一定時間応答がありませんでした",
+    "2490000": "協力者を召喚できませんでした"
   },
   "korkr": {
     "2300000": "협력자를 소환하고 있습니다.",
@@ -417,7 +429,9 @@
     "dialogue:334520": "소지 및 보관 상한을 초과하기 때문에\n입수하지 못한 아이템이 있습니다.",
     "game:331305": "YOU DIED",
     "2602250": "피 묻은 손가락 <?joinName?>이(가) 침입했습니다.",
-    "2602260": "배율자 <?joinName?>이(가) 침입했습니다."
+    "2602260": "배율자 <?joinName?>이(가) 침입했습니다.",
+    "2460000": "협력자를 소환하지 못했습니다.\n일정 시간 응답이 없었습니다.",
+    "2490000": "협력자를 소환하지 못했습니다."
   },
   "polpl": {
     "2300000": "Przyzywanie sojusznika…",
@@ -477,7 +491,9 @@
     "dialogue:334520": "Części przedmiotów nie można było uzyskać,\ngdyż docelowa liczba przekracza limit\npojemności ekwipunku i schowka.",
     "game:331305": "NIE ŻYJESZ",
     "2602250": "Najazd krwawego palca imieniem <?joinName?>",
-    "2602260": "Odszczepieniec imieniem <?joinName?> dokonuje najazdu"
+    "2602260": "Odszczepieniec imieniem <?joinName?> dokonuje najazdu",
+    "2460000": "Nie udało się przyzwać sojusznika.\nPrzekroczono czas oczekiwania.",
+    "2490000": "Nie udało się przyzwać sojusznika"
   },
   "porbr": {
     "2300000": "Invocando cooperador...",
@@ -537,7 +553,9 @@
     "dialogue:334520": "Não foi possível adquirir alguns itens, pois o máximo\nde armazenamento do inventário e do depósito\nseria excedido.",
     "game:331305": "VOCÊ MORREU",
     "2602250": "Dedo Sangrento <?joinName?> invadiu",
-    "2602260": "Não Conformista <?joinName?> invadiu"
+    "2602260": "Não Conformista <?joinName?> invadiu",
+    "2460000": "Não foi possível invocar o cooperador\ndevido ao tempo expirado.",
+    "2490000": "Não foi possível invocar o cooperador."
   },
   "rusru": {
     "2300000": "Призыв помощника...",
@@ -597,7 +615,9 @@
     "dialogue:334520": "Невозможно получить некоторые предметы.\nВ инвентаре и сундуке не хватает места\nдля хранения.",
     "game:331305": "ВЫ ПОГИБЛИ",
     "2602250": "Окровавленный палец <?joinName?> вторгся в чужой мир",
-    "2602260": "Мятежник <?joinName?> вторгся в чужой мир"
+    "2602260": "Мятежник <?joinName?> вторгся в чужой мир",
+    "2460000": "Нельзя призвать помощника,\nтак как время истекло.",
+    "2490000": "Призвать помощника нельзя"
   },
   "spaar": {
     "2300000": "Invocando ayudante…",
@@ -657,7 +677,9 @@
     "dialogue:334520": "No se pueden adquirir algunos objetos\nporque se superaría el máximo que puedes guardar\nentre el inventario y el almacenamiento.",
     "game:331305": "MORISTE",
     "2602250": "El dedo sangriento <?joinName?> invadió",
-    "2602260": "El recusante <?joinName?> invadió"
+    "2602260": "El recusante <?joinName?> invadió",
+    "2460000": "No se pudo invocar al ayudante\nporque se excedió el tiempo de espera.",
+    "2490000": "No se pudo invocar al ayudante."
   },
   "spaes": {
     "2300000": "Invocando al cooperador...",
@@ -717,7 +739,9 @@
     "dialogue:334520": "No has podido adquirir algunos objetos porque\nsuperarían el número máximo permitido en el inventario\no almacenamiento.",
     "game:331305": "HAS MUERTO",
     "2602250": "Invadido por el Dedo Sangriento <?joinName?>.",
-    "2602260": "Invadido por el recusante <?joinName?>."
+    "2602260": "Invadido por el recusante <?joinName?>.",
+    "2460000": "No se puede invocar al cooperador\nal haberse superado el tiempo de espera.",
+    "2490000": "No se puede invocar al cooperador."
   },
   "thath": {
     "2300000": "กําลัง​อัญเชิญ​พันธมิตร",
@@ -777,7 +801,9 @@
     "dialogue:334520": "ไม่​สามารถ​เก็บ​บาง​ไอ​เท​ม​ได้​เนืองจาก​ไอ​เทม​พก​พา​และ​หีบ​ไม้​เต็ม​แล้ว",
     "game:331305": "YOU DIED",
     "2602250": "นิว​โลหิต <?joinName?> ​บุกรุก​เข้า​มา​แล้ว",
-    "2602260": "ผู้​ตระบัด​บัญญัติ <?joinName?> ​บุกรุก​เข้า​มา​แล้ว"
+    "2602260": "ผู้​ตระบัด​บัญญัติ <?joinName?> ​บุกรุก​เข้า​มา​แล้ว",
+    "2460000": "ไม่​สามารถ​อัญเชิญ​พันธมิตร​ได้\n​เพราะ​ไม่มี​การ​ตอบ​กลับ​ใน​เวลา​ที​กําหนด",
+    "2490000": "ไม่​สามารถ​อัญเชิญ​พันธมิตร​ได้"
   },
   "zhocn": {
     "2300000": "正在召唤协助者。",
@@ -837,7 +863,9 @@
     "dialogue:334520": "已超过持有与收纳上限，\n无法取得部分道具。",
     "game:331305": "YOU DIED",
     "2602250": "血指<?joinName?>已入侵。",
-    "2602260": "叛律者<?joinName?>已入侵。"
+    "2602260": "叛律者<?joinName?>已入侵。",
+    "2460000": "一定时间内联机没有回应，\n因此无法召唤协助者。",
+    "2490000": "无法召唤协助者。"
   },
   "zhotw": {
     "2300000": "正在召喚協助者。",
@@ -897,6 +925,8 @@
     "dialogue:334520": "已超過持有與收納上限，\n無法取得部分道具。",
     "game:331305": "YOU DIED",
     "2602250": "血指<?joinName?>已入侵。",
-    "2602260": "叛律者<?joinName?>已入侵。"
+    "2602260": "叛律者<?joinName?>已入侵。",
+    "2460000": "一定時間內連線沒有回應，\n因此無法召喚協助者。",
+    "2490000": "無法召喚協助者。"
   }
 }

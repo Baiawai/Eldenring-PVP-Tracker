@@ -100,6 +100,7 @@ def recognize(text, language):
 # translations. Several IDs are the same event in different network roles.
 _EVENTS = {
     'ally_summoning': ('2300000',),
+    'ally_summon_failed': ('2460000', '2490000'),
     'invasion_loading': ('2301200',),
     'arena_assembled': ('2311413',),
     'invasion_search_near': ('2331200',),

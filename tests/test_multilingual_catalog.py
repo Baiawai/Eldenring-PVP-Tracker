@@ -108,6 +108,16 @@ class MultilingualCatalogTests(unittest.TestCase):
             events = classify('This is not an Elden Ring notification.', language)
             self.assertFalse(any(item['event'] in ('invasion_victory', 'invasion_defeat', 'arena_victory', 'arena_defeat') for item in events))
 
+    def test_summon_failure_and_timeout_are_single_events_in_every_language(self):
+        for language, entries in messages().items():
+            for identifier in ('2460000', '2490000'):
+                with self.subTest(language=language, identifier=identifier):
+                    events = classify(entries[identifier], language)
+                    self.assertEqual([event['event'] for event in events].count('ally_summon_failed'), 1)
+        for language, text in [('frafr', "Impossible d'invoquer l'adversaire."),
+                               ('engus', 'Unable to summon adversary')]:
+            self.assertNotIn('ally_summon_failed', [event['event'] for event in classify(text, language)])
+
     def test_english_hunter_message_remains_ambiguous(self):
         text = messages()['engus']['2600304'].replace('<?joinName?>', 'Xeno')
         self.assertEqual(classify(text, 'engus'), [{'event':'hunter_observed', 'values':{'joinName':'Xeno'}}])

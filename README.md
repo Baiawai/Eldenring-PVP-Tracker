@@ -1,77 +1,106 @@
 # Elden Ring PvP Tracker
 
-Application Windows locale qui suit les combats PvP d’Elden Ring à partir des messages affichés à l’écran. L’interface s’ouvre dans un navigateur et les statistiques sont conservées sur le PC.
+Elden Ring PvP Tracker est une application Windows locale qui suit les combats PvP à partir des notifications affichées dans le jeu. Son interface s'ouvre dans le navigateur et les données sont conservées sur le PC. Version actuelle : **1.0.3.0**.
 
-## Fonctions
+## Fonctionnalités
 
-- Suivi distinct de l’**Arène 1v1**, des **invasions** et des combats lorsque votre **monde est envahi**. Seule l’arène possède des égalités.
-- Statistiques par mode, captures de résultat, historique des détections et joueurs rencontrés, y compris les alliés et chasseurs reconnus.
-- Profil personnalisable, légende, informations de session et dernier combat dans le volet latéral.
-- Détection des joueurs Steam et informations réseau disponibles, avec accès aux profils Steam. Les noms, rôles et pings ne sont affichés que lorsqu’ils peuvent être identifiés.
-- Interface et reconnaissance des messages dans les langues prises en charge par le jeu. Au premier lancement, la langue du navigateur est utilisée si elle est disponible ; elle reste modifiable dans les paramètres.
+- Suivi séparé de l'arène 1v1, des invasions et des défenses lorsque votre monde est envahi. Les égalités concernent uniquement l'arène.
+- Statistiques, captures de résultat, historique des événements et liste des joueurs rencontrés.
+- Profil de personnage avec pseudo, niveau, image et légende ; volet de session et dernier combat.
+- Détection des joueurs et informations réseau disponibles via Steam, avec accès aux profils Steam lorsque ceux-ci sont identifiés.
+- Interface et reconnaissance des messages dans les langues prises en charge par le jeu.
 
-La reconnaissance dépend de l’OCR et des notifications réellement visibles. Certains textes, langues ou noms peuvent être mal lus ou masqués ; les profils Steam ne sont pas automatiquement assimilés à des personnages lorsque leur correspondance n’est pas certaine. Le classement en ligne est facultatif : les statistiques locales restent utilisables si le serveur de classement est indisponible.
+La reconnaissance utilise l'OCR et ne peut lire que les notifications visibles. Un texte ou un nom peut être mal reconnu ; un personnage et un compte Steam ne sont pas nécessairement associés. Le classement en ligne est facultatif et sa disponibilité ne conditionne pas les statistiques locales.
 
-## Prérequis
+## Installation de la version de développement
 
-- Windows, avec Elden Ring et Steam pour l’utilisation en jeu.
-- Python 3.12 64 bits pour exécuter le projet depuis ses sources.
-- Tesseract OCR installé à l’emplacement actuellement attendu par l’application : `C:\Program Files\Tesseract-OCR\tesseract.exe`. Les modèles de reconnaissance utilisés par le projet sont dans `application/locales/tessdata/`.
+### Prérequis
 
-La mesure de ping utilise les composants Steam/P2P du projet et peut demander une autorisation administrateur Windows. Une adresse affichée peut être celle d’un relais ; sa géolocalisation est indicative.
-
-## Installation et lancement
+- Windows, Elden Ring et Steam pour le suivi en jeu.
+- Python 3.15 64 bits pour lancer le projet depuis ses sources.
+- Tesseract OCR installé dans `C:\Program Files\Tesseract-OCR\tesseract.exe`. Les modèles OCR utilisés par le projet se trouvent dans `application/locales/tessdata/`.
 
 Depuis PowerShell, à la racine du projet :
 
 ```powershell
-py -3.12 -m venv .venv
+py -3.15 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\Lancer le tracker.bat
 ```
 
-Le script de lancement utilise `.venv` et ouvre normalement `http://localhost:5000/` dans le navigateur. Si le tracker tourne déjà, utilisez sa page existante ou l’icône dans la zone de notification. Pour voir les messages de diagnostic dans une console :
+Le lanceur utilise `.venv` et ouvre normalement [localhost:5000](http://localhost:5000/). Le serveur écoute uniquement sur `127.0.0.1:5000`. Si le tracker tourne déjà, utilisez sa page existante ou l'icône dans la zone de notification. Pour afficher les messages du programme dans une console :
 
 ```powershell
 .\.venv\Scripts\python.exe ELDENRING_Tracker.py
 ```
 
-L’environnement virtuel existant est lié à son installation Python et à son chemin Windows : recréez-le après une copie sur un autre PC. Les bibliothèques et modèles nécessaires au code de l’application sont suivis dans le projet ; Tesseract lui-même doit être installé séparément.
+Un environnement virtuel dépend de l'installation Python et de son chemin : recréez `.venv` après avoir déplacé le projet sur un autre PC.
 
-## Utilisation
+## Démarrer le suivi
 
-1. Lancez le tracker, puis Elden Ring.
-2. Dans les paramètres, vérifiez que la langue choisie correspond à celle du jeu. Ce réglage adapte l’interface et l’OCR ; il ne change pas la langue d’Elden Ring.
-3. Cliquez sur **Start** et gardez le jeu au premier plan pendant la détection. Configurez si nécessaire la zone des notifications et l’intervalle de capture.
-4. Consultez les captures, les statistiques, les joueurs rencontrés ou l’historique dans le menu. **Stop** arrête le suivi. La session affichée dans le volet repart de zéro au prochain démarrage du suivi.
+1. Lancez le tracker et Elden Ring.
+2. Dans **Configuration**, choisissez la langue utilisée dans le jeu. Elle adapte l'interface et la reconnaissance, sans modifier la langue du jeu.
+3. Cliquez sur **Start** et gardez le jeu visible au premier plan pour que les notifications puissent être capturées. **Stop** arrête le suivi.
+4. Consultez les captures, les statistiques, les joueurs et l'historique depuis le menu. La session affichée dans le volet repart de zéro au prochain démarrage du suivi.
 
-## Données locales
+### Capture et reconnaissance
 
-Les bases SQLite de profil, paramètres, captures, historique et statistiques se trouvent dans `%APPDATA%\Elden Ring PvP Tracker\`. Les captures temporaires et images générées pendant le suivi peuvent aussi apparaître dans `application/`. Ces fichiers personnels et les environnements virtuels sont exclus du dépôt par `.gitignore`.
+Dans **Configuration → Capture**, la détection automatique de la zone de notification est active par défaut. Elle cherche les messages reconnus et prévoit une hauteur suffisante pour deux lignes ; si elle ne peut pas situer le message, elle analyse la zone centrale de l'image. Vous pouvez verrouiller une zone vérifiée, puis la déverrouiller pour reprendre la détection, ou désactiver le mode automatique pour définir les limites manuellement.
 
-Les statistiques d’utilisation sont enregistrées localement dans `usage_metrics.db` à partir du premier lancement de cette version. Une session correspond à la durée de lancement du tracker, y compris lorsqu’il est en attente ; elle est mise à jour environ toutes les 30 secondes. Les consultations comptent les ouvertures de pages dans l’interface. Les combats par mode reprennent les compteurs existants. Les mesures du diagnostic sont temporaires et concernent le processus courant : les erreurs OCR sont des erreurs techniques, et non un taux de reconnaissance. Le ping Steam est une moyenne des mesures actuellement disponibles et les synchronisations API ne sont comptées que lorsqu’elles sont tentées.
+L'aperçu et le test OCR utilisent une notification reconnue sur deux lignes. Si aucun exemple n'est disponible, démarrez le suivi et attendez une notification de ce type. Le test ne modifie pas les statistiques. Le dernier exemple est chiffré et conservé localement après le redémarrage.
 
-Pour conserver vos données, sauvegardez le dossier `%APPDATA%\Elden Ring PvP Tracker\` lorsque le tracker est arrêté. Les adresses IP et informations Steam détectées peuvent faire partie de l’historique : protégez vos sauvegardes en conséquence.
+L'écran contenant la fenêtre du jeu est détecté automatiquement. La reconnaissance dépend aussi de la langue sélectionnée et de la visibilité des notifications.
+
+### Profil et connexions Steam
+
+Dans **Configuration → Profil**, la capture du profil permet de récupérer le pseudo, le niveau et l'image en une étape. Dans Elden Ring, ouvrez le menu, puis **Configuration → Quitter la partie**, sans confirmer la sortie. Vérifiez les éléments reconnus avant de les enregistrer : l'OCR peut se tromper.
+
+Dans **Configuration → P2P**, l'activation automatique du journal Steam est proposée par défaut. Lorsque la détection P2P est active, le tracker demande au client Steam d'activer son journal au démarrage ou après un redémarrage de Steam. Désactivez cette option pour utiliser la configuration manuelle ; la commande reste disponible dans la section P2P.
+
+En développement, la mesure avancée du ping peut demander une autorisation administrateur Windows. Le ping Steam est utilisé lorsqu'il est disponible ; certaines connexions ne fournissent aucune mesure. Une adresse affichée peut être celle d'un relais et sa géolocalisation est indicative.
+
+### Historique et archives
+
+En bas de la page **Historique**, la taille correspond à l'espace alloué aux événements actifs et à leurs index lorsque SQLite fournit cette mesure ; sinon, elle est estimée à partir des données enregistrées.
+
+Arrêtez le suivi avant de purger ou d'archiver l'historique actif. L'archivage retire les événements de la liste active et les conserve chiffrés dans la même base locale, y compris les rencontres Steam. La restauration ajoute les événements absents sans écraser les événements déjà présents et conserve l'archive.
+
+La purge retire également les rencontres Steam de la liste active des joueurs, mais ne supprime ni les archives, ni les captures, ni les statistiques cumulées. SQLite peut réutiliser l'espace libéré sans réduire immédiatement la taille du fichier.
+
+Les durées de conservation des captures et de l'historique Steam sont désactivées par défaut. Si vous en activez une, les anciennes données sont supprimées au démarrage. La suppression des captures peut modifier les graphiques et certaines rencontres, sans modifier les statistiques cumulées.
+
+## Données locales et sauvegarde
+
+Les bases SQLite de profil, configuration, captures, historique et statistiques se trouvent dans `%APPDATA%\Elden Ring PvP Tracker\`. Des images temporaires générées pendant le suivi peuvent aussi apparaître dans `application/`. Ces fichiers personnels, les journaux et les environnements virtuels sont exclus du dépôt.
+
+Pour sauvegarder vos données, arrêtez le tracker puis copiez le dossier `%APPDATA%\Elden Ring PvP Tracker\`. Les captures et historiques peuvent contenir des pseudos et des adresses réseau : protégez vos sauvegardes avant de les partager.
+
+Les statistiques d'utilisation sont enregistrées localement dans `usage_metrics.db`. Une session mesure la durée de fonctionnement du tracker, y compris en attente, et est mise à jour environ toutes les 30 secondes. Le diagnostic présente aussi des mesures temporaires du processus courant ; les erreurs OCR techniques ne représentent pas un taux de reconnaissance.
+
+## Version Microsoft Store
+
+La construction et les vérifications du package sont décrites dans [store/README.md](store/README.md). La version compilée désactive le classement distant et la mesure du ping nécessitant une élévation ; elle affiche le ping Steam lorsqu'il est disponible. Les données et l'installation du package doivent être testées séparément de la version de développement.
 
 ## Structure du projet
 
-- `ELDENRING_Tracker.py` : lancement du serveur Flask/Waitress et icône de notification.
-- `application/functions.py` : suivi, OCR, routes et orchestration des combats.
-- `application/mode_stats.py`, `session_summary.py` : statistiques par mode et session courante.
-- `application/detection_history.py`, `player_sightings.py`, `players.py` : historique et rencontres.
+- `ELDENRING_Tracker.py` : serveur Flask/Waitress et icône de notification.
+- `application/functions.py` : orchestration du suivi et des combats.
+- `application/mode_stats.py`, `session_summary.py` : statistiques par mode et session.
+- `application/detection_history.py`, `history_archives.py`, `player_sightings.py`, `players.py` : événements, archives et rencontres.
+- `application/notification_region.py`, `notification_sample.py`, `profile_capture.py` : zone OCR, exemple de notification et capture du profil.
 - `application/peer_tracking.py`, `steam_history.py`, `steam_overlay.py`, `steam_peers/` : informations Steam et réseau.
-- `application/locales/` : messages du jeu, traductions de l’interface et modèles OCR ; voir son [README](application/locales/README.md).
-- `templates/index.html` et `static/` : interface, styles et scripts du navigateur.
-- `tests/` : tests automatisés du projet.
+- `application/locales/` : messages du jeu, traductions et modèles OCR ; voir son [README](application/locales/README.md).
+- `templates/index.html` et `static/` : interface et ressources.
+- `tests/` : tests automatisés.
 
-Les fonctions Python utilisent `snake_case`. Les classes CSS de structure ajoutées ou renommées utilisent des noms descriptifs en anglais séparés par des tirets ; les sélecteurs HTML, JavaScript et CSS doivent évoluer ensemble. Les noms historiques des routes HTTP et des colonnes SQLite restent conservés pour la compatibilité.
+## Vérification
 
-## Tests
+Depuis la racine :
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests
 ```
 
-Pour les changements visuels ou de détection, complétez les tests automatisés par une vérification dans l’interface ou sur une partie adaptée. Les instructions de travail pour les assistants figurent dans [AGENTS.md](AGENTS.md).
+Pour un fichier JavaScript modifié, `node --check static/nom-du-fichier.js` vérifie sa syntaxe si Node est installé. Complétez par des essais de l'interface et, pour l'OCR, par une partie adaptée. Les tests qui écrivent doivent utiliser des données et un `APPDATA` isolés.
 
-Les principaux résultats et limites de l’audit de développement sont indiqués dans [AUDIT.md](AUDIT.md).
+Les consignes de travail figurent dans [AGENTS.md](AGENTS.md), et les résultats et limites de l'audit dans [AUDIT.md](AUDIT.md).

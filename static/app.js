@@ -330,7 +330,6 @@ function launchLanguages(language){
     $(".monitor-starting").text(text_active[4]);
     $(".language_tr").text(interface_active[42]);
     $(".language_tr").text(interface_active[42]);
-    $(".autoStrat_tr").text(interface_active[43]);
     $(".auto_start span[auto_start='false']").text(interface_active[44]);
     $(".auto_start span[auto_start='true']").text(interface_active[45]);
     $(".reEcr_tr").text(interface_active[46]);
@@ -387,6 +386,31 @@ list_lang = ["eng", "fra", "deu", "ita", "spaes", "spaar", "por", "pol", "rus", 
 
 
 let start_ready = true;
+// A monitor started in the background (or in another tab) must be reflected
+// without calling /start again or consuming the pending event queue here.
+function attachRunningMonitor() {
+    if (!start_ready || $('#start').hasClass('active') || !text_active[2]) return;
+    $('#start').addClass('active').text(text_active[2]);
+    $('.presentation').remove();
+    $('.cadreStats').fadeIn();
+    $('.cadre').css('background', 'rgba(0,0,0,0.99)');
+    $('.cadreStats .monitor-status').remove();
+    $('.cadreStats').append($('<p class="elden-on simple monitor-status monitor-starting">').text(text_active[4]));
+    clearInterval(runApp);
+    runApp = setInterval(intervall, 3000);
+    sidebarTracking = true;
+    sidebarGameRunning = null;
+    sidebarMonitorReady = false;
+    renderSidebar();
+    loadProfileLegend();
+    startPreviewPolling();
+}
+setInterval(function () {
+    if ($('#start').hasClass('active') || !start_ready) return;
+    $.get('/monitor-status', function (data) {
+        if (data && data.running) attachRunningMonitor();
+    });
+}, 3000);
 $("#start").click(function(){
     if(start_ready == true){
     if (!$(this).hasClass("active") && $(".settings-panel").is(":visible")) {
@@ -438,8 +462,6 @@ $("#start").click(function(){
         $('.cadreStats').scrollTop($('.cadreStats')[0].scrollHeight);
         if($(".profile-card").is(":hidden")){
             $(".profile-card").show();
-            $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
-            $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
         }
     }, 200);
     runApp = setInterval(intervall, 3000);
@@ -460,7 +482,8 @@ $("#start").click(function(){
             $('#start').removeClass('active').text(text_active[0]);
             start_ready = true;
             $('.monitor-starting').remove();
-            $('.cadreStats').append($('<p class="elden-off simple">').text(appT('monitor_start_error', 'Impossible de démarrer le suivi. Réessaie dans quelques instants.')));
+            const errorMessage = appT('monitor_start_error', 'Impossible de démarrer le suivi. Réessaie dans quelques instants.');
+            $('.cadreStats').append($('<p class="elden-off simple">').text(errorMessage));
             $('.live_on').addClass('live_off').removeClass('live_on');
         }
     })
@@ -478,8 +501,6 @@ if($("#menu_button_captures").hasClass("active")){
 
 $( window ).resize(function() {
    
-    $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
-    $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
     initSetting();
 });
 
@@ -1026,10 +1047,6 @@ $("#menu_button_settings").click(function(){
         $(".cadre_resu").fadeIn();
         $(this).removeClass("active");
         $(".settings-panel").css("display","none");
-        setTimeout(function() {
-            $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
-            $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
-        }, 200);
         menu_settings = false;
     } else {
         if($(".presentation").length != 0){
@@ -1060,10 +1077,6 @@ $("#menu_button_settings").click(function(){
         preview_img_profil = false;
         clearInterval(runUser);
     }
-    setTimeout(function() {
-        $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
-        $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
-    }, 200);
     if(!$(".modal_chart").hasClass("hide")){
         $(".modal_chart").addClass("hide");
         $(".chart-container").show();
@@ -1102,10 +1115,6 @@ $("#menu_button_multi").click(function(){
             $("input#pseudo").focus();
         }, 200);
     }
-   setTimeout(function() {
-        $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
-        $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
-    }, 200);
     if(!$(".modal_chart").hasClass("hide")){
         $(".modal_chart").addClass("hide");
         $(".chart-container").show();
@@ -1155,11 +1164,6 @@ $("#menu_button_captures").click(function(){
     setTimeout(function() {
         $('.capture-scroll').scrollTop(0);
     }, 100);
-    setTimeout(function() {
-        $(".profile-card img").css("max-height",($(".profile-card").height() / 3)+"px");
-        $(".profile-card .scroll_card").css("height",($(".profile-card").height() - $(".profile-card-header.img_user").height()) - 5+"px");
-       
-    }, 300);
     if(!$(".modal_chart").hasClass("hide")){
         $(".modal_chart").addClass("hide");
         $(".chart-container").show();
@@ -1355,7 +1359,7 @@ function init(){
 
                 if(user[6] != ''){
                     
-                    $(".fakeImageuser").hide();
+                    $(".img_user .fakeImageuser").hide();
                     if($(".user_img_carde").length != 0){
                         $(".user_img_carde").attr("src","data:image/jpg;base64,"+user[6]);
                     }else {
@@ -1573,7 +1577,7 @@ function intervall_user(){
                 if($(".preview_img_profil img").length == 0 && preview_img_profil == false && runUserFor == "img_avatar"){
                     preview_img_profil = true;
                     $(".preview_img_profil .loading").hide();
-                    $(".fakeImageuser").hide();
+                    $(".img_user .fakeImageuser").hide();
                     $(".preview_img_profil").append("<img src='data:image/jpg;base64,"+interval_img+"'>");
                     $(".carde_info[info=avatar]").fadeOut();
                     $(".avatr_save").show();
@@ -1631,7 +1635,7 @@ $("#save_img").click(function(){
     
                 $(".panel_user").removeClass("hide");
                 // $("#menu_button_settings").click();
-                $(".fakeImageuser").hide();
+                $(".img_user .fakeImageuser").hide();
                 $(".detail_img").addClass("hide");
                 $("#save_img").addClass("hide").prop("disabled", true);
                 clearInterval(runUser);   
@@ -1708,7 +1712,7 @@ function syncMulti() {
             const avatarValue = String(row[8] || '');
             const avatar = avatarValue && /^[A-Za-z0-9+/]+={0,2}$/.test(avatarValue)
                 ? $('<img alt="">').attr('src', 'data:image/jpg;base64,' + avatarValue).prop('outerHTML')
-                : '<div class="fakeImageuser" aria-hidden="true">?</div>';
+                : '<div class="fakeImageuser" aria-hidden="true"></div>';
             const lang = String(row[6] || '');
             const flags = {fra:'France.png', eng:'English.png'};
             const language = Object.prototype.hasOwnProperty.call(flags, lang)
@@ -2011,7 +2015,7 @@ $(".carde_info").click(function(){
         } else {
             $(".btn_menu_settings[menu=3]").click();
         }
-        $("#changeLvl").click();
+        $("#profile_capture_start").trigger("click");
     }
     if(info_selected == "pseudo" || info_selected == "avatar"){
         if($(".settings-panel").is(":hidden")){
@@ -2021,11 +2025,11 @@ $(".carde_info").click(function(){
             $(".btn_menu_settings[menu=3]").click();
         }
         if(info_selected == "pseudo"){
-            $("#pseudo").click();
+            $("#profile_capture_start").trigger("click");
             
         }
         if(info_selected == "avatar"){
-           $("#changeAvatar").click();
+           $("#profile_capture_start").trigger("click");
         }
     }
 
@@ -2179,3 +2183,34 @@ $(window).on('load', function() {
     const section = { '#statistics': 'menu_button_info', '#settings': 'menu_button_settings' }[window.location.hash];
     if (section) document.getElementById(section).click();
 });
+
+
+// Redistribute the active-tab sparks whenever the selected section changes.
+(function () {
+    const nav = document.querySelector('.settings-panel .contente_header_settings');
+    if (!nav) return;
+    let current = null;
+    const effect = document.createElement('span');
+    effect.className = 'settings-active-sparks';
+    effect.setAttribute('aria-hidden', 'true');
+    function update() {
+        const active = nav.querySelector('.btn_menu_settings.active_setting');
+        if (!active || active === current) return;
+        current = active;
+        effect.replaceChildren();
+        const field = document.createElement('span');
+        field.className = 'settings-spark-field';
+        effect.appendChild(field);
+        for (let i = 0; i < 22; i++) {
+            const spark = document.createElement('i');
+            spark.style.left = (27 + Math.random() * 46).toFixed(2) + '%';
+            spark.style.top = (22 + Math.random() * 56).toFixed(2) + '%';
+            spark.style.setProperty('--spark-size', (.7 + Math.random() * 1.5).toFixed(2) + 'px');
+            spark.style.setProperty('--spark-opacity', (.3 + Math.random() * .55).toFixed(2));
+            field.appendChild(spark);
+        }
+        active.appendChild(effect);
+    }
+    new MutationObserver(update).observe(nav, {subtree:true, attributes:true, attributeFilter:['class']});
+    update();
+})();

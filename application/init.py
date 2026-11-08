@@ -16,8 +16,8 @@ from application.runtime_paths import image_dir, initialize_data_dir
 
 elden_counter_dir_path = str(initialize_data_dir())
 
-database_user = os.path.join(elden_counter_dir_path, "database_user.db")
-database_capture = os.path.join(elden_counter_dir_path, "database_capture.db")
+database_user = os.path.join(elden_counter_dir_path, 'database_user.db')
+database_capture = os.path.join(elden_counter_dir_path, 'database_capture.db')
 database_multi = os.path.join(elden_counter_dir_path, "database_multi.db")
 database_setting = os.path.join(elden_counter_dir_path, "database_setting.db")
 
@@ -34,7 +34,8 @@ def verify_identity():
         mac_address = adapter.MACAddress
     finally:
         pythoncom.CoUninitialize()
-    macId = encrypt_value(".".join([mac_address, system_info.node])).decode("utf-8")
+    identity = ".".join([mac_address, system_info.node])
+    macId = encrypt_value(identity).decode("utf-8")
     
     con = sqlite3.connect(database_user) 
     cursor = con.cursor()

@@ -7,6 +7,7 @@ import socket
 import pystray
 from PIL import Image
 from application.runtime_paths import tesseract_path, RESOURCE_DIR, FROZEN
+from application.version import APP_VERSION
 from application.local_security import is_allowed_request
 import threading
 from waitress import serve
@@ -19,7 +20,7 @@ os.environ['TESSDATA_PREFIX'] = str(RESOURCE_DIR / 'locales' / 'tessdata')
 print("=====================================")
 print(" ELDENRING TRACKER ")
 print("=====================================")
-print("version: BETA")
+print(f"version: {APP_VERSION}")
 print("-------------")
 print("Date : 26/02/2023")
 print("Dev by : Baiawai")
@@ -43,6 +44,10 @@ from application import secur
 from application import players
 from application import metrics_routes
 from application import usage_metrics
+from application import auto_tracking
+from application import retention
+from application import steam_log_auto, peer_tracking
+from application import history_archives
 
 from application.init import get_selected_language, elden_counter_dir_path
 from application.ui_localization import packs
@@ -124,7 +129,7 @@ def index():
         elif langue_select != "fr":
             from application.ui_localization import packs
             langue_select = packs().get(langue_select, {}).get('html_lang', 'en')
-        return render_template("index.html", lang = langue_select, store_build=FROZEN)
+        return render_template("index.html", lang = langue_select, store_build=FROZEN, app_version=APP_VERSION)
     else:
         url = 'https://github.com/UB-Mannheim/tesseract/wiki'
         version = ctypes.sizeof(ctypes.c_voidp) 
@@ -180,6 +185,7 @@ def start_flask():
 
 def stop_flask(icon):
     print("Exit")
+    functions.flush_notification_sample()
     icon.stop()
     os._exit(0)
     
@@ -192,9 +198,16 @@ def exit():
 flask_thread = threading.Thread(target=start_flask)     
 if __name__ == '__main__' and app_started == True:
     try:
+        retention.cleanup(init.database_capture, retention.load(), secur.decrypt_value)
+        functions.session_summary = functions.SessionSummary(functions._latest_saved_capture())
+    except Exception:
+        app.logger.exception('Unable to apply retention settings')
+    try:
         usage_metrics.start()
     except Exception:
         app.logger.exception('Unable to start local usage metrics')
+    auto_tracking.start_worker(app, functions)
+    steam_log_auto.start_worker(peer_tracking.enabled)
     flask_thread.start()
     start_pystray()
 

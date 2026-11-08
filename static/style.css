@@ -146,7 +146,7 @@ p{
     left:0px;
     width:100%;
     height:100%;
-    background-image: linear-gradient(to bottom, rgba(255,0,0,0), #a68d60);
+    background-image: linear-gradient(to bottom, rgba(255, 0, 0, 0), #dbc295);
     z-index:1030;
     text-align:center;
     display: none;
@@ -224,8 +224,7 @@ p{
 
 }
 .contente_settings{
-    background-color: rgba(0,0,0,0.7);
-    box-shadow:  0 5px 10px rgba(0,0,0,0.7);
+    background: url('settings-panel-fade.svg') center / 100% 100% no-repeat;
     width:90%;
     height:90%;
     margin:0px auto;
@@ -233,10 +232,6 @@ p{
     padding-top:30px;
     transition: all 0.3s;
     overflow-y: auto;
-}
-.contente_settings:hover{
-    background-color: rgba(0,0,0,0.8);
-    
 }
 .app-header{
    position:relative;
@@ -1849,9 +1844,9 @@ padding-left:10px;
 .fakeImageuser{
     width:100px;
     min-height:50px;
-    background-color:#000;
-    color:#fff;
-    font-size:20px;
+    background:#17140f url('default-profile-silhouette.png') center / cover no-repeat;
+    color:transparent;
+    font-size:0;
     padding:30px;
     display: flex;
     justify-content: center;
@@ -2236,7 +2231,7 @@ font-family: optimus princeps;
 .steam-peer-card h2 { margin: 0 0 7px; font: 19px 'optimus princeps', serif; color: #d4bd8f; }
 #steam_peer_status { margin: 0; font: 18px/1.4 Arial, sans-serif; color: #c5b99f; text-align: center; }
 #steam_peer_status.steam-empty { text-align: center; font-size: 18px; }
-#steam_peer_list { margin: 0; padding: 0; list-style: none; max-height: 18vh; overflow-y: auto; }
+#steam_peer_list { margin: 0; padding: 0; list-style: none; }
 #steam_peer_list li { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 4px 0; font: 18px/1.3 Arial, sans-serif; }
 .steam-peer-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .steam-peer-ping { white-space: nowrap; color: #d4bd8f; }
@@ -2269,8 +2264,9 @@ font-family: optimus princeps;
 .live > b { margin-top: 20px; }
 #steam_peer_list li { display: block; }
 .steam-peer-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-#steam_peer_list .steam-peer-name { display: block; flex: 1; min-width: 0; border: 0; border-radius: 0; padding: 0; margin: 0; color: #d4bd8f; font: 18px/1.3 Arial,sans-serif; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#steam_peer_list .steam-peer-name { appearance:none; display:block; flex:1; min-width:0; border:0; border-radius:0; padding:0; margin:0; background:none; box-shadow:none; color:#d4bd8f; font:18px/1.3 Arial,sans-serif; text-align:left; white-space:normal; overflow-wrap:anywhere; cursor:pointer; }
 #steam_peer_list .steam-peer-name:hover { color: #fff1c8; text-decoration: underline; }
+#steam_peer_list .steam-peer-name:focus-visible { outline:2px solid #d4bd8f; outline-offset:3px; }
 .steam-peer-ip, #steam_profile_status { margin: 3px 0 7px; color: #b7ab96; font: 18px/1.35 Arial,sans-serif; overflow-wrap: anywhere; }
 #steam_profile_status { text-align: center; }
 .live-preview { position: relative; }
@@ -2310,3 +2306,18 @@ font-family: optimus princeps;
 
 /* Keep the home logo current when the running server has cached the template. */
 .img_eldenring img { content: url('home-logo-classic-eye.png'); }
+
+#notification_ocr_result { white-space:pre-wrap; overflow-wrap:anywhere; text-align:left; }
+body.hide-sidebar-legend .sidebar-legend { display:none; }
+body.hide-steam-address :is(.steam-peer-ip, .player-steam-address, .history-steam-address) { display:none !important; }
+body.hide-steam-name .steam-peer-name { visibility:hidden; }
+body.hide-steam-country .ip-country { display:none !important; }
+body.hide-steam-ping .steam-peer-ping { display:none !important; }
+.steam-display-preferences { display:grid; gap:10px; margin:16px 0; text-align:left; }
+.setting_user > .form_single[inert] { opacity:.55; }
+body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
+    animation-duration:0.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.001ms !important;
+    scroll-behavior:auto !important;
+}

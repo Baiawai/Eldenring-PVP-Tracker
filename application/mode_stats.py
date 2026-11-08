@@ -2,9 +2,9 @@
 import os
 import sqlite3
 from contextlib import closing
-from application.runtime_paths import data_dir
+from application.init import database_user
 
-DATABASE = str(data_dir() / 'database_user.db')
+DATABASE = database_user
 MODES = ('Arena', 'Invasion', 'Defense')
 FIELDS = ('victory', 'defeat', 'egality', 'combats', 'noResult', 'fight_exit',
           'abandon', 'maxVictory', 'maxDefeat', 'ratioTime', 'score',

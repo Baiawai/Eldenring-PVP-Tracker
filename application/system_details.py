@@ -7,6 +7,7 @@ import subprocess
 from pathlib import Path
 
 from application.runtime_paths import tesseract_path, data_dir
+from application.version import APP_VERSION
 
 
 def database_sizes(directory):
@@ -50,7 +51,7 @@ def snapshot():
         'storage': {'databases': databases,
                     'database_bytes': sum(item['bytes'] for item in databases) if databases is not None else None,
                     'disk_free_bytes': free_bytes},
-        'environment': {'tracker': 'BETA', 'python': platform.python_version(),
+        'environment': {'tracker': APP_VERSION, 'python': platform.python_version(),
                         'tesseract': tesseract_version(), 'os': platform.platform(),
                         'data_path': str(directory)},
     }

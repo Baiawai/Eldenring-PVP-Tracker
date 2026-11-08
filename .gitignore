@@ -1,5 +1,6 @@
 # Local environments and build output
 .venv/
+.venv-python312-backup/
 VENV/
 venv/
 __pycache__/

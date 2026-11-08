@@ -87,7 +87,7 @@
                 Historique
             </li>
             <li id="menu_button_settings">
-                Settings
+                Configuration
             </li>
             <li id="menu_button_information" role="button" tabindex="0" data-i18n="information_title">Informations</li>
         </ul>
@@ -186,10 +186,12 @@
 
         <section class="history-panel" id="history_panel" aria-labelledby="history_title" hidden>
             <div class="players-shell history-shell">
-                <header class="players-header">
-                    <p class="players-eyebrow" data-i18n="history_eyebrow">JOURNAL DU COMPTEUR</p>
-                    <h1 id="history_title" data-i18n="history_title">Historique des détections</h1>
-                    <p class="players-intro" data-i18n="history_intro">Retrouve les événements reconnus par le tracker au fil de tes parties.</p>
+                <header class="players-header history-header">
+                    <div>
+                        <p class="players-eyebrow" data-i18n="history_eyebrow">JOURNAL DU COMPTEUR</p>
+                        <h1 id="history_title" data-i18n="history_title">Historique des détections</h1>
+                        <p class="players-intro" data-i18n="history_intro">Retrouve les événements reconnus par le tracker au fil de tes parties.</p>
+                    </div>
                 </header>
                 <div class="history-controls">
                     <label for="history_mode" data-i18n="history_category">Catégorie</label>
@@ -206,6 +208,23 @@
                 <div id="history_list" class="history-list" aria-live="polite"></div>
                 <button type="button" class="history-more players-filter" id="history_more" data-i18n="history_more" hidden>Afficher les événements précédents</button>
                 <p class="players-notice" data-i18n="history_notice">Les nouveaux événements sont conservés à partir de l’activation de cet historique.</p>
+                <section class="history-storage-section">
+                    <div class="history-storage-controls">
+                        <span data-i18n="history_storage_label">Taille de l’historique actif</span>
+                        <strong id="history_storage_size">—</strong>
+                        <button type="button" id="history_purge" data-i18n="history_purge" disabled>Purger l’historique</button>
+                    </div>
+                    <p id="history_storage_note" class="history-storage-note" data-i18n="history_storage_note">Espace alloué dans la base locale : après une purge, SQLite peut le réutiliser sans réduire immédiatement la taille du fichier.</p>
+                    <p id="history_monitor_note" class="history-action-status" role="status"></p>
+                    <p id="history_action_status" class="history-action-status" role="status" aria-live="polite"></p>
+                </section>
+                <section class="history-archives" aria-labelledby="history_archives_title">
+                    <div class="history-archives-header">
+                        <div><h2 id="history_archives_title" data-i18n="history_archives_title">Archives</h2><p data-i18n="history_archives_intro">Archive l’historique actif pour le retirer de cette liste. Les archives restent stockées localement et peuvent être restaurées.</p></div>
+                        <button type="button" id="history_archive" data-i18n="history_archive" disabled>Archiver l’historique</button>
+                    </div>
+                    <div id="history_archives_list" class="history-archives-list"></div>
+                </section>
             </div>
         </section>
 
@@ -313,7 +332,7 @@
                     </div>
      
                     
-                    <h5 class="version">BETA</h5>
+                    <h5 class="version" title="Version du tracker" data-i18n-title="environment_tracker">{{ app_version }}</h5>
                     
                 </div>
                 <div class="live">
@@ -345,9 +364,14 @@
             
         </div>
         <div class="settings-panel">
+            <header class="page-heading">
+                <span class="page-heading-icon"><img src="{{ url_for('static', filename='icon-settings-bronze.png') }}" alt=""></span>
+                <h1>Configuration</h1>
+            </header>
             <div class="cadre_settings_sub">
                 <div class="header_settings"></div>
                 <div class="contente_header_settings">
+                    <div class="settings-section-title" aria-live="polite">Général</div>
                     <div class="btn_menu_settings active_setting" menu="0"><img  src="{{ url_for('static', filename='icon-setting.png') }}"/></div>
                     <div class="btn_menu_settings" menu="1"><img  src="{{ url_for('static', filename='icon-ecrant.png') }}"/></div>
                     <div class="btn_menu_settings" menu="2"><img  src="{{ url_for('static', filename='icon-picture.png') }}"/></div>
@@ -380,13 +404,28 @@
                         </div>
                     </div>
                     <div class="form_single">
-                        <div class="form_single_left autoStrat_tr">
-                            Auto Start
-                        </div>
+                        <label class="form_single_left" for="auto_game_start" data-i18n="auto_game_start">Démarrer le suivi à l’ouverture du jeu</label>
+                        <div class="form_single_right"><input type="checkbox" id="auto_game_start" disabled aria-describedby="auto_game_start_help"><p id="auto_game_start_help" data-i18n="auto_game_start_help">Après un arrêt manuel, le suivi redémarre uniquement à la prochaine ouverture du jeu.</p><span id="auto_game_start_status" role="status" aria-live="polite"></span></div>
+                    </div>
+                    <div class="form_single">
+                        <div class="form_single_left autoStrat_tr" data-i18n="auto_tracker_start">Démarrer le suivi à l’ouverture du tracker</div>
                         <div class="form_single_right auto_start">
                           <button><</button> <span auto_start="false"> Non </span> <span class="hide" auto_start="true"> Oui </span> <button>></button>
                         </div>
                     </div>
+                    <div class="form_single">
+                        <label class="form_single_left" for="notify_monitor_error" data-i18n="notify_monitor_error">Notification en cas d’erreur de suivi</label>
+                        <div class="form_single_right"><input type="checkbox" id="notify_monitor_error" disabled></div>
+                    </div>
+                    <div class="form_single">
+                        <label class="form_single_left" for="notify_game_hidden" data-i18n="notify_game_hidden">Notification si le jeu n’est plus visible</label>
+                        <div class="form_single_right"><input type="checkbox" id="notify_game_hidden" disabled></div>
+                    </div>
+                    <div class="form_single">
+                        <label class="form_single_left" for="notify_monitor_stop" data-i18n="notify_monitor_stop">Notification à l’arrêt du suivi</label>
+                        <div class="form_single_right"><input type="checkbox" id="notify_monitor_stop" disabled></div>
+                    </div>
+                    <p id="tracking_notifications_status" role="status" aria-live="polite"></p>
                 
 
                 </div>
@@ -407,38 +446,84 @@
                             <div class="form_plain zoomWindow">???</div>
                         </div>
                     </div>
+                    <div class="form_single">
+                        <label class="form_single_left" for="display_scale" data-i18n="display_scale">Taille de l’interface et du texte</label>
+                        <div class="form_single_right"><select id="display_scale"><option value="100">100 %</option><option value="115">115 %</option><option value="130">130 %</option></select></div>
+                    </div>
+                    <div class="form_single">
+                        <label class="form_single_left" for="display_arabesques" data-i18n="display_arabesques">Visibilité des arabesques</label>
+                        <div class="form_single_right"><div class="settings-range"><input type="range" id="display_arabesques" min="0" max="100" value="38"><output id="display_arabesques_value">38 %</output></div></div>
+                    </div>
+                    <div class="form_single">
+                        <label class="form_single_left" for="display_reduce_motion" data-i18n="display_reduce_motion">Réduire les animations</label>
+                        <div class="form_single_right"><input type="checkbox" id="display_reduce_motion"></div>
+                    </div>
 
                 </div>
                 <div class="contente_settings hide" setting="2">
                     <div class="notification-region-settings">
                         <p class="notification-region-title" data-i18n="notification_region_title">Zone des notifications</p>
-                        <p class="notification-region-intro" data-i18n="notification_region_intro">Ajuste les limites pour encadrer les messages du jeu.</p>
-                        <div class="notification-region-controls">
-                            <label for="notification_top" data-i18n="notification_top">Limite supérieure</label>
-                            <input type="range" id="notification_top" min="0" max="95" step="1" value="40">
-                            <output id="notification_top_value">40 %</output>
-                            <label for="notification_bottom" data-i18n="notification_bottom">Limite inférieure</label>
-                            <input type="range" id="notification_bottom" min="5" max="100" step="1" value="100">
-                            <output id="notification_bottom_value">100 %</output>
+                        <p class="notification-purpose" data-i18n="notification_purpose">Cette zone est essentielle au suivi : l’application lit les notifications à l’écran pour repérer les débuts de combat, les victoires et les noms des adversaires, sans modifier les fichiers du jeu.</p>
+                        <div class="notification-sample">
+                            <div id="notification_preview" class="notification-preview" hidden>
+                                <img id="notification_preview_image" alt="" />
+                                <div id="notification_preview_area" class="notification-preview-area"></div>
+                            </div>
+                            <p id="notification_preview_empty" data-i18n="notification_preview_empty">Démarre le suivi et attends une notification reconnue à deux lignes pour afficher un exemple.</p>
                         </div>
-                        <button type="button" id="notification_reset" data-i18n="notification_reset">Réinitialiser</button>
+                        <div class="form_single">
+                            <label class="form_single_left" for="notification_manual" data-i18n="notification_automatic">Détection automatique de la zone</label>
+                            <div class="form_single_right"><input type="checkbox" id="notification_manual" checked disabled></div>
+                        </div>
+                        <p id="notification_manual_intro" class="notification-region-intro" data-i18n="notification_region_intro" hidden>Ajuste les limites autour du message détecté, puis teste la reconnaissance.</p>
+                        <p id="notification_auto_intro" class="notification-region-intro" data-i18n="notification_auto_intro">Lorsque cette option est activée, le tracker repère le bandeau à partir des messages du jeu reconnus et ajuste la zone pour les notifications d’une ou deux lignes. Si sa position est incertaine, toute l’image est analysée. Choisis Non pour régler toi-même les limites supérieure et inférieure.</p>
+                        <div id="notification_manual_controls" class="notification-region-controls" hidden>
+                            <div class="form_single"><label class="form_single_left" for="notification_top" data-i18n="notification_top">Limite supérieure</label><div class="form_single_right"><div class="settings-range"><input type="range" id="notification_top" min="0" max="95" step="1" value="40"><output id="notification_top_value">40 %</output></div></div></div>
+                            <div class="form_single"><label class="form_single_left" for="notification_bottom" data-i18n="notification_bottom">Limite inférieure</label><div class="form_single_right"><div class="settings-range"><input type="range" id="notification_bottom" min="5" max="100" step="1" value="100"><output id="notification_bottom_value">100 %</output></div></div></div>
+                        </div>
+                        <div id="notification_lock_settings" hidden>
+                            <div class="form_single">
+                                <label class="form_single_left" for="notification_lock" data-i18n="notification_lock">Verrouiller la zone détectée</label>
+                                <div class="form_single_right"><input type="checkbox" id="notification_lock" disabled></div>
+                            </div>
+                            <p id="notification_lock_help" class="notification-region-intro" data-i18n="notification_lock_help">Lorsque l’aperçu montre la bonne zone de notification, verrouille ses limites pour éviter qu’une détection incorrecte les modifie. Déverrouille-la pour reprendre la détection automatique, notamment si l’affichage du jeu ou la position des notifications change.</p>
+                            <p id="notification_lock_active" class="notification-region-intro" data-i18n="notification_lock_active" hidden>La zone est verrouillée : ses limites restent fixes jusqu’au déverrouillage.</p>
+                            <p id="notification_lock_unavailable" class="notification-region-intro" data-i18n="notification_lock_unavailable" hidden>Attends qu’une zone soit détectée sur l’aperçu avant de la verrouiller.</p>
+                        </div>
                         <p id="notification_status" role="status" aria-live="polite"></p>
-                        <div id="notification_preview" class="notification-preview" hidden>
-                            <img id="notification_preview_image" alt="" />
-                            <div id="notification_preview_area" class="notification-preview-area"></div>
+                        <div class="notification-actions">
+                            <button type="button" id="notification_reset" data-i18n="notification_reset" hidden>Réinitialiser</button>
+                            <button type="button" id="notification_ocr_test" data-i18n="notification_ocr_test" disabled>Tester la reconnaissance</button>
                         </div>
-                        <p id="notification_preview_empty" data-i18n="notification_preview_empty">L’aperçu apparaîtra après une capture du jeu par le tracker.</p>
+                        <p id="notification_ocr_status" role="status" aria-live="polite"></p>
+                        <pre id="notification_ocr_result" hidden></pre>
+                    </div>
+                    <div class="form_single">
+                        <label class="form_single_left" for="retention_captures" data-i18n="retention_captures">Conservation des captures</label>
+                        <div class="form_single_right">
+                            <select id="retention_captures" disabled><option value="0" data-i18n="retention_forever">Tout conserver</option><option value="30">30 j</option><option value="90">90 j</option><option value="365">365 j</option></select>
+                            <p data-i18n="retention_captures_help">Les captures plus anciennes sont supprimées au démarrage. Elles disparaissent aussi des graphiques et de certaines rencontres ; les statistiques cumulées restent conservées.</p>
+                            <span id="retention_captures_status" role="status" aria-live="polite"></span>
+                        </div>
                     </div>
 
                 </div>
                 <div class="contente_settings hide setting_user" setting="3">
                     <div class="form_single">
-                        <div class="form_single_left">
-                            <label for="pseudo" class="vt_pseudo_tr">Votre pseudo</label>
-                            
-                        </div>
-                        <div class="form_single_right">
-                            <input type="text" name="pseudo" id="pseudo"/>
+                        <span class="form_single_left" data-i18n="profile_capture_title">Profil du personnage</span>
+                        <div class="form_single_right"><button type="button" id="profile_capture_start" data-i18n="profile_capture_start">Récupérer mon profil</button></div>
+                    </div>
+                    <div class="profile-capture-panel" id="profile_capture_panel" hidden>
+                        <p id="profile_capture_instructions" data-i18n="profile_step_menu">Dans Elden Ring, ouvre le menu, puis Configuration et l’onglet « Quitter la partie », sans confirmer la sortie.</p>
+                        <p id="profile_capture_success" data-i18n="profile_capture_success" hidden>Tous les éléments ont été récupérés avec succès.</p>
+                        <p id="profile_capture_status" role="status" aria-live="polite"></p>
+                        <button type="button" id="profile_capture_cancel" data-i18n="profile_capture_cancel">Annuler</button>
+                        <div id="profile_capture_preview" hidden>
+                            <img id="profile_capture_avatar" alt="">
+                            <p><span class="vt_pseudo_tr">Votre pseudo</span> : <strong id="profile_capture_name"></strong></p>
+                            <p><span class="vt_niveau_tr">Votre niveau</span> : <strong id="profile_capture_level"></strong></p>
+                            <p data-i18n="profile_capture_review">Vérifie les informations avant de les enregistrer.</p>
+                            <button type="button" id="profile_capture_save" data-i18n="profile_legend_save">Enregistrer</button>
                         </div>
                     </div>
                     <div class="form_single legend-setting">
@@ -449,102 +534,21 @@
                         </div>
                     </div>
                     <div class="form_single">
-                        <div class="form_single_left">
-                            <label class="vt_avatar_tr">Votre avatar</label>
-                        </div>
-                        <div class="form_single_right input_range">
-                            <input type="button" id="changeAvatar" value="Changer">
-                        </div>
+                        <label class="form_single_left" for="display_legend" data-i18n="display_legend">Afficher ma légende</label>
+                        <div class="form_single_right"><input type="checkbox" id="display_legend" checked></div>
                     </div>
-                    <div class="form_single">
-                        <div class="form_single_left">
-                            <label class="vt_niveau_tr">Votre niveau</label>
-                        </div>
-                        <div class="form_single_right input_range">
-                            <input type="button" id="changeLvl" value="Changer">
-                        </div>
-                    </div>
-                    <div class="form_single setting_user_detail detail_pseudo hide">
-
-                        <div class="descri_profil">
-                            <div class="profile-instructions">
-                                <p class="profile-instructions-title" data-i18n="profile_name_title">Choisir votre pseudo</p>
-                                <p data-i18n="profile_name_intro">Saisissez de préférence le pseudo utilisé dans le jeu.</p>
-                                <ol>
-                                    <li><span id="min3" aria-hidden="true">–</span> <span data-i18n="profile_name_min">Au moins 3 caractères.</span></li>
-                                    <li><span id="max21" aria-hidden="true">–</span> <span data-i18n="profile_name_max">16 caractères maximum.</span></li>
-                                    <li><span id="notcs" aria-hidden="true">–</span> <span data-i18n="profile_name_chars">Lettres non accentuées et chiffres uniquement.</span></li>
-                                </ol>
-                                <p class="profile-instructions-note" data-i18n="profile_name_saved">Le pseudo est enregistré automatiquement lorsqu’il respecte ces conditions.</p>
-                            </div>
-                        </div>
-                 
-                    </div>
-                    <div class="form_single setting_user_detail detail_img hide">
-                        <div class="panel_status panel_img ">
-                            <div class="pseudo_cadre">
-                                
-                                <div class="preview_img_profil">
-                                    <div class="loading"></div>
-                                </div>
-                                <button type="button" id="capture_img_profil" mode="img_avatar">Commencer</button>
-                                
-                            </div>
-                            <div class="descri_profil">
-                                
-                                <div class="profile-instructions">
-                                    <p class="profile-instructions-title" data-i18n="profile_avatar_title">Capturer l’avatar du personnage</p>
-                                    <ol>
-                                        <li data-i18n="profile_step_start">Clique sur « Commencer » : le suivi démarre automatiquement si nécessaire.</li>
-                                        <li data-i18n="profile_step_menu">Dans Elden Ring, ouvre le menu, puis Configuration et l’onglet « Quitter la partie », sans confirmer la sortie.</li>
-                                        <li data-i18n="profile_step_wait">Reste sur cet écran quelques secondes, puis reviens dans le tracker.</li>
-                                    </ol>
-                                    <p class="profile-instructions-note" data-i18n="profile_avatar_note">La photo est enregistrée automatiquement dès sa capture. Vérifie l’aperçu, puis clique sur « Terminer ».</p>
-                                </div>
-                                <div class="avatr_save" data-i18n="profile_avatar_saved">Avatar enregistré automatiquement.</div>   
-                            </div>
-                            <button type="button" class="hide" id="save_img" disabled>Terminer</button>
-                        </div>
-                    </div>
-                    <div class="form_single setting_user_level hide">
-                        <div class="panel_status ">
-                            <div class="pseudo_cadre">
-                                
-                                <div class="preview_img_level">
-                                    <div class="loading"></div>
-                                </div>
-                                <button type="button" id="capture_img_level" mode="img_lvl">Commencer</button>
-                                
-                            </div>
-                            <div class="descri_profil">
-                                
-                                <div class="profile-instructions">
-                                    <p class="profile-instructions-title" data-i18n="profile_level_title">Relever le niveau du personnage</p>
-                                    <ol>
-                                        <li data-i18n="profile_step_start">Clique sur « Commencer » : le suivi démarre automatiquement si nécessaire.</li>
-                                        <li data-i18n="profile_step_menu">Dans Elden Ring, ouvre le menu, puis Configuration et l’onglet « Quitter la partie », sans confirmer la sortie.</li>
-                                        <li data-i18n="profile_step_wait">Reste sur cet écran quelques secondes, puis reviens dans le tracker.</li>
-                                    </ol>
-                                    <p class="profile-instructions-note" data-i18n="profile_level_note">Le niveau est enregistré automatiquement dès sa lecture. Vérifie le résultat, puis clique sur « Terminer ».</p>
-                                </div>
-                                <div class="lvl_save hide" data-i18n="profile_level_saved">Niveau enregistré automatiquement.</div> 
-                            </div>
-                            <button type="button" class="hide" id="save_lvl" disabled>Terminer</button>
-                        </div>
-                    </div>
-
                 </div>
                 <div class="contente_settings hide steam-peer-settings" setting="5">
                     <div class="steam-peer-settings-inner">
                         <h2 data-i18n="steam_settings_title">Joueurs connectés · Steam</h2>
-                        <label for="steam_peer_enabled" data-i18n="steam_settings_toggle">Détection des joueurs Steam</label>
-                        <select id="steam_peer_enabled"><option value="true" data-i18n="steam_enabled">Activée</option><option value="false" data-i18n="steam_disabled">Désactivée</option></select>
-                        <div class="steam-ping-setting">
-                            <p id="steam_ping_help" data-i18n="steam_ping_help">La mesure avancée démarre avec le suivi. Accepte la demande administrateur Windows si elle apparaît ; tu peux aussi la lancer ici.</p>
-                            <button type="button" id="steam_ping_activate" data-i18n="steam_ping_activate">Activer la mesure des pings</button>
-                            <p id="steam_ping_status" role="status"></p>
-                        </div>
-                        <p id="steam_settings_status" role="status"></p>
+                        <div class="form_single"><label class="form_single_left" for="steam_peer_enabled" data-i18n="steam_settings_toggle">Détection des joueurs Steam</label><div class="form_single_right"><select id="steam_peer_enabled"><option value="true" data-i18n="steam_enabled">Activée</option><option value="false" data-i18n="steam_disabled">Désactivée</option></select><span id="steam_settings_status" role="status"></span></div></div>
+                        <div class="form_single"><label class="form_single_left" for="steam_log_auto" data-i18n="steam_log_auto">Activer automatiquement le journal Steam</label><div class="form_single_right"><input type="checkbox" id="steam_log_auto" disabled><span id="steam_log_auto_status" role="status" aria-live="polite"></span></div></div>
+                        <div class="form_single steam-ping-setting"><div class="form_single_left" data-i18n="steam_ping_activate">Activer la mesure des pings</div><div class="form_single_right"><button type="button" id="steam_ping_activate" data-i18n="steam_ping_activate">Activer la mesure des pings</button><p id="steam_ping_help" data-i18n="steam_ping_help">La mesure avancée démarre avec le suivi. Accepte la demande administrateur Windows si elle apparaît ; tu peux aussi la lancer ici.</p><span id="steam_ping_status" role="status"></span></div></div>
+                        <div class="form_single"><label class="form_single_left" for="steam_show_name" data-i18n="steam_show_name">Afficher les noms Steam</label><div class="form_single_right"><input type="checkbox" id="steam_show_name" checked></div></div>
+                        <div class="form_single"><label class="form_single_left" for="steam_show_country" data-i18n="steam_show_country">Afficher le pays</label><div class="form_single_right"><input type="checkbox" id="steam_show_country" checked></div></div>
+                        <div class="form_single"><label class="form_single_left" for="steam_show_ping" data-i18n="steam_show_ping">Afficher le ping</label><div class="form_single_right"><input type="checkbox" id="steam_show_ping" checked></div></div>
+                        <div class="form_single"><label class="form_single_left" for="steam_hide_ip" data-i18n="steam_hide_ip">Masquer les adresses réseau</label><div class="form_single_right"><input type="checkbox" id="steam_hide_ip"></div></div>
+                        <div class="form_single"><label class="form_single_left" for="retention_steam" data-i18n="retention_steam">Conservation de l’historique Steam</label><div class="form_single_right"><select id="retention_steam" disabled><option value="0" data-i18n="retention_forever">Tout conserver</option><option value="30">30 j</option><option value="90">90 j</option><option value="365">365 j</option></select><p data-i18n="retention_steam_help">Les anciennes rencontres Steam sont supprimées au démarrage. Les événements de suivi et les autres historiques sont conservés.</p><span id="retention_steam_status" role="status" aria-live="polite"></span></div></div>
                         <p data-i18n="steam_settings_help">Lance le jeu puis laisse Steam ouvert. Les noms affichés sont les profils Steam ; les personnages et les rôles peuvent être différents. Le ping peut être indisponible.</p>
                         <details id="steam_manual_setup">
                             <summary data-i18n="steam_manual_setup">Configuration manuelle de Steam</summary>
@@ -671,7 +675,7 @@
 
             <div class="profile-card ">
                 <div class="profile-card-header img_user">
-                    <div class="fakeImageuser">?</div>
+                    <div class="fakeImageuser" aria-hidden="true"></div>
                 <h5><span class="userName">???</span> <span class="niv_tr"><br>niveau: </span> <span class="userLvl_count">0</span></h5> 
                 </div>
                 <p id="sidebar_legend" class="sidebar-legend" hidden></p>
@@ -803,6 +807,13 @@
     <script src="{{ url_for('static', filename='ui-i18n.js') }}"></script>
     <script src="{{ url_for('static', filename='stats-calculations.js') }}"></script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script src="{{ url_for('static', filename='profile-capture.js') }}"></script>
+    <script src="{{ url_for('static', filename='display-preferences.js') }}"></script>
+    <script src="{{ url_for('static', filename='auto-game-start.js') }}"></script>
+    <script src="{{ url_for('static', filename='retention.js') }}"></script>
+    <script src="{{ url_for('static', filename='tracking-notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='settings-yes-no.js') }}"></script>
+    <script src="{{ url_for('static', filename='steam-log-auto.js') }}"></script>
     <script src="{{ url_for('static', filename='game-language.js') }}"></script>
     <script src="{{ url_for('static', filename='capture-speed.js') }}"></script>
     <script src="{{ url_for('static', filename='notification-region.js') }}"></script>

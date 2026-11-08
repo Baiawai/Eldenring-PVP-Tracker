@@ -83,7 +83,7 @@ window.interface_en = ["Victory", "Defeat", "Draw", "Captures", "Settings",
 "serie defeat",
 "Image saved successfully"
 ];
-window.interface_fr = ["Victoire", "Defaite", "Egalite", "Captures", "Parametres",
+window.interface_fr = ["Victoire", "Defaite", "Egalite", "Captures", "Configuration",
 "Bienvenue sur le compteur de victoire<br> pour le jeux",
 "Lancer votre jeu<br> dirigez vous devant la statue pour le multijoueur de l'arene a la table ronde<br> et appuyer sur Start ici.<br>Mode disponible: Duel 1v1",
 "Aucune capture disponible",

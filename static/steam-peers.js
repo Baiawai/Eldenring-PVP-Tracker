@@ -68,7 +68,7 @@
             ping.className = 'steam-peer-ping';
             ping.textContent = typeof peer.ping === 'number' && peer.ping >= 0 ? Math.round(peer.ping) + ' ms' : '—';
             ip.className = 'steam-peer-ip';
-            const label = peer.relay ? tr('steam_ip_relay', 'Relais') : tr('steam_ip_label', 'IP réseau');
+            const label = peer.relay ? tr('steam_ip_relay', 'Relais') : 'IP';
             ip.textContent = label + ' : ' + (peer.ip || '—');
             if (peer.ip) window.appendIpCountry(ip, peer.country_code);
             row.append(name, ping); item.append(row, ip); list.append(item);

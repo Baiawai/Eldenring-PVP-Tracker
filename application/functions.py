@@ -20,6 +20,7 @@ import html
 import threading
 import traceback
 import sqlite3
+from io import BytesIO
 
 
 from __main__ import app
@@ -29,13 +30,19 @@ from application.init import load_user, load_settings, initialize_display_settin
 from application.mode_stats import mode_user, add_mode_score, correct_invasion_no_result
 from application.player_sightings import SightingTracker, record_sighting
 from application.detection_history import record_detection, update_detection, message_text, read_steam_history
-from application.locale_catalog import tracker_notifications
+from application.locale_catalog import tracker_notifications, classify
 from application import game_language, capture_speed, notification_region, peer_tracking, steam_history, steam_overlay, profile_legend
 from application.session_summary import SessionSummary
 from application.browser_language import browser_language
 from application.ui_localization import packs as ui_packs, localize_counter
 from application.runtime_paths import image_dir, RESOURCE_DIR, tesseract_path, data_dir
 from application import usage_metrics
+from application import auto_tracking
+from application import capture_display, profile_capture, notification_sample
+from application import retention
+from application import tracker_notifications
+from application import steam_log_auto
+from application.invasion_search import SearchVisibility
 from application.multi import sync_leaderboard_data
 from application.secur import encrypt_value, decrypt_value, decrypt_rows
 #  _   __   _   _   _____  
@@ -64,6 +71,8 @@ try:
 except (OSError, ValueError):
     _legacy_height = None
 notification_bounds = notification_region.load((settings[4], settings[5]), _legacy_height)
+notification_manual_mode = notification_region.manual_mode()
+notification_locked_bounds = notification_region.load_locked_bounds()
 game_detected = True
 game_running = None  # Unknown until the monitor checks the game window.
 steam_overlay_open = False
@@ -72,6 +81,7 @@ mode_detected = False
 invasion_phase = None
 invasion_search_extent = None
 invasion_search_history_id = None
+invasion_search_visibility = SearchVisibility()
 invasion_return_pending = None
 recent_invasion_no_result = None
 opponent_name = ''
@@ -81,6 +91,7 @@ monitor_ready = False
 monitor_error = False
 sighting_tracker = SightingTracker()
 ally_summoning_last_seen = None
+ally_summon_failure_last_seen = None
 inventory_warning_seen = {}
 sightings_revision = 0
 def _observe_steam_peers(status, peers):
@@ -119,7 +130,16 @@ time_result = time_end - time_start
 tampo_text = ""
 capture = ""
 capture_revision = 0
+notification_event_sample = None
+notification_sample_revision = 0
 preview_condition = threading.Condition()
+try:
+    _saved_notification_sample = notification_sample.load()
+    if _saved_notification_sample and (_saved_notification_sample.get('lines') or 0) >= 2:
+        notification_sample_revision = 1
+        notification_event_sample = dict(_saved_notification_sample, identity=None, id=notification_sample_revision)
+except Exception:
+    app.logger.exception('Unable to load notification example')
 preview_wait_slots = threading.BoundedSemaphore(2)
 captures = []
 captures_stats = []
@@ -463,6 +483,16 @@ def steam_peers():
     return jsonify(peer_tracking.snapshot())
 
 
+@app.route('/steam-log-auto', methods={'GET', 'POST'})
+def steam_log_auto_setting():
+    if request.method == 'POST':
+        value = request.form.get('enabled')
+        if value not in ('true', 'false'):
+            return jsonify({'request': 'error', 'reason': 'invalid_setting'}), 400
+        steam_log_auto.set_enabled(value == 'true')
+    return jsonify({'request': 'success', 'enabled': steam_log_auto.get_enabled()})
+
+
 @app.route('/steam-profile', methods={'POST'})
 def steam_profile_open():
     steam_id = request.form.get('steam_id', '')
@@ -483,28 +513,197 @@ def steam_ping_activate():
     return jsonify({'request':'success'})
 
 
+_notification_save_condition = threading.Condition()
+_pending_notification_save = None
+_notification_save_started = False
+_notification_save_busy = False
+
+
+def _notification_sample_writer():
+    global _pending_notification_save, _notification_save_busy
+    while True:
+        with _notification_save_condition:
+            _notification_save_condition.wait_for(lambda: _pending_notification_save is not None)
+            example = _pending_notification_save
+            _pending_notification_save = None
+            _notification_save_busy = True
+        try:
+            notification_sample.save(*example)
+        except Exception:
+            app.logger.exception('Unable to save notification example')
+        finally:
+            with _notification_save_condition:
+                _notification_save_busy = False
+                _notification_save_condition.notify_all()
+
+
+def _queue_notification_sample(image, language, bounds, lines):
+    global _pending_notification_save, _notification_save_started
+    with _notification_save_condition:
+        _pending_notification_save = (image, language, bounds, lines)
+        if not _notification_save_started:
+            threading.Thread(target=_notification_sample_writer, name='notification-example-writer', daemon=True).start()
+            _notification_save_started = True
+        _notification_save_condition.notify()
+
+
+def flush_notification_sample(timeout=2):
+    """Allow the queued example to finish before normal application exit."""
+    with _notification_save_condition:
+        return _notification_save_condition.wait_for(
+            lambda: _pending_notification_save is None and not _notification_save_busy, timeout=timeout)
+
+
+def _remember_notification_event(image_b64, text, language, bounds=None, lines=0):
+    """Keep a real game frame only when its OCR contains a known game event."""
+    global notification_event_sample, notification_sample_revision
+    if not image_b64 or not text or lines < 2:
+        return False
+    events = classify(text, language)
+    if not events:
+        return False
+    identity = (language, bounds is not None, tuple(sorted({(item['event'], tuple(sorted(item['values'].items()))) for item in events})))
+    with preview_condition:
+        if notification_event_sample and notification_event_sample['identity'] == identity:
+            return False
+        notification_sample_revision += 1
+        notification_event_sample = {'image':image_b64, 'language':language,
+                                     'identity':identity, 'id':notification_sample_revision, 'bounds':bounds, 'lines':lines}
+    try:
+        _queue_notification_sample(image_b64, language, bounds, lines)
+    except Exception:
+        # Failure to preserve an example must not interrupt a combat.
+        app.logger.exception('Unable to queue notification example')
+    return True
+
+
+def _notification_preview():
+    with preview_condition:
+        return dict(notification_event_sample) if notification_event_sample else None
+
+
+def _usable_sample_bounds(sample):
+    bounds = (sample or {}).get('bounds')
+    return bool(bounds and notification_region.valid(*bounds) and bounds[1] - bounds[0] < .95)
+
+
 @app.route('/notification-region', methods={'GET', 'POST'})
 def notification_region_setting():
-    global notification_bounds
+    global notification_bounds, notification_manual_mode, notification_locked_bounds
     if request.method == 'POST':
+        manual = request.form.get('manual')
+        lock = request.form.get('locked')
+        if manual is not None:
+            if manual not in ('true', 'false') or lock is not None:
+                return jsonify(request='error', reason='invalid_mode'), 400
+            notification_region.set_manual_mode(manual == 'true')
+            notification_manual_mode = manual == 'true'
+        elif lock is not None:
+            if lock not in ('true', 'false'):
+                return jsonify(request='error', reason='invalid_mode'), 400
+            if notification_manual_mode:
+                return jsonify(request='error', reason='manual_mode'), 409
+            if lock == 'true':
+                sample = _notification_preview()
+                if not _usable_sample_bounds(sample):
+                    return jsonify(request='error', reason='no_lockable_preview'), 409
+                if request.form.get('preview_id') != str(sample['id']):
+                    return jsonify(request='error', reason='preview_changed'), 409
+                next_bounds = tuple(sample['bounds'])
+            else:
+                next_bounds = None
+            notification_region.set_locked_bounds(next_bounds)
+            notification_locked_bounds = next_bounds
+        else:
+            if not notification_manual_mode:
+                return jsonify(request='error', reason='automatic_mode'), 409
+            try:
+                top = float(request.form.get('top', ''))
+                bottom = float(request.form.get('bottom', ''))
+                if not notification_region.valid(top, bottom):
+                    raise ValueError('invalid region')
+            except (TypeError, ValueError):
+                return jsonify({'request':'error', 'reason':'invalid_region'}), 400
+            notification_region.save(top, bottom)
+            notification_bounds = (top, bottom)
+    sample = _notification_preview()
+    effective = notification_bounds if notification_manual_mode else (notification_locked_bounds or (sample or {}).get('bounds') or (0.0, 1.0))
+    return jsonify({'request':'success', 'top':effective[0], 'bottom':effective[1],
+                    'manual':notification_manual_mode, 'locked':notification_locked_bounds is not None,
+                    'can_lock':_usable_sample_bounds(sample), 'preview':sample['image'] if sample else '',
+                    'preview_id':sample['id'] if sample else None})
+
+
+@app.route('/notification-ocr-test', methods={'POST'})
+def notification_ocr_test():
+    # The test uses the same event image displayed by the settings page and
+    # never sends its result to the tracking state machine.
+    sample = _notification_preview()
+    bounds = notification_bounds if notification_manual_mode else (notification_locked_bounds or (sample or {}).get('bounds') or (0.0, 1.0))
+    if not sample:
+        return jsonify(request='error', reason='no_preview'), 409
+    if request.form.get('preview_id') != str(sample['id']):
+        return jsonify(request='error', reason='preview_changed'), 409
+    try:
+        raw = base64.b64decode(sample['image'], validate=True)
+        with Image.open(BytesIO(raw)) as image:
+            image.load()
+            region = image.crop(notification_region.crop_box(*image.size, bounds)).convert('RGB')
+        grey = cv2.cvtColor(np.array(region), cv2.COLOR_RGB2GRAY)
+        model = game_language.LANGUAGES[sample['language']][1]
+        text = pytesseract.image_to_string(grey, lang=model, config='--psm 6 --oem 1' + game_ocr_data_config())
+        matched = bool(classify(text, sample['language']))
+    except Exception:
+        app.logger.exception('Notification OCR test failed')
+        return jsonify(request='error', reason='ocr_error'), 503
+    return jsonify(request='success', text=text, matched=matched)
+
+
+@app.route('/auto-game-start', methods={'GET', 'POST'})
+def auto_game_start_setting():
+    if request.method == 'POST':
+        value = request.form.get('enabled')
+        if value not in ('true', 'false'):
+            return jsonify(request='error', reason='invalid_setting'), 400
+        auto_tracking.save(value == 'true')
+    return jsonify(request='success', enabled=auto_tracking.enabled())
+
+
+@app.route('/tracking-notifications', methods={'GET', 'POST'})
+def tracking_notifications_setting():
+    if request.method == 'POST':
+        value = request.form.get('enabled')
+        if value not in ('true', 'false'):
+            return jsonify(request='error', reason='invalid_setting'), 400
         try:
-            top = float(request.form.get('top', ''))
-            bottom = float(request.form.get('bottom', ''))
-            if not notification_region.valid(top, bottom):
-                raise ValueError('invalid region')
-        except (TypeError, ValueError):
-            return jsonify({'request':'error', 'reason':'invalid_region'}), 400
-        notification_region.save(top, bottom)
-        notification_bounds = (top, bottom)
-    preview = capture
-    if not preview:
+            tracker_notifications.save(request.form.get('kind', ''), value == 'true')
+        except ValueError:
+            return jsonify(request='error', reason='invalid_setting'), 400
+    return jsonify(request='success', settings=tracker_notifications.load())
+
+
+@app.route('/monitor-status', methods={'GET'})
+def monitor_status():
+    # Unlike /interval, this does not consume pending tracker events.
+    return jsonify(request='success', running=run_monitor)
+
+
+@app.route('/retention-settings', methods={'GET', 'POST'})
+def retention_settings():
+    if request.method == 'POST':
+        if not monitor_lock.acquire(blocking=False):
+            return jsonify(request='error', reason='monitor_active'), 409
         try:
-            with open(os.path.join(base_dir, 'template_notif.jpg'), 'rb') as f:
-                preview = b64encode(f.read()).decode('ascii')
-        except OSError:
-            preview = ''
-    return jsonify({'request':'success', 'top':notification_bounds[0],
-                    'bottom':notification_bounds[1], 'preview':preview})
+            if run_monitor or fight:
+                return jsonify(request='error', reason='monitor_active'), 409
+            try:
+                days = int(request.form.get('days', ''))
+                retention.save(request.form.get('kind', ''), days)
+            except (TypeError, ValueError):
+                return jsonify(request='error', reason='invalid_setting'), 400
+        finally:
+            monitor_lock.release()
+    return jsonify(request='success', settings=retention.load())
 
 
 @app.route('/capture-speed', methods={'GET', 'POST'})
@@ -541,9 +740,10 @@ def game_language_setting():
 
 def reset_monitor_state():
     global mode_select, mode_detected
-    global invasion_phase, invasion_search_extent, invasion_search_history_id, invasion_return_pending, recent_invasion_no_result, opponent_name, ally_summoning_last_seen, inventory_warning_seen
+    global invasion_phase, invasion_search_extent, invasion_search_history_id, invasion_return_pending, recent_invasion_no_result, opponent_name, ally_summoning_last_seen, ally_summon_failure_last_seen, inventory_warning_seen
     recent_invasion_no_result = None
     invasion_search_history_id = None
+    invasion_search_visibility.reset()
     steam_history.cancel_arena()
     mode_select = 'Arena'
     mode_detected = False
@@ -553,6 +753,7 @@ def reset_monitor_state():
     opponent_name = ''
     sighting_tracker.pending.clear()
     ally_summoning_last_seen = None
+    ally_summon_failure_last_seen = None
     inventory_warning_seen.clear()
     global array_stats
     global error
@@ -645,12 +846,24 @@ def screenshot_with_retry(*args, **kwargs):
     # accessing the screen. Retry only this known transient failure.
     while run_monitor:
         try:
-            return pyautogui.screenshot(*args, **kwargs)
+            if active_capture_display is None:
+                return pyautogui.screenshot(*args, **kwargs)
+            filename = args[0] if args else None
+            return capture_display.capture(active_capture_display, filename=filename, region=kwargs.get('region'))
         except OSError as exc:
             if 'screen grab failed' not in str(exc).lower():
                 raise
             time.sleep(0.25)
     raise _CaptureStopped()
+
+
+def update_game_display():
+    """Refresh capture geometry when the game window has a usable monitor."""
+    global active_capture_display, width_screen, height_screen
+    detected_display = capture_display.game_display()
+    if detected_display is not None:
+        active_capture_display = detected_display
+        width_screen, height_screen = detected_display['width'], detected_display['height']
 
 
 def _run_monitor():
@@ -675,6 +888,7 @@ def _run_monitor():
         run_monitor = False
         monitor_ready = False
         steam_overlay_open = False
+        tracker_notifications.notify('monitor_error' if monitor_error else 'monitor_stop')
         try:
             kind = 'monitor_error' if monitor_error else 'monitor_stop'
             message = 'Suivi arrêté à cause d’une erreur' if monitor_error else 'Suivi arrêté'
@@ -689,11 +903,14 @@ def _run_monitor():
 @app.route("/start", methods={"GET"})
 def start():
     global run_monitor, monitor_ready, monitor_error, capture, capture_revision, game_running
+    global active_capture_display, width_screen, height_screen
     if not monitor_lock.acquire(blocking=False):
         if run_monitor:
             return jsonify({"request": "already_running"})
         return jsonify({"request": "error", "reason": "stopping"}), 409
     try:
+        active_capture_display = None
+        width_screen, height_screen = legacy_screen_size
         session_summary.start()
         game_running = None
         run_monitor = True
@@ -706,7 +923,7 @@ def start():
         try:
             peer_tracking.request_auto_ping()
         except Exception:
-            app.logger.exception('Unable to start automatic Steam ping measurement')
+            app.logger.exception('Unable to start Steam peer detection')
         threading.Thread(target=_run_monitor, name='capture-monitor', daemon=True).start()
     except Exception:
         run_monitor = False
@@ -869,6 +1086,8 @@ for m in get_monitors():
     else:
         height_screen = m.height
         width_screen = m.width
+legacy_screen_size = (width_screen, height_screen)
+active_capture_display = None
         
 
 def emit_tracking_event(text):
@@ -1011,7 +1230,7 @@ def game_ocr_data_config():
 
 def normalise_ocr(text):
     return ' '.join(''.join(c for c in unicodedata.normalize('NFKD', text.casefold())
-                            if not unicodedata.combining(c)).split())
+                            if not unicodedata.combining(c)).replace('’', "'").replace('‘', "'").split())
 
 
 def handle_invasion(text, path_video_simple, original_grey):
@@ -1190,12 +1409,15 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
     global time_result
     global fighters_exit
     global fighter_exit
-    global mode_select, mode_detected
-    global sightings_revision, ally_summoning_last_seen, inventory_warning_seen
+    global mode_select, mode_detected, invasion_phase, invasion_search_extent, invasion_search_history_id
+    global sightings_revision, ally_summoning_last_seen, ally_summon_failure_last_seen, inventory_warning_seen
     global connexion_error
     # The original invasion/player detectors understand French notifications.
     # Preserve the source OCR as well: arena and on-screen capture logic still
     # consume the original language, while translated IDs supply PvP events.
+    summon_failed = any(event['event'] == 'ally_summon_failed'
+                        for text in (text_simple, notification_text) if text
+                        for event in classify(text, game_locale))
     if game_locale != 'frafr':
         first = tracker_notifications(text_simple or '', game_locale)
         second = tracker_notifications(notification_text or '', game_locale)
@@ -1212,6 +1434,16 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
             emit_tracking_event('Impossible d’acquérir ' + safe_item + '.<br><span class="inventory-warning">Pensez à retirer une partie de cet objet de votre inventaire ou de votre stockage pour ne pas gêner la détection.</span>')
         inventory_warning_seen[key] = now
     combined_ocr = normalise_ocr((text_simple or "") + "\n" + (notification_text or "")).replace("’", "'")
+    search_visible = "vous tentez d'envahir un autre monde" in combined_ocr
+    if invasion_search_visibility.observe(invasion_phase == 'search' and not fight, search_visible, time.monotonic()):
+        invasion_phase = None
+        invasion_search_extent = None
+        invasion_search_history_id = None
+    if summon_failed:
+        now = time.monotonic()
+        if ally_summon_failure_last_seen is None or now - ally_summon_failure_last_seen > 8:
+            emit_tracking_event("Impossible d'invoquer l'allié.")
+        ally_summon_failure_last_seen = now
     if "invocation de l'allie" in combined_ocr and not (fight and mode_select in ("Invasion", "Arena")):
         now = time.monotonic()
         if ally_summoning_last_seen is None or now - ally_summoning_last_seen > 8:
@@ -1582,6 +1814,7 @@ def monitor():
     # icon_runes = cv2.imread(path_icon_runes, cv2.IMREAD_GRAYSCALE)
      
     last_capture_cycle = None
+    ever_game_visible = False
     overlay_detector = steam_overlay.OverlayDetector()
     while(True):
         if count < count_limit and run_monitor == True:
@@ -1594,6 +1827,10 @@ def monitor():
                     continue
             last_capture_cycle = time.monotonic()   
             
+            # A game can appear or move after tracking starts. Keep the last
+            # usable screen while it is minimized or temporarily unavailable.
+            update_game_display()
+
             # Confirm the screen is available before declaring the game closed:
             # Windows may be showing its secure administrator prompt.
             img_steam = screenshot_with_retry(path_steam, region=(
@@ -1647,6 +1884,7 @@ def monitor():
             steam_overlay_open = overlay_detector.update(foreground_hwnd if game_in_foreground else None,
                                                          overlay_window=overlay_window)
             if game_in_foreground and not steam_overlay_open and text_steam.find("STEAM") == -1 and max_val < 0.8: 
+                ever_game_visible = True
         
                 if game_detected == False:
                     with preview_condition:
@@ -1684,9 +1922,6 @@ def monitor():
                     img_simple = img.crop((left_capt, top_capt, right_capt, bottom_capt))
                     img_simple.save(path_video_simple, 'JPEG', optimize=True, quality=95)
                     original_grey = cv2.imread(path_video_simple, cv2.IMREAD_GRAYSCALE)
-                    notification_image = img_simple.crop(notification_region.crop_box(*img_simple.size, notification_bounds))
-                    notification_grey = cv2.cvtColor(np.array(notification_image.convert('RGB')), cv2.COLOR_RGB2GRAY)
-
                     with open(path_video_simple, "rb") as f:
                         image_binary = f.read()
                         image_b64 = b64encode(image_binary).decode("utf-8")
@@ -1701,6 +1936,12 @@ def monitor():
                     game_model = game_language.LANGUAGES[game_locale][1]
                     ocr_data = game_ocr_data_config()
                     text_simple = measured_game_ocr(original_grey, lang=game_model, config="--psm 12 --oem 1" + ocr_data)
+                    frame_manual = notification_manual_mode
+                    frame_locked = None if frame_manual else notification_locked_bounds
+                    # If unlocked, full-image OCR remains the safe fallback.
+                    frame_bounds = notification_bounds if frame_manual else (frame_locked or (0.0, 1.0))
+                    notification_image = img_simple.crop(notification_region.crop_box(*img_simple.size, frame_bounds))
+                    notification_grey = cv2.cvtColor(np.array(notification_image.convert('RGB')), cv2.COLOR_RGB2GRAY)
                     notification_text = measured_game_ocr(notification_grey, lang=game_model, config="--psm 6 --oem 1" + ocr_data)
                     if fight and mode_select == 'Defense':
                         frame = cv2.imread(path_video_simple)
@@ -1709,7 +1950,25 @@ def monitor():
                         death_text = measured_game_ocr(death_mask, lang=game_model, config='--psm 6' + ocr_data)
                         if 'vous avez peri' in normalise_ocr(death_text):
                             text_simple += '\n' + death_text
-                
+                    try:
+                        combined = text_simple + '\n' + notification_text
+                        if classify(combined, game_locale):
+                            positioned = pytesseract.image_to_data(original_grey, lang=game_model,
+                                config="--psm 6 --oem 1" + ocr_data, output_type=pytesseract.Output.DICT)
+                            located = notification_region.analyze_notification(positioned, img_simple.height, game_locale, original_grey)
+                            if located:
+                                if not frame_manual and frame_locked is None:
+                                    crop = img_simple.crop(notification_region.crop_box(*img_simple.size, located['bounds'])).convert('RGB')
+                                    crop_grey = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
+                                    crop_text = measured_game_ocr(crop_grey, lang=game_model, config="--psm 6 --oem 1" + ocr_data)
+                                    # Never replace a recognized full-image message with an
+                                    # unreadable crop: preserve the broad fallback.
+                                    if classify(crop_text, game_locale):
+                                        notification_text = crop_text
+                                _remember_notification_event(image_b64, combined, game_locale, located['bounds'], located['lines'])
+                    except Exception:
+                        # The optional automatic zone and preview must not interrupt tracking.
+                        app.logger.exception('Unable to prepare notification event preview')
                     process_game_text(text_simple, path_video_simple, original_grey, notification_text)
                 
                 # try:
@@ -1730,11 +1989,14 @@ def monitor():
                     cv2.destroyAllWindows()
                     break
             else:
-               
+                notify_hidden = False
                 with preview_condition:
                     if game_detected:
                         game_detected = False
                         preview_condition.notify_all()
+                        notify_hidden = bool(ever_game_visible and game_running and not steam_overlay_open)
+                if notify_hidden:
+                    tracker_notifications.notify('game_hidden')
                 
                 
         else:
@@ -1839,6 +2101,51 @@ def sub_monitor():
                                 
                                      
                                 
+_profile_candidate_lock = threading.Lock()
+_profile_candidate = None
+
+
+@app.route('/profile-capture', methods={'POST'})
+def capture_profile():
+    global _profile_candidate
+    import secrets
+    import win32gui
+    from application import init
+    action = request.form.get('action')
+    if action == 'read':
+        hwnd = win32gui.FindWindow(None, 'ELDEN RING™')
+        if not hwnd or hwnd != win32gui.GetForegroundWindow() or win32gui.IsIconic(hwnd):
+            return jsonify(request='waiting')
+        display = capture_display.game_display()
+        if not display:
+            return jsonify(request='waiting')
+        try:
+            image = capture_display.capture(display)
+            candidate = profile_capture.read(image, game_language.LANGUAGES[game_locale][1])
+        except (OSError, pytesseract.TesseractError):
+            app.logger.exception('Unable to read character profile')
+            return jsonify(request='error'), 503
+        if not candidate:
+            return jsonify(request='waiting')
+        token = secrets.token_urlsafe(32)
+        with _profile_candidate_lock:
+            _profile_candidate = (token, time.monotonic(), candidate)
+        return jsonify(request='success', token=token, profile=candidate)
+    if action == 'save':
+        token = request.form.get('token', '')
+        with _profile_candidate_lock:
+            candidate = _profile_candidate
+            if not candidate or not token.isascii() or len(token) > 100 or time.monotonic() - candidate[1] > 300 or not secrets.compare_digest(token, candidate[0]):
+                return jsonify(request='error'), 400
+            profile = candidate[2]
+            with sqlite3.connect(init.database_user, timeout=10) as db:
+                db.execute('UPDATE tabel_user SET name=?, base64=?, userLevel=? WHERE id=1',
+                           (encrypt_value(profile['name']), encrypt_value(profile['avatar']), encrypt_value(profile['level'])))
+            _profile_candidate = None
+        return jsonify(request='success', profile=profile)
+    return jsonify(request='error'), 400
+
+
 @app.route("/monitor_user", methods={"POST"})
 def monitor_user():
     
