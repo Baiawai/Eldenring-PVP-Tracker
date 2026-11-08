@@ -1,5 +1,6 @@
 /* Ranking page: the same warm, restrained palette as the statistics page. */
 .cadre_multi { overflow:auto; background:radial-gradient(ellipse at 50% 0%, #262116 0, #100f0c 40%, #080807 100%); }
+.cadre_multi [hidden] { display:none !important; }
 .cadre_multi .infoMulti, .cadre_multi .panel_status, .cadre_multi .panel_multi_body { height:auto; min-height:0; }
 .cadre_multi .panel_status { text-align:left; }
 .leaderboard-shell { box-sizing:border-box; width:100%; max-width:1280px; margin:0 auto; padding:40px 38px 70px; }

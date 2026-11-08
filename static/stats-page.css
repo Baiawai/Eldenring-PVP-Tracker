@@ -1,5 +1,9 @@
 /* Independent profile drawer and statistics page. */
 :root { --profile-sidebar-width: 20%; --profile-sidebar-duration: .65s; }
+/* Game-inspired pointer; keep the text caret and disabled-state feedback. */
+body, body * { cursor:url('elden-cursor-exact.png') 0 0, auto !important; }
+body :is(input:not([type]), input[type="text"], input[type="search"], input[type="number"], input[type="email"], input[type="password"], textarea, [contenteditable="true"]) { cursor:text !important; }
+body :is(button, input, select, textarea):disabled { cursor:not-allowed !important; }
 .app-content { float:left; transition: width var(--profile-sidebar-duration) ease; }
 .profile-sidebar-open .app-content { width:calc(100% - 250px - var(--profile-sidebar-width)); }
 .profile-sidebar { display:block; position:fixed; right:0; top:0; z-index:1800; width:var(--profile-sidebar-width); transform:translateX(100%); visibility:hidden; transition:transform var(--profile-sidebar-duration) ease, visibility 0s linear var(--profile-sidebar-duration); }
@@ -7,6 +11,24 @@
 /* Long player lists extend the home page instead of creating a nested scroller. */
 .cadre { overflow-x:hidden; overflow-y:auto; }
 .live { max-height:none; }
+.presentation { cursor:pointer; }
+body .app-content .presentation .img_eldenring button.home-start-prompt {
+    position:absolute; bottom:7%; left:50%; transform:translateX(-50%);
+    width:max-content; max-width:90%; margin:0; padding:5px 12px; border:0;
+    color:#e7d2a8; font-size:20px; font-weight:normal; font-style:italic; line-height:1.35;
+    background:none !important; background-image:none !important; box-shadow:none;
+    opacity:0; filter:drop-shadow(0 0 6px rgba(230,195,125,.6)); cursor:pointer;
+}
+.home-start-prompt[hidden] { display:none; }
+body .app-content .presentation .img_eldenring button.home-start-prompt.is-ready {
+    animation:home-prompt-fade-in 2s ease-out forwards, home-prompt-glow 5s ease-in-out 2s infinite;
+}
+.home-start-prompt:focus-visible { outline:2px solid #e1c487; outline-offset:3px; }
+@keyframes home-prompt-fade-in { from { opacity:0; } to { opacity:1; } }
+@keyframes home-prompt-glow {
+    0%, 50%, 100% { filter:drop-shadow(0 0 4px rgba(230,195,125,.55)); }
+    25%, 75% { filter:drop-shadow(0 0 4px rgba(255,225,165,.75)) drop-shadow(0 0 9px rgba(255,205,108,.4)); }
+}
 body .app-content #steam_peer_list .steam-peer-name { background:transparent !important; box-shadow:none; border:0; color:#d4bd8f; }
 body .app-content #steam_peer_list .steam-peer-name:hover { color:#fff1c8; }
 @media (max-width:760px) { .live { width:calc(100% - 50px); } }
@@ -43,6 +65,12 @@ body .app-content #steam_peer_list .steam-peer-name:hover { color:#fff1c8; }
 .sidebar-summary-row { display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-top:1px solid rgba(212,189,143,.15); color:#bfb09a; font-size:18px; }
 .sidebar-summary-row strong { min-width:0; max-width:60%; text-align:right; color:#edddbd; font-size:18px; font-weight:normal; overflow-wrap:anywhere; }
 .sidebar-guidance { padding:8px 0 30px; }
+.sidebar-guidance .carde_banner_info::before {
+    content:""; position:absolute; top:-25px; left:20px; width:35px; height:35px;
+    border:2px solid rgba(255,255,255,.5); background:#1a1a1a;
+}
+.sidebar-guidance .carde_banner_info img { border:0; background:transparent; transform:scale(1.8); }
+.sidebar-guidance .carde_info .sidebar-guidance-action { margin-top:0; color:#dfc793; text-decoration:underline; text-underline-offset:3px; }
 .stats-page[hidden] { display:none; }
 .stats-page { position:absolute; inset:0; z-index:1450; overflow:auto; text-align:left; color:#e8dfcd; background:radial-gradient(ellipse at 50% 0%, #262116 0, #100f0c 40%, #080807 100%); }
 .stats-shell { box-sizing:border-box; width:100%; max-width:1280px; margin:0 auto; padding:0 38px 70px; }
@@ -187,6 +215,9 @@ body .app-content #steam_peer_list .steam-peer-name:hover { color:#fff1c8; }
 .capture-toolbar .min_d::before { background-image:url("capture-defeat-bronze.png"); background-size:60px auto; }
 .capture-toolbar .min_e::before { background-image:url("capture-draw-bronze.png"); background-size:51px auto; }
 .capture-toolbar .up_capture:hover .min_up::before { filter:drop-shadow(0 0 5px rgba(232,195,125,.8)); }
+.capture-toolbar .capture-result-label { display:flex; align-items:center; margin-left:auto; max-width:100%; }
+.capture-toolbar .capture-result-label select { box-sizing:border-box; max-width:100%; min-height:40px; font-size:18px; }
+@media (max-width:600px) { .capture-toolbar .capture-result-label { margin-left:0; } }
 
 /* Textured supports for native settings controls and read-only values. */
 .settings-panel .contente_settings :is(input[type="text"], .form_plain, #steam_command) {

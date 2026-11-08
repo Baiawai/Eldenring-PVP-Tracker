@@ -10,7 +10,7 @@
     <script type="text/javascript" src="{{ url_for('static', filename='datatables.min.js') }}"></script>
  
     <script type="text/javascript" src="{{ url_for('static', filename='chart.min.js') }}"></script>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='tracker-eye.ico') }}" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='tracker-eye-ornament.ico') }}" />
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ url_for('static', filename='statistique.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ url_for('static', filename='selects.css') }}" rel="stylesheet" type="text/css" />
@@ -99,22 +99,24 @@
             <div class="information-shell">
                 <header class="information-header"><p class="information-eyebrow">FAQ</p><h1 id="information_title" data-i18n="information_title">Informations</h1></header>
                 <div class="faq-list">
-                    <details class="faq-item"><summary data-i18n="faq_q_01">Comment démarrer le suivi ?</summary><p data-i18n="faq_a_01">Lance le tracker et Elden Ring, puis clique sur Start. Stop arrête le suivi.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_01">Comment démarrer le suivi ?</summary><p data-i18n="faq_a_01">Lance le tracker et Elden Ring, puis sélectionne dans Configuration la langue utilisée en jeu. Clique sur Start pour commencer et sur Stop pour arrêter le suivi. Un nouveau suivi remet la session en mémoire à zéro.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_02">Le jeu doit-il rester visible ?</summary><p data-i18n="faq_a_02">Garde Elden Ring au premier plan pendant la détection. Les notifications masquées ou absentes ne peuvent pas être lues.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_03">Quels modes sont suivis ?</summary><p data-i18n="faq_a_03">L’arène 1v1, les invasions et les défenses sont séparées. Les égalités concernent uniquement l’arène.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_04">Pourquoi un résultat manque-t-il ?</summary><p data-i18n="faq_a_04">La reconnaissance lit les messages à l’écran et peut se tromper. Vérifie la langue du jeu et la zone des notifications.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_05">Comment choisir la langue ?</summary><p data-i18n="faq_a_05">Dans les paramètres, sélectionne la langue utilisée dans le jeu. Le réglage adapte l’interface et la reconnaissance, pas le jeu lui-même.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_06">Comment régler les captures ?</summary><p data-i18n="faq_a_06">Dans les paramètres, adapte la zone des notifications et l’intervalle de capture. Une prévisualisation apparaît quand le jeu est capturé.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_07">Comment lire les statistiques ?</summary><p data-i18n="faq_a_07">Choisis un mode. Le taux de victoire utilise les résultats connus ; le graphique utilise les captures de résultats enregistrées.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_04">Pourquoi un résultat manque-t-il ?</summary><p data-i18n="faq_a_04">Le tracker lit les notifications à l’écran par reconnaissance de texte (OCR). Un message masqué, manqué ou mal lu peut laisser un résultat inconnu. Vérifie la langue du jeu et la zone dans Configuration → Capture, puis teste-la avec un exemple reconnu sur deux lignes.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_05">Comment choisir la langue ?</summary><p data-i18n="faq_a_05">Dans Configuration, sélectionne la langue utilisée dans le jeu. Elle règle l’interface et la reconnaissance des messages, sans changer la langue du jeu. Au premier lancement, la langue du navigateur est utilisée si elle est prise en charge, sinon l’anglais ; ton choix enregistré est conservé.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_06">Comment régler les captures ?</summary><p data-i18n="faq_a_06">Dans Configuration → Capture, la détection automatique cherche la zone des notifications et prévoit les messages sur deux lignes. Vérifie l’aperçu avec un exemple reconnu, puis verrouille la zone si elle est correcte ; déverrouille-la si l’affichage change. Tu peux aussi désactiver le mode automatique et régler les limites manuellement. Un intervalle plus long réduit la fréquence des lectures et peut manquer des messages courts.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_07">Comment lire les statistiques ?</summary><p data-i18n="faq_a_07">Choisis un mode : le taux de victoire divise les victoires par les victoires, défaites et égalités enregistrées. Les égalités ne concernent que l’arène. Le graphique utilise les captures de résultats conservées ; il peut donc différer des statistiques cumulées.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_08">Que montre la page Joueurs ?</summary><p data-i18n="faq_a_08">Elle regroupe les noms reconnus et les profils Steam observés. Un nom de personnage et un profil Steam ne sont pas automatiquement associés.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_09">Comment fonctionne le ping ?</summary><p data-i18n="faq_a_09">Les informations Steam et le ping ne sont affichés que s’ils sont disponibles. Une adresse peut être celle d’un relais.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_09">Comment fonctionne le ping ?</summary><p data-i18n="faq_a_09">Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. En développement, la mesure avancée du ping peut demander une autorisation administrateur ; la version Store utilise le ping Steam disponible sans élévation.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_10">Où sont mes données ?</summary><p data-i18n="faq_a_10">Les statistiques, réglages, captures et historiques sont stockés sur ton PC. Sauvegarde le dossier %APPDATA%\Elden Ring PvP Tracker lorsque le tracker est arrêté.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_11">Le classement est-il disponible ?</summary><p data-i18n="faq_a_11">Le classement distant est désactivé dans la version Store. La version de développement conserve l’ancien service, qui peut être indisponible.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_12">Faut-il installer Python ou Tesseract ?</summary><p data-i18n="faq_a_12">Pour la version Store, non. Pour exécuter le projet depuis ses sources, Python et Tesseract doivent être installés.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_13">Fermer l’onglet arrête-t-il le suivi ?</summary><p data-i18n="faq_a_13">Non. Pour arrêter le programme, utilise le bouton prévu dans les paramètres. La session en mémoire repart de zéro au redémarrage.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_11">Le classement est-il disponible ?</summary><p data-i18n="faq_a_11">Le classement est actuellement désactivé. Il reviendra dans une future mise à jour.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_12">Faut-il installer Python ou Tesseract ?</summary><p data-i18n="faq_a_12">La version Store comprend les composants nécessaires. Pour lancer le projet depuis ses sources, installe Python et prépare la distribution locale de Tesseract ou utilise une installation existante ; consulte le README du projet.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_13">Fermer l’onglet arrête-t-il le suivi ?</summary><p data-i18n="faq_a_13">Fermer l’onglet laisse le tracker actif. Stop arrête le suivi ; Configuration → Quitter ferme le programme. Redémarrer le suivi remet la session en mémoire à zéro, mais conserve les statistiques enregistrées.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_14">Comment protéger mes informations ?</summary><p data-i18n="faq_a_14">Les captures et historiques peuvent contenir des noms ou adresses réseau. Protège tes sauvegardes avant de les partager.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_15">Comment récupérer mon profil de personnage ?</summary><p data-i18n="faq_a_15">Dans Configuration → Profil, lance la capture. En jeu, ouvre Configuration → Quitter la partie sans confirmer la sortie et garde le jeu visible. Le tracker récupère ensemble pseudo, niveau et image : vérifie-les avant d’enregistrer ou annule si nécessaire.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_16">Comment fonctionnent l’archivage et la purge de l’historique ?</summary><p data-i18n="faq_a_16">Arrête le suivi avant d’archiver ou de purger l’historique actif. L’archivage retire les événements de la liste, y compris les rencontres Steam, et les conserve chiffrés localement. La restauration ajoute les événements absents sans doublons et conserve l’archive. La purge retire l’historique actif mais conserve les archives, les captures et les statistiques cumulées.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_17">Comment activer la détection Steam ?</summary><p data-i18n="faq_a_17">Dans Configuration → P2P, active la détection des joueurs. L’activation automatique du journal Steam est proposée par défaut : elle demande à Steam d’activer le journal nécessaire au démarrage du tracker ou de Steam. Si elle échoue, la commande manuelle reste disponible. Les profils observés ne sont pas automatiquement associés aux personnages en jeu.</p></details>
                 </div>
-                <p class="information-contact"><span data-i18n="faq_contact">Une question ? Écris-nous :</span> <a href="mailto:gael.pitras@gmail.com">gael.pitras@gmail.com</a></p>
                 <section class="environment-details" aria-labelledby="info_environment_title">
                     <h2 id="info_environment_title" data-i18n="environment_title">Version et environnement</h2>
                     <p class="environment-status" role="status" data-details-status></p>
@@ -237,7 +239,7 @@
                         <p class="players-intro" data-i18n="players_intro">Retrouve les adversaires, alliés et chasseurs reconnus pendant tes parties.</p>
                     </div>
                 </header>
-                <div class="players-overview" aria-label="Bilan des joueurs identifiés">
+                <div class="players-overview" aria-label="Joueurs identifiés" data-i18n-aria="players_recognized">
                     <div class="players-metric tracker-frame"><span data-i18n="players_recognized">Pseudos reconnus</span><strong id="players_count">0</strong></div>
                     <div class="players-metric tracker-frame"><span data-i18n="victories">Victoires</span><strong id="players_victories">0</strong></div>
                     <div class="players-metric tracker-frame"><span data-i18n="defeats">Défaites</span><strong id="players_defeats">0</strong></div>
@@ -281,11 +283,10 @@
                 <div class="panel_status panel_user">
                     <div class="leaderboard-shell">
                     <header class="leaderboard-header">
-                        <div><p class="leaderboard-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p><h1 data-i18n="leaderboard_title">Classement</h1><p class="leaderboard-intro" data-i18n="leaderboard_intro">Retrouve les résultats des combattants de l’arène.</p></div>
-                        <button type="button" id="leaderboard_refresh" data-i18n="leaderboard_refresh">Actualiser</button>
+                        <div><p class="leaderboard-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p><h1 data-i18n="leaderboard_title">Classement</h1></div>
                     </header>
-                    <p id="leaderboard_status" class="leaderboard-status" role="status" aria-live="polite" hidden></p>
-                    <div class="panel_multi panel_multi_body">
+                    <p id="leaderboard_status" class="leaderboard-status" role="status" data-i18n="leaderboard_disabled_future">Le classement est actuellement désactivé. Il reviendra dans une future mise à jour.</p>
+                    <div class="panel_multi panel_multi_body" hidden>
 
                      
                         <div class="containuer_multi_cadre leaderboard-table-wrap" cadre="sync_multi" tabindex="0">
@@ -328,6 +329,7 @@
                 <div class="presentation">
                     <div class="img_eldenring">
                         <img src="{{ url_for('static', filename='home-logo-classic-eye.png') }}" alt="Elden Ring PvP Tracker"/>
+                        <button type="button" class="home-start-prompt" data-i18n="home_start_prompt" hidden>Appuyer sur Start pour commencer</button>
                      
                     </div>
      
@@ -514,7 +516,7 @@
                         <div class="form_single_right"><button type="button" id="profile_capture_start" data-i18n="profile_capture_start">Récupérer mon profil</button></div>
                     </div>
                     <div class="profile-capture-panel" id="profile_capture_panel" hidden>
-                        <p id="profile_capture_instructions" data-i18n="profile_step_menu">Dans Elden Ring, ouvre le menu, puis Configuration et l’onglet « Quitter la partie », sans confirmer la sortie.</p>
+                        <p id="profile_capture_instructions" data-i18n="profile_step_menu">Lance Elden Ring et charge ta partie. Une fois dans le monde du jeu, ouvre le menu principal, puis Configuration. Va dans l’onglet tout à droite, « Quitter la partie », sans quitter la partie. L’application y récupérera automatiquement ton pseudo, ton niveau et ton image. Attends quelques secondes (environ 2 à 5 secondes), puis reviens ici pour vérifier les informations récupérées et les enregistrer.</p>
                         <p id="profile_capture_success" data-i18n="profile_capture_success" hidden>Tous les éléments ont été récupérés avec succès.</p>
                         <p id="profile_capture_status" role="status" aria-live="polite"></p>
                         <button type="button" id="profile_capture_cancel" data-i18n="profile_capture_cancel">Annuler</button>
@@ -645,18 +647,21 @@
                     </div>
                 </div>
                 <label class="capture-mode-label">
-                    <select id="capture_mode" aria-label="Mode des captures">
+                    <select id="capture_mode" aria-label="Mode des captures" data-i18n-aria="captures_mode_label">
                         <option value="all" data-i18n="all_modes">Tous les modes</option>
                         <option value="Arena" data-i18n="arena">Arène 1v1</option>
                         <option value="Invasion" data-i18n="invasion">Invasions</option>
                         <option value="Defense" data-i18n="defense">Monde envahi</option>
                     </select>
                 </label>
-                <div class="choice_capture">
-                    <div class="sub_v" title="Victoires"><div class="min_v">V</div></div>
-                    <div class="sub_d" title="Défaites"><div class="min_d">D</div></div>
-                    <div class="sub_e" title="Égalités"><div class="min_e">E</div></div>
-                </div>
+                <label class="capture-result-label">
+                    <select id="capture_result" aria-label="Résultat des captures" data-i18n-aria="capture_result_label">
+                        <option value="all" data-i18n="capture_all_results">Tous les résultats</option>
+                        <option value="victory_text" data-i18n="victories">Victoires</option>
+                        <option value="defeat_text" data-i18n="defeats">Défaites</option>
+                        <option value="egality_text" data-i18n="draw">Égalité</option>
+                    </select>
+                </label>
             </div>
            
             <div class="capture-scroll">
@@ -707,7 +712,7 @@
                 <div class="header_carde_info">
                         <h5 class="btr_1">Modifier votre languages</h5>
                         <div class="carde_banner_info">
-                            <img src="{{ url_for('static', filename='icon-setting.png') }}"/>
+                            <img src="{{ url_for('static', filename='icon-settings-bronze.png') }}" alt=""/>
                         </div>
                 </div>
                 <p class="btr_2">Le système à besoin de savoir quel languages utilise votre jeux</p>
@@ -716,46 +721,15 @@
 
            
 
-            <div class="carde_info" info="pseudo">
+            <div class="carde_info" info="profile">
                 <div class="header_carde_info">
-                        <h5 class="btr_3">Ajouter un pseudonyme</h5>
+                        <h5 data-i18n="profile_capture_start">Récupérer mon profil</h5>
                         <div class="carde_banner_info">
-                            <img src="{{ url_for('static', filename='icon-multi.png') }}"/>
+                            <img src="{{ url_for('static', filename='icon-edit-profile-bronze.png') }}" alt=""/>
                         </div>
                 </div>
-                <p class="btr_4">Vous pouvez ajouter un pseudonyme pour que l'ont puisse vous reconnaitre</p>
-              
-            </div>
-
-            <div class="carde_info" info="avatar">
-                <div class="header_carde_info">
-                        <h5 class="btr_5">Ajouter un avatar</h5>
-                        <div class="carde_banner_info">
-                            <img src="{{ url_for('static', filename='icon-multi.png') }}"/>
-                        </div>
-                </div>
-                <p class="btr_6">Suivez les instructions et laisser le système capturer votre avatar du jeux</p>
-             
-            </div>
-            <div class="carde_info" info="niveau">
-                <div class="header_carde_info">
-                        <h5 class="btr_7">Modifier votre niveau</h5>
-                        <div class="carde_banner_info">
-                            <img src="{{ url_for('static', filename='icon-multi.png') }}"/>
-                        </div>
-                </div>
-                <p class="btr_8">Suivez les instructions et laisser le système capturer votre niveau du jeux</p>
-             
-            </div>
-            <div class="carde_info" info="captures">
-                <div class="header_carde_info">
-                        <h5 class="btr_9">Modifier vos captures</h5>
-                        <div class="carde_banner_info">
-                            <img src="{{ url_for('static', filename='icon-picture.png') }}"/>
-                        </div>
-                </div>
-                <p class="btr_10">Pour aider le système à améliorer ces performances, vous pouvez lui indiquez ou capturer les notifications</p>
-           
+                <p data-i18n="sidebar_profile_guidance">Lance Elden Ring et charge ta partie, puis ouvre l’onglet « Quitter la partie » sans quitter. L’application récupérera ton pseudo, ton niveau et ton image.</p>
+                <p class="sidebar-guidance-action" data-i18n="sidebar_profile_open">Clique ici pour ouvrir la configuration du profil.</p>
             </div>
             </div>
 

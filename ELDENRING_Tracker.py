@@ -2,7 +2,6 @@ import threading
 from flask import Flask, abort, render_template, request
 import webbrowser
 import os
-import ctypes
 import socket
 import pystray
 from PIL import Image
@@ -59,7 +58,7 @@ server = None
 
 current_folder = os.path.dirname(os.path.abspath(__file__))
 static_folder = os.path.join(current_folder, "static")
-icon_path = os.path.join(static_folder, "tracker-eye.ico")  
+icon_path = os.path.join(static_folder, "tracker-eye-ornament.ico")
 image = Image.open(icon_path)
 
 
@@ -115,29 +114,15 @@ path_to_tesseract = tesseract_path()
     
 @app.route("/")
 def index():
-    autor = False
-    if os.path.exists(path_to_tesseract):
-            autor = True
+    langue_select = get_selected_language()
+    if langue_select == "fra":
+        langue_select = "fr"
+    elif langue_select == "eng":
+        langue_select = "en"
     else:
-            autor = False
-    if autor:
-        langue_select = get_selected_language()
-        if langue_select == "fra":
-            langue_select= "fr"
-        if langue_select == "eng":
-            langue_select= "en"
-        elif langue_select != "fr":
-            from application.ui_localization import packs
-            langue_select = packs().get(langue_select, {}).get('html_lang', 'en')
-        return render_template("index.html", lang = langue_select, store_build=FROZEN, app_version=APP_VERSION)
-    else:
-        url = 'https://github.com/UB-Mannheim/tesseract/wiki'
-        version = ctypes.sizeof(ctypes.c_voidp) 
-        if version == 8:
-            version = "64bits"
-        if version == 4:
-            version = "32bits"
-        return render_template("tesseract_error.html", version = version, url = url)
+        from application.ui_localization import packs
+        langue_select = packs().get(langue_select, {}).get('html_lang', 'en')
+    return render_template("index.html", lang=langue_select, store_build=FROZEN, app_version=APP_VERSION)
 
 
 # Packaging smoke test: no web browser, listening socket, tray or game tracking.
@@ -146,7 +131,7 @@ if getattr(sys, 'frozen', False) and len(sys.argv) == 3 and sys.argv[1] == '--di
     with app.test_client() as client:
         response = client.get('/')
         result = {'status': response.status_code, 'tesseract': os.path.isfile(path_to_tesseract),
-                  'interface': b'tesseract_error' not in response.data and response.status_code == 200,
+                  'interface': b'id="game_language"' in response.data and response.status_code == 200,
                   'store_mode': b'data-store-build="true"' in response.data,
                   'leaderboard_disabled': client.get('/syncMulti').status_code == 404}
     with open(sys.argv[2], 'w', encoding='utf-8') as output:

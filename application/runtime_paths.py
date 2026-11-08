@@ -77,4 +77,7 @@ def image_dir():
 def tesseract_path():
     if FROZEN:
         return str(Path(sys.executable).resolve().parent / 'tesseract' / 'tesseract.exe')
+    local = RESOURCE_DIR.parent / 'build' / 'tesseract-5.5.4' / 'tesseract.exe'
+    if local.is_file():
+        return str(local)
     return r'C:\Program Files\Tesseract-OCR\tesseract.exe'

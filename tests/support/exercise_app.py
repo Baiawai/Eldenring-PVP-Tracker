@@ -15,6 +15,10 @@ from PIL import Image
 
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root))
+from application import runtime_paths
+test_images = Path(os.environ['APPDATA']) / 'test-runtime-images'
+test_images.mkdir(parents=True, exist_ok=True)
+runtime_paths.image_dir = lambda: test_images
 webbrowser.open_new = lambda *args, **kwargs: True
 module = types.ModuleType('__main__')
 module.__file__ = str(root / 'ELDENRING_Tracker.py')
@@ -25,12 +29,15 @@ exec(compile(Path(module.__file__).read_bytes(), module.__file__, 'exec'), modul
 from application import functions, init, multi, player_sightings, secur
 from application.version import APP_VERSION
 from cryptography.fernet import Fernet
-functions.sync_leaderboard_data = lambda: False
-multi.requests.post = lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError('Unexpected network request'))
 client = module.app.test_client()
 
-response = client.get('/')
+response = client.get('/', headers={'Accept-Language':'fr-FR,fr;q=0.9'})
 assert response.status_code == 200
+assert init.get_selected_language() == 'fra'
+assert functions.game_locale == 'frafr'
+assert client.post('/languages', data={'language':'eng'}).status_code == 200
+assert client.get('/', headers={'Accept-Language':'de-DE'}).status_code == 200
+assert init.get_selected_language() == 'eng'
 assert b'data-store-build="false"' in response.data
 assert ('data-i18n-title="environment_tracker">' + APP_VERSION + '</h5>').encode() in response.data
 assert client.get('/', headers={'Host':'127.0.0.1:5000', 'Origin':'http://127.0.0.1:5000', 'Sec-Fetch-Site':'same-origin'}).status_code == 200
@@ -215,14 +222,11 @@ with patch.object(functions.pytesseract, 'image_to_string', side_effect=RuntimeE
         assert False
     except RuntimeError:
         pass
-with patch.object(multi, 'FROZEN', False), patch.object(multi, '_sync_leaderboard_data', return_value=True):
-    assert multi.sync_leaderboard_data() is True
-with patch.object(multi, 'FROZEN', False), patch.object(multi, '_sync_leaderboard_data', return_value=False):
-    assert multi.sync_leaderboard_data() is False
+assert client.get('/syncMulti').status_code == 404
 system = client.get('/system-metrics').get_json()['system']
 assert system['version'] == APP_VERSION
 assert system['ocr_count'] == 2 and system['ocr_errors'] == 1
-assert system['sync_ok'] == 1 and system['sync_failed'] == 1
+assert system['sync_ok'] == 0 and system['sync_failed'] == 0
 assert system['steam_ping_ms'] is None
 assert client.post('/usage-visit', data={'feature':'statistics'}, headers={'Origin':'https://example.com'}).status_code == 403
 

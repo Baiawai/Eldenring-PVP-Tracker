@@ -41,7 +41,7 @@ class MultilingualCatalogTests(unittest.TestCase):
         for language, pack in packs.items():
             self.assertTrue(pack['modern'].get('information_title'))
             self.assertTrue(pack['modern'].get('faq_contact'))
-            for index in range(1, 15):
+            for index in range(1, 18):
                 for kind in ('q', 'a'):
                     with self.subTest(language=language, question=index, kind=kind):
                         self.assertTrue(pack['modern'].get(f'faq_{kind}_{index:02d}'))

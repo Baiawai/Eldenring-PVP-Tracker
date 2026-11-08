@@ -1,5 +1,63 @@
 (function () {
     let language = 'fra';
+    // Keep the FAQ current when Flask serves a template cached before this update.
+    const faqFrench = {"faq_a_01": "Lance le tracker et Elden Ring, puis sélectionne dans Configuration la langue utilisée en jeu. Clique sur Start pour commencer et sur Stop pour arrêter le suivi. Un nouveau suivi remet la session en mémoire à zéro.", "faq_a_04": "Le tracker lit les notifications à l’écran par reconnaissance de texte (OCR). Un message masqué, manqué ou mal lu peut laisser un résultat inconnu. Vérifie la langue du jeu et la zone dans Configuration → Capture, puis teste-la avec un exemple reconnu sur deux lignes.", "faq_a_05": "Dans Configuration, sélectionne la langue utilisée dans le jeu. Elle règle l’interface et la reconnaissance des messages, sans changer la langue du jeu. Au premier lancement, la langue du navigateur est utilisée si elle est prise en charge, sinon l’anglais ; ton choix enregistré est conservé.", "faq_a_06": "Dans Configuration → Capture, la détection automatique cherche la zone des notifications et prévoit les messages sur deux lignes. Vérifie l’aperçu avec un exemple reconnu, puis verrouille la zone si elle est correcte ; déverrouille-la si l’affichage change. Tu peux aussi désactiver le mode automatique et régler les limites manuellement. Un intervalle plus long réduit la fréquence des lectures et peut manquer des messages courts.", "faq_a_07": "Choisis un mode : le taux de victoire divise les victoires par les victoires, défaites et égalités enregistrées. Les égalités ne concernent que l’arène. Le graphique utilise les captures de résultats conservées ; il peut donc différer des statistiques cumulées.", "faq_a_09": "Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. En développement, la mesure avancée du ping peut demander une autorisation administrateur ; la version Store utilise le ping Steam disponible sans élévation.", "faq_a_12": "La version Store comprend les composants nécessaires. Pour lancer le projet depuis ses sources, installe Python et prépare la distribution locale de Tesseract ou utilise une installation existante ; consulte le README du projet.", "faq_a_13": "Fermer l’onglet laisse le tracker actif. Stop arrête le suivi ; Configuration → Quitter ferme le programme. Redémarrer le suivi remet la session en mémoire à zéro, mais conserve les statistiques enregistrées.", "faq_q_15": "Comment récupérer mon profil de personnage ?", "faq_a_15": "Dans Configuration → Profil, lance la capture. En jeu, ouvre Configuration → Quitter la partie sans confirmer la sortie et garde le jeu visible. Le tracker récupère ensemble pseudo, niveau et image : vérifie-les avant d’enregistrer ou annule si nécessaire.", "faq_q_16": "Comment fonctionnent l’archivage et la purge de l’historique ?", "faq_a_16": "Arrête le suivi avant d’archiver ou de purger l’historique actif. L’archivage retire les événements de la liste, y compris les rencontres Steam, et les conserve chiffrés localement. La restauration ajoute les événements absents sans doublons et conserve l’archive. La purge retire l’historique actif mais conserve les archives, les captures et les statistiques cumulées.", "faq_q_17": "Comment activer la détection Steam ?", "faq_a_17": "Dans Configuration → P2P, active la détection des joueurs. L’activation automatique du journal Steam est proposée par défaut : elle demande à Steam d’activer le journal nécessaire au démarrage du tracker ou de Steam. Si elle échoue, la commande manuelle reste disponible. Les profils observés ne sont pas automatiquement associés aux personnages en jeu."};
+    const faqList = document.querySelector(".faq-list");
+    if (faqList) {
+        Object.keys(faqFrench).forEach(function (key) {
+            let node = faqList.querySelector('[data-i18n="' + key + '"]');
+            if (!node && /^faq_q_1[5-7]$/.test(key)) {
+                const item = document.createElement("details"); item.className = "faq-item";
+                node = document.createElement("summary"); node.dataset.i18n = key;
+                const answer = document.createElement("p"); answer.dataset.i18n = key.replace("faq_q_", "faq_a_");
+                item.append(node, answer); faqList.appendChild(item);
+            }
+            if (node) { node.textContent = faqFrench[key]; node.dataset.i18nFr = faqFrench[key]; }
+        });
+    }
+    const rankingFaq = document.querySelector('[data-i18n="faq_a_11"]');
+    if (rankingFaq) rankingFaq.textContent = 'Le classement est actuellement désactivé. Il reviendra dans une future mise à jour.';
+    const rankingPanel = document.querySelector('.cadre_multi');
+    if (rankingPanel) {
+        rankingPanel.querySelectorAll('.leaderboard-intro, #leaderboard_refresh, .panel_multi_body').forEach(node => { node.hidden = true; });
+        const status = rankingPanel.querySelector('#leaderboard_status');
+        if (status) {
+            status.hidden = false;
+            status.dataset.i18n = 'leaderboard_disabled_future';
+            status.textContent = 'Le classement est actuellement désactivé. Il reviendra dans une future mise à jour.';
+        }
+    }
+    // Refresh the favicon even when the running server has cached an older template.
+    document.querySelectorAll('link[rel~="icon"]').forEach(link => { link.href = '/static/tracker-eye-ornament.ico'; });
+    const profileInstructions = document.getElementById('profile_capture_instructions');
+    if (profileInstructions) profileInstructions.textContent = 'Lance Elden Ring et charge ta partie. Une fois dans le monde du jeu, ouvre le menu principal, puis Configuration. Va dans l’onglet tout à droite, « Quitter la partie », sans quitter la partie. L’application y récupérera automatiquement ton pseudo, ton niveau et ton image. Attends quelques secondes (environ 2 à 5 secondes), puis reviens ici pour vérifier les informations récupérées et les enregistrer.';
+    // Upgrade the guidance in templates cached by an already-running tracker.
+    const legacyProfile = document.querySelector('.carde_info[info="pseudo"]');
+    if (legacyProfile) {
+        legacyProfile.setAttribute('info', 'profile');
+        const title = legacyProfile.querySelector('h5');
+        const description = legacyProfile.querySelector('p');
+        if (title) { title.classList.remove('btr_3'); title.dataset.i18n = 'profile_capture_start'; title.textContent = 'Récupérer mon profil'; }
+        if (description) description.classList.remove('btr_4');
+        document.querySelectorAll('.carde_info[info="avatar"], .carde_info[info="niveau"]').forEach(node => node.remove());
+    }
+    const profileGuidance = document.querySelector('.carde_info[info="profile"] p');
+    if (profileGuidance) {
+        profileGuidance.dataset.i18n = 'sidebar_profile_guidance';
+        profileGuidance.textContent = 'Lance Elden Ring et charge ta partie, puis ouvre l’onglet « Quitter la partie » sans quitter. L’application récupérera ton pseudo, ton niveau et ton image.';
+        if (!profileGuidance.parentElement.querySelector('.sidebar-guidance-action')) {
+            const action = document.createElement('p');
+            action.className = 'sidebar-guidance-action';
+            action.dataset.i18n = 'sidebar_profile_open';
+            action.textContent = 'Clique ici pour ouvrir la configuration du profil.';
+            profileGuidance.after(action);
+        }
+    }
+    document.querySelectorAll('.carde_info[info="captures"]').forEach(node => node.remove());
+    [['languages', 'icon-settings-bronze.png'], ['profile', 'icon-edit-profile-bronze.png']].forEach(function (entry) {
+        const icon = document.querySelector('.carde_info[info="' + entry[0] + '"] img');
+        if (icon) { icon.src = '/static/' + entry[1]; icon.alt = ''; }
+    });
     const settingsPanel = document.querySelector('.settings-panel');
     // Upgrade the markup served by an already-running tracker with a cached template.
     const oldHeading = settingsPanel && settingsPanel.querySelector('.settings-page-heading');
@@ -96,6 +154,12 @@
             tab.dataset.i18nAria = entry[0];
             tab.setAttribute('aria-label', entry[1]);
         }
+    });
+    // Add accessible translations to templates already cached by the running server.
+    [['.players-overview', 'players_recognized', 'Joueurs identifiés'],
+     ['#capture_mode', 'captures_mode_label', 'Mode des captures']].forEach(function(entry) {
+        const node = document.querySelector(entry[0]);
+        if (node) { node.dataset.i18nAria = entry[1]; node.dataset.i18nAriaFr = entry[2]; }
     });
     window.uiT = function(key, french) {
         const pack = window.ELDEN_UI_PACKS && window.ELDEN_UI_PACKS[language];

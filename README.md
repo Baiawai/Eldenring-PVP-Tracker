@@ -8,9 +8,9 @@ Elden Ring PvP Tracker est une application Windows locale qui suit les combats P
 - Statistiques, captures de résultat, historique des événements et liste des joueurs rencontrés.
 - Profil de personnage avec pseudo, niveau, image et légende ; volet de session et dernier combat.
 - Détection des joueurs et informations réseau disponibles via Steam, avec accès aux profils Steam lorsque ceux-ci sont identifiés.
-- Interface et reconnaissance des messages dans les langues prises en charge par le jeu.
+- Interface et reconnaissance des messages dans les langues prises en charge par le jeu. Au premier lancement, la langue du navigateur est utilisée si elle est disponible ; elle reste modifiable dans Configuration.
 
-La reconnaissance utilise l'OCR et ne peut lire que les notifications visibles. Un texte ou un nom peut être mal reconnu ; un personnage et un compte Steam ne sont pas nécessairement associés. Le classement en ligne est facultatif et sa disponibilité ne conditionne pas les statistiques locales.
+La reconnaissance utilise l'OCR et ne peut lire que les notifications visibles. Un texte ou un nom peut être mal reconnu ; un personnage et un compte Steam ne sont pas nécessairement associés. Le classement en ligne est actuellement désactivé et reviendra dans une future mise à jour. Les statistiques locales restent disponibles.
 
 ## Installation de la version de développement
 
@@ -18,7 +18,7 @@ La reconnaissance utilise l'OCR et ne peut lire que les notifications visibles. 
 
 - Windows, Elden Ring et Steam pour le suivi en jeu.
 - Python 3.15 64 bits pour lancer le projet depuis ses sources.
-- Tesseract OCR installé dans `C:\Program Files\Tesseract-OCR\tesseract.exe`. Les modèles OCR utilisés par le projet se trouvent dans `application/locales/tessdata/`.
+- Tesseract OCR : préparez la version 5.5.4 locale avec `.\.venv\Scripts\python.exe store\prepare_tesseract.py`. À défaut, l'application utilise `C:\Program Files\Tesseract-OCR\tesseract.exe`. Les modèles OCR se trouvent dans `application/locales/tessdata/`.
 
 Depuis PowerShell, à la racine du projet :
 
@@ -79,7 +79,7 @@ Les statistiques d'utilisation sont enregistrées localement dans `usage_metrics
 
 ## Version Microsoft Store
 
-La construction et les vérifications du package sont décrites dans [store/README.md](store/README.md). La version compilée désactive le classement distant et la mesure du ping nécessitant une élévation ; elle affiche le ping Steam lorsqu'il est disponible. Les données et l'installation du package doivent être testées séparément de la version de développement.
+La construction et les vérifications du package sont décrites dans [store/README.md](store/README.md). Le classement distant est désactivé dans les deux versions. La version compilée désactive la mesure du ping nécessitant une élévation et affiche le ping Steam lorsqu'il est disponible. Les données et l'installation du package doivent être testées séparément de la version de développement.
 
 ## Structure du projet
 

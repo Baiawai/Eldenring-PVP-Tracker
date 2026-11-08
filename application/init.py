@@ -132,8 +132,8 @@ def load_settings():
         bottomCustom = 0
         autoStart = False
         # print(app_insert('ⓔ ⒺDontTOucheMePLs♇'))
-        apiLink = "gAAAAABj8NV_fo5djmUw14TXgQfaKmYdMAkZea7OVq3MVKQJ9xNISzwwb61c64RmrFEq1enXhij3RDra3ucmnA6j0J8xdnnw-6_oP02Ue7VZ0USI003ASJIfMkNG_FDxg35BksVz3GwR3cn4nCzP45k7XT5bCpCdfogLtLlmCWtki2UlCUstQjI="
-        apiDont = "gAAAAABj8WSZN4uMMDsOI6Mt_7IXReqSXoAp3jF_Vpr4voHsSmjdM_iF73O0z5A_WSemQIGpjQlhM8CQBAD5FsD2WNgOgPDxGgw_B6QP7nj1-uDRWdiLQV0="
+        apiLink = ""
+        apiDont = ""
         sql = "INSERT INTO table_setting (id, resolutionHeight, resolutionWidth, scale, topCustom, bottomCustom, autoStart, apiLink, apiDont) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         val = (1, resolutionHeight, resolutionWidth, scale, topCustom, bottomCustom, autoStart, apiLink, apiDont)
         with closing(sqlite3.connect(database_setting)) as con:

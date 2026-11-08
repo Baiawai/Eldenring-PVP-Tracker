@@ -43,7 +43,6 @@ from application import retention
 from application import tracker_notifications
 from application import steam_log_auto
 from application.invasion_search import SearchVisibility
-from application.multi import sync_leaderboard_data
 from application.secur import encrypt_value, decrypt_value, decrypt_rows
 #  _   __   _   _   _____  
 # | | |  \ | | | | |_   _| 
@@ -803,7 +802,6 @@ def init():
     apply_score(0, 0, 0, 0, 0, 0, 0, 0, 0)
     
     
-    sync_leaderboard_data()
 
 
 
@@ -960,7 +958,6 @@ def capture_select():
     egality = user[4]
     ratio = user[7]
     global captures_stats
-    sync_leaderboard_data()
     
     last = captures_stats[-1]
     if len(last) > 5:

@@ -50,7 +50,7 @@
                 image.src = 'data:image/jpeg;base64,' + data.profile.avatar;
             });
             document.querySelectorAll('.img_user .fakeImageuser').forEach(e => { e.style.display = 'none'; });
-            document.querySelectorAll('.carde_info[info="pseudo"], .carde_info[info="avatar"], .carde_info[info="niveau"]').forEach(e => e.remove());
+            document.querySelectorAll('.carde_info[info="profile"], .carde_info[info="pseudo"], .carde_info[info="avatar"], .carde_info[info="niveau"]').forEach(e => e.remove());
             preview.hidden = true; panel.hidden = true; token = '';
         } catch (_) { status.textContent = tr('profile_capture_error', 'Lecture impossible. Réessaie.'); save.disabled = false; }
     });

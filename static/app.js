@@ -6,6 +6,14 @@ $('#menu_button_info').insertAfter('#menu_button_multi');
 
 // Older pages cached by the running server receive the same separate scroll area.
 const captureContainer = document.querySelector('.captures-panel');
+// Replace the old result buttons when the running server has a cached template.
+const oldCaptureChoices = captureContainer && captureContainer.querySelector('.choice_capture');
+if (oldCaptureChoices && !captureContainer.querySelector('#capture_result')) {
+    const label = document.createElement('label');
+    label.className = 'capture-result-label';
+    label.innerHTML = '<select id="capture_result" aria-label="Résultat des captures" data-i18n-aria="capture_result_label"><option value="all" data-i18n="capture_all_results">Tous les résultats</option><option value="victory_text" data-i18n="victories">Victoires</option><option value="defeat_text" data-i18n="defeats">Défaites</option><option value="egality_text" data-i18n="draw">Égalité</option></select>';
+    oldCaptureChoices.replaceWith(label);
+}
 if (captureContainer && !captureContainer.querySelector('.capture-scroll')) {
     const scrollArea = document.createElement('div');
     scrollArea.className = 'capture-scroll';
@@ -14,6 +22,19 @@ if (captureContainer && !captureContainer.querySelector('.capture-scroll')) {
     });
     captureContainer.appendChild(scrollArea);
 }
+
+// Keep the home prompt available when the running server has an older template cached.
+const homeLogo = document.querySelector('.presentation .img_eldenring');
+if (homeLogo && !homeLogo.querySelector('.home-start-prompt')) {
+    const prompt = document.createElement('button');
+    prompt.type = 'button'; prompt.className = 'home-start-prompt'; prompt.hidden = true;
+    prompt.dataset.i18n = 'home_start_prompt'; prompt.textContent = 'Appuyer sur Start pour commencer';
+    homeLogo.appendChild(prompt);
+}
+document.querySelector('.presentation')?.addEventListener('click', function () {
+    const start = document.getElementById('start');
+    if (start && !start.classList.contains('active')) start.click();
+});
 
 $( document ).ready(function() {
     setTimeout(function() { 
@@ -50,6 +71,17 @@ $( document ).ready(function() {
             
                 clearInterval(myloader);
                 $(".sprit").remove();
+                setTimeout(function () {
+                    const prompt = document.querySelector('.home-start-prompt');
+                    if (prompt && !document.getElementById('start').classList.contains('active')) {
+                        prompt.hidden = false;
+                        requestAnimationFrame(function () {
+                            requestAnimationFrame(function () {
+                                if (prompt.isConnected && !document.getElementById('start').classList.contains('active')) prompt.classList.add('is-ready');
+                            });
+                        });
+                    }
+                }, 500);
                 
                 }
             }
@@ -276,7 +308,6 @@ function launchLanguages(language){
     };
     const legacy = legacyLanguages[language] || legacyLanguages.eng;
     [text_active, interface_active, days_active] = legacy;
-    setLeaderboardLanguage(language);
     const localePack = window.ELDEN_UI_PACKS && window.ELDEN_UI_PACKS[language];
     if (localePack) {
         interface_active = localePack.legacy;
@@ -306,7 +337,6 @@ function launchLanguages(language){
     $(".panel_img #capture_img_profil").text(interface_active[17]);
     $(".panel_img .dp-1").html(interface_active[18]);
    
-    $(".panel_user #sync_multi").text(interface_active[21]);
     $(".panel_user table .t-1").text(interface_active[22]);
     $(".panel_user table .t-2").text(interface_active[23]);
     $(".panel_user table .t-3").text(interface_active[24]);
@@ -357,8 +387,6 @@ function launchLanguages(language){
     $(".btr_6").text(interface_active[69]);
     $(".btr_7").text(interface_active[70]);
     $(".btr_8").text(interface_active[71]);
-    $(".btr_9").text(interface_active[72]);
-    $(".btr_10").text(interface_active[73]);
     $(".niv_tr").html(interface_active[74]);
     $(".ratio").text(interface_active[76]);
     $(".combats").text(interface_active[77]);
@@ -809,6 +837,7 @@ function intervall(){
 
 }
 var status_capture = "";
+let captureFilterGeneration = 0;
 var captures_posted = 0;
 function getCapture(result, Time){
 
@@ -820,7 +849,6 @@ function getCapture(result, Time){
             if($(".para_capture").length == 1){
                 $(".no_capture").remove();
             }
-        syncMulti();  
           $(".modal_chart").addClass("hide");
           $(".chart-container").show();
           launchChart(mode_chart, 1);
@@ -1103,13 +1131,11 @@ $("#menu_button_multi").click(function(){
             $(".chart-container").show();
             launchChart(mode_chart, 1);
         }
-        $("#sync_multi").click();
         // $(".sub_carde_user .profile-card").remove();
         // $(".sub_carde_user").append($(".profile-card ").clone());
         $(this).addClass("active");
         $(".cadre_multi").show();
         menu_multi = true
-        syncMulti();
        
         setTimeout(function() {
             $("input#pseudo").focus();
@@ -1294,20 +1320,8 @@ function init(){
             // Global Notify top
             notify_top = response["settings"][4];
            
-            if(notify_top != 0){
-            
-              
-                $(".carde_info[info=captures]").remove();
-            }
-            if(response["user"][1] != ""){
-                $(".carde_info[info=pseudo]").remove();
-            }
-       
-            if(response["user"][6] != ""){
-                $(".carde_info[info=avatar]").remove();
-            }
-            if(parseInt(response["user"][19]) > 0){
-                $(".carde_info[info=niveau]").remove();
+            if (response["user"][1] && response["user"][6] && parseInt(response["user"][19], 10) > 0) {
+                $(".carde_info[info=profile]").remove();
             }
             if(language_default == false){
                 $(".carde_info[info=languages]").remove();
@@ -1429,8 +1443,10 @@ $('.capture-scroll').on('scroll', function() {
     if($(this).scrollTop() + $(this).innerHeight() + 100 >= $(this)[0].scrollHeight && scroll_request == false && $(".para_capture").length >= 50) {
    
         scroll_request = true;
+        const generation = captureFilterGeneration;
         $(".capture-scroll").append("<div class='next_captures_loader'><span></span><span></span><span></span></div>");
         $.get("/nextCaptures", function(response){
+            if (generation !== captureFilterGeneration) return;
             if(response["request"] == "success"){
                 let last_id = response["captures"][0][0][0];
                 array_capture = response["captures"][0].reverse();
@@ -1678,156 +1694,6 @@ $("#changeLvl").click(function(){
    
 });
 
-let leaderboardRequestVersion = 0;
-let leaderboardStatusKey = '';
-let leaderboardStatusFallback = '';
-let leaderboardPlayers = [];
-let leaderboardCurrentRank = null;
-function setLeaderboardStatus(key, fallback) {
-    leaderboardStatusKey = key;
-    leaderboardStatusFallback = fallback;
-    $('#leaderboard_status').text(key ? appT(key, fallback) : '').prop('hidden', !key);
-}
-function leaderboardText(value) {
-    return $('<span>').text(value == null ? '' : String(value)).html();
-}
-function syncMulti() {
-    if (document.body.dataset.storeBuild === 'true') return;
-    const version = ++leaderboardRequestVersion;
-    const refresh = $('#leaderboard_refresh').prop('disabled', true);
-    setLeaderboardStatus('leaderboard_loading', 'Chargement du classement…');
-    $.get('/syncMulti').done(function(response) {
-        if (version !== leaderboardRequestVersion) return;
-        const table = $('#table_multi').DataTable();
-        if (!response || response.request !== 'success' || !Array.isArray(response.datas)) {
-            leaderboardPlayers = [];
-            table.clear().draw(false);
-            setLeaderboardStatus('leaderboard_profile_required', 'Renseigne un pseudo et un avatar pour consulter le classement.');
-            return;
-        }
-        setLeaderboardStatus(response.online ? '' : 'leaderboard_offline', 'Classement indisponible : affichage des données locales.');
-        leaderboardPlayers = response.datas;
-        table.clear();
-        response.datas.forEach(function(row, index) {
-            const avatarValue = String(row[8] || '');
-            const avatar = avatarValue && /^[A-Za-z0-9+/]+={0,2}$/.test(avatarValue)
-                ? $('<img alt="">').attr('src', 'data:image/jpg;base64,' + avatarValue).prop('outerHTML')
-                : '<div class="fakeImageuser" aria-hidden="true"></div>';
-            const lang = String(row[6] || '');
-            const flags = {fra:'France.png', eng:'English.png'};
-            const language = Object.prototype.hasOwnProperty.call(flags, lang)
-                ? $('<img>').attr({title:lang, alt:lang, src:'/static/' + flags[lang]}).prop('outerHTML')
-                : leaderboardText(lang);
-            table.row.add([index + 1, language, leaderboardText(row[2]), avatar,
-                leaderboardText(row[18]), leaderboardText(row[17]), leaderboardText(row[3]),
-                leaderboardText(row[4]), leaderboardText(row[5]), leaderboardText(row[7]), leaderboardText(row[10])]);
-        });
-        table.draw(false);
-    }).fail(function() {
-        if (version === leaderboardRequestVersion) setLeaderboardStatus('leaderboard_error', 'Impossible de charger le classement.');
-    }).always(function() {
-        if (version === leaderboardRequestVersion) refresh.prop('disabled', false);
-    });
-}
-$('#leaderboard_refresh').on('click', syncMulti);
-function leaderboardRowPlayer(row) {
-    const data = $('#table_multi').DataTable().row(row).data();
-    return data && leaderboardPlayers[Number(data[0]) - 1];
-}
-function markLeaderboardRows() {
-    if (!$.fn.DataTable.isDataTable('#table_multi')) return;
-    $('#table_multi tbody tr').each(function() {
-        const player = leaderboardRowPlayer(this);
-        if (player) $(this).attr({tabindex:0, 'aria-label':appT('leaderboard_open_card', 'Voir la fiche du joueur') + ': ' + String(player[2] || '')});
-    });
-}
-function leaderboardVisibleRanks() {
-    return $('#table_multi').DataTable().rows({search:'applied', order:'applied'}).data().toArray()
-        .map(data => Number(data[0])).filter(rank => Number.isInteger(rank) && leaderboardPlayers[rank - 1]);
-}
-function renderLeaderboardPlayer(rank) {
-    const player = leaderboardPlayers[rank - 1];
-    if (!player) return;
-    leaderboardCurrentRank = rank;
-    const dialog = document.getElementById('leaderboard_player_dialog');
-    const name = String(player[2] || '—');
-    const avatar = String(player[8] || '');
-    const validAvatar = !!avatar && /^[A-Za-z0-9+/]+={0,2}$/.test(avatar);
-    $('#leaderboard_player_name').text(name);
-    $('#leaderboard_player_rank').text(rank);
-    $('#leaderboard_player_level').text(player[18] == null || player[18] === '' ? '—' : player[18]);
-    const image = $('#leaderboard_player_avatar');
-    image.prop('hidden', !validAvatar).attr('alt', name);
-    if (validAvatar) image.attr('src', 'data:image/jpg;base64,' + avatar);
-    else image.removeAttr('src');
-    $('#leaderboard_player_no_avatar').prop('hidden', validAvatar);
-    const fields = {'victories':3, 'defeats':4, 'draws':5, 'fights':10, 'score':17,
-        'win-streak':14, 'loss-streak':15, 'no-result':11, 'opponent-left':12,
-        'abandons':13, 'connection-errors':19, 'game-closed':20};
-    Object.keys(fields).forEach(function(key) {
-        const value = player[fields[key]];
-        dialog.querySelector('[data-player-stat="' + key + '"]').textContent = value == null || value === '' ? '—' : value;
-    });
-    const rate = window.TrackerStats.winRate([0, 0, player[3], player[4], player[5]], 'Arena');
-    dialog.querySelector('[data-player-stat="rate"]').textContent = new Intl.NumberFormat(document.documentElement.lang || undefined, {maximumFractionDigits:2}).format(rate) + ' %';
-    const ranks = leaderboardVisibleRanks();
-    const index = ranks.indexOf(rank);
-    const previous = dialog.querySelector('.leaderboard-player-prev');
-    const next = dialog.querySelector('.leaderboard-player-next');
-    previous.disabled = index <= 0;
-    next.disabled = index < 0 || index >= ranks.length - 1;
-    if (dialog.open && document.activeElement === document.body) {
-        (previous.disabled ? (next.disabled ? dialog.querySelector('.leaderboard-player-close') : next) : previous).focus();
-    }
-    if (dialog.open) setTimeout(function() {
-        if (dialog.open && !dialog.contains(document.activeElement)) {
-            (previous.disabled ? (next.disabled ? dialog.querySelector('.leaderboard-player-close') : next) : previous).focus();
-        }
-    }, 0);
-    dialog.querySelector('.leaderboard-player-card').scrollTop = 0;
-}
-function openLeaderboardPlayer(row) {
-    const data = $('#table_multi').DataTable().row(row).data();
-    if (!data || !leaderboardRowPlayer(row)) return;
-    const dialog = document.getElementById('leaderboard_player_dialog');
-    renderLeaderboardPlayer(Number(data[0]));
-    row.focus();
-    if (!dialog.open) dialog.showModal();
-    dialog.querySelector('.leaderboard-player-close').focus();
-}
-$('#table_multi').on('draw.dt', markLeaderboardRows).on('click', 'tbody tr', function() {
-    openLeaderboardPlayer(this);
-}).on('keydown', 'tbody tr', function(event) {
-    if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        openLeaderboardPlayer(this);
-    }
-});
-const leaderboardPlayerDialog = document.getElementById('leaderboard_player_dialog');
-leaderboardPlayerDialog.querySelector('.leaderboard-player-close').addEventListener('click', function() { leaderboardPlayerDialog.close(); });
-function navigateLeaderboardPlayer(offset) {
-    const ranks = leaderboardVisibleRanks();
-    const index = ranks.indexOf(leaderboardCurrentRank);
-    const next = index + offset;
-    if (index >= 0 && next >= 0 && next < ranks.length) renderLeaderboardPlayer(ranks[next]);
-}
-leaderboardPlayerDialog.querySelector('.leaderboard-player-prev').addEventListener('click', function() { navigateLeaderboardPlayer(-1); });
-leaderboardPlayerDialog.querySelector('.leaderboard-player-next').addEventListener('click', function() { navigateLeaderboardPlayer(1); });
-document.addEventListener('keydown', function(event) {
-    if (leaderboardPlayerDialog.open && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
-        event.preventDefault();
-        navigateLeaderboardPlayer(event.key === 'ArrowLeft' ? -1 : 1);
-    }
-});
-leaderboardPlayerDialog.addEventListener('click', function(event) {
-    const box = leaderboardPlayerDialog.getBoundingClientRect();
-    if (event.target === leaderboardPlayerDialog && (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)) leaderboardPlayerDialog.close();
-});
-document.addEventListener('ui-language-change', function() {
-    if (leaderboardStatusKey) setLeaderboardStatus(leaderboardStatusKey, leaderboardStatusFallback);
-    markLeaderboardRows();
-});
-
 counteur_loader = 22;
 $('.load_fire').css("background-image", "url('/static/split1.png')");
 centent_size = $('.load_fire').width();
@@ -1879,105 +1745,55 @@ function initSetting() {
 
 
 
-$(".sub_v, .sub_d, .sub_e").click(function(){
-   
-    $(".para_capture").remove();
-    
-    $(".capture-scroll").append("<div class='next_captures_loader'><span></span><span></span><span></span></div>");
-   
-    if($(this).hasClass("sub_v") && !$(this).hasClass("active")){
-        status_capture = "victory_text";
-        $(".sub_v, .sub_d, .sub_e").removeClass("active");
-        $(this).addClass("active");
-    } else if($(this).hasClass("sub_d") && !$(this).hasClass("active")){
-        status_capture = "defeat_text";
-        $(".sub_v, .sub_d, .sub_e").removeClass("active");
-        $(this).addClass("active");
-    } else if($(this).hasClass("sub_e") && !$(this).hasClass("active")){
-        status_capture = "egality_text";
-        $(".sub_v, .sub_d, .sub_e").removeClass("active");
-        $(this).addClass("active");
-    } else {
-        $(".sub_v, .sub_d, .sub_e").removeClass("active");
-        status_capture = null;
-    }
+let captureFilterRequest = null;
+
+function reloadFilteredCaptures() {
+    const generation = ++captureFilterGeneration;
+    const selection = $('#capture_result').val() || 'all';
+    status_capture = selection === 'all' ? null : selection;
+    if (captureFilterRequest) captureFilterRequest.abort();
+    $('.capture-scroll .para_capture, .capture-scroll .next_captures_loader').remove();
+    $('.capture-scroll .no_capture').hide();
+    $('.capture-scroll').scrollTop(0).append("<div class='next_captures_loader'><span></span><span></span><span></span></div>");
     scroll_request = true;
-    
-    $.get("/allCaptures", {mode: $('#capture_mode').val()}, function(response){
-        if(response["request"] == "success" && response["captures"] != ""){
-            let last_id = response["captures"][0][0];
-            array_capture = response["captures"];
-            count_status = 1;
-            for(let i = 0; i < response["captures"].length;i++){
-          
-                let victory_cp = array_capture[i][2];
-                let defeat_cp = array_capture[i][3];
-                let egality_cp = array_capture[i][4];
-                
-                let result = "";
-                let class_text = "";
-            
-                
-                    if(victory_cp == 1){
-                        result = appT('victory', 'Victory')
-                        class_text = "victory_text";
-                    }
-                    if(defeat_cp == 1){
-                        result = appT('defeat', 'Defeat')
-                        class_text = "defeat_text";
-                    }
-                    if(egality_cp == 1){
-                        result = appT('draw', 'Egality')
-                        class_text = "egality_text";
-                    }
-                    if (array_capture[i][7] !== "Arena") result = (array_capture[i][7] === 'Defense' ? appT('defense', 'Monde envahi') : appT('invasion', 'Invasions')) + " · " + result;
-                    if (array_capture[i][1]) result += " · " + $('<span>').text(array_capture[i][1]).html();
-                    let date_select = array_capture[i][6];
+    captureFilterRequest = $.get('/allCaptures', {mode: $('#capture_mode').val()})
+        .done(function(response) {
+            if (generation !== captureFilterGeneration) return;
+            const captures = response.request === 'success' && Array.isArray(response.captures) ? response.captures : [];
+            captures.slice().reverse().forEach(function(capture) {
+                let result = '', resultClass = '';
+                if (capture[2] == 1) { result = appT('victory', 'Victoire'); resultClass = 'victory_text'; }
+                if (capture[3] == 1) { result = appT('defeat', 'Défaite'); resultClass = 'defeat_text'; }
+                if (capture[4] == 1) { result = appT('draw', 'Égalité'); resultClass = 'egality_text'; }
+                if (status_capture && status_capture !== resultClass) return;
+                if (capture[7] !== 'Arena') result = (capture[7] === 'Defense' ? appT('defense', 'Monde envahi') : appT('invasion', 'Invasions')) + ' · ' + result;
+                if (capture[1]) result += ' · ' + capture[1];
+                const card = $('<div>').addClass('para_capture').addClass(resultClass);
+                const caption = $('<span>').append($('<b>').text(result), $('<br>'), document.createTextNode(' ' + appT('time', 'Temps') + ': ' + capture[5] + ' s'));
+                card.append(caption, $('<div>').addClass('img').append($('<img>').attr('src', 'data:image/jpg;base64,' + capture[8])),
+                    $('<div>').addClass('posted').text(capture[0]), $('<div>').addClass('datePosted').text(capture[6]));
+                $('.capture-scroll').append(card);
+            });
+        })
+        .always(function() {
+            if (generation !== captureFilterGeneration) return;
+            $('.capture-scroll .next_captures_loader').remove();
+            if (!$('.capture-scroll .no_capture').length) $('.capture-scroll').append($('<div>').addClass('no_capture').text(interface_active[63] || 'Aucune capture disponible'));
+            $('.capture-scroll .no_capture').toggle($('.capture-scroll .para_capture').length === 0);
+            // /allCaptures already returned every matching mode; do not append paged duplicates.
+            scroll_request = null;
+            captureFilterRequest = null;
+        });
+}
 
-                    let Time = array_capture[i][5];
-                    let base64 = array_capture[i][8];
-                    let capture_ID = array_capture[i][0] ;
-                 
-                    if(status_capture == class_text || status_capture == null){
-                        if(status != null){
-                            capture_ID = count_status;
-                            $(".capture-scroll").prepend("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> "+appT('time', 'Temps')+": "+Time+" s</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
-                        } else {
-                            $(".capture-scroll").append("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> "+appT('time', 'Temps')+": "+Time+" s</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
-                        }
-                        count_status += 1;
-                    }
-                    
-            }
-            $(".captures-panel .next_captures_loader").remove();
-            if (!$('.no_capture').length) $('.capture-scroll').append('<div class="no_capture">Aucune capture disponible</div>');
-            $('.no_capture').toggle($('.captures-panel .para_capture').length === 0);
-            if(last_id <= 1){
-                scroll_request = null;
-            } else {
-                scroll_request = false;
-            }
-            
-        } else {
-            $(".captures-panel .next_captures_loader").remove();
-            if (!$('.no_capture').length) $('.capture-scroll').append('<div class="no_capture">Aucune capture disponible</div>');
-            $('.no_capture').show();
-
-        }
-     
-
-    });
-    
-
-});
-
+$('#capture_result').on('change', reloadFilteredCaptures);
 $('#capture_mode').on('change', function() {
-    const mode = $(this).val();
-    $('.sub_e').toggle(mode === 'Arena' || mode === 'all');
-    $('.sub_v, .sub_d, .sub_e').removeClass('active');
-    $('.sub_v').addClass('active').trigger('click');
+    const allowDraw = this.value === 'Arena' || this.value === 'all';
+    const draw = document.querySelector('#capture_result option[value="egality_text"]');
+    if (!allowDraw && $('#capture_result').val() === 'egality_text') $('#capture_result').val('all');
+    if (draw) { draw.disabled = !allowDraw; draw.hidden = !allowDraw; }
+    reloadFilteredCaptures();
 });
-
 
 $("#close_nav").click(function(){
 
@@ -1997,18 +1813,7 @@ $(".carde_info").click(function(){
             $(".btn_menu_settings[menu=0]").click();
         }
     }
-    if(info_selected == "captures"){
-        if($(".settings-panel").is(":hidden")){
-            $("#menu_button_settings").click();
-            $(".btn_menu_settings[menu=2]").click();
-        } else {
-            $(".btn_menu_settings[menu=2]").click();
-            $(".detail_img").addClass("hide");
-            $(".detail_pseudo").addClass("hide");
-            $(".setting_user_level").removeClass("hide");
-        }
-    }
-    if(info_selected == "niveau"){
+    if(info_selected == "profile" || info_selected == "niveau"){
         if($(".settings-panel").is(":hidden")){
             $("#menu_button_settings").click();
             $(".btn_menu_settings[menu=3]").click();

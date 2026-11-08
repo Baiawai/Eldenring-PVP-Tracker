@@ -95,93 +95,17 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 if errors:
                     raise AssertionError((width, errors))
                 page.locator('#menu_button_info').click()
-                image_bytes = io.BytesIO()
-                Image.new('RGB', (50, 60), '#876b42').save(image_bytes, format='JPEG')
-                avatar = base64.b64encode(image_bytes.getvalue()).decode('ascii')
-                ranking = [0, 0, 'Malenia', 38, 12, 1, 'fra', '74.51', avatar, '', 52, 0, 0, 0, 0, 0, 0, 8.5, 150, 0, 0]
-                suspicious = [0, 0, '<img src=x onerror=alert(1)>', 2, 1, 0, 'eng', '66.67', '', '', 3, 0, 0, 0, 0, 0, 0, 0.2, 100, 0, 0]
-                page.route('**/syncMulti', lambda route: route.fulfill(json={'request':'success', 'online':False, 'datas':[ranking, suspicious]}))
+                leaderboard_requests = []
+                page.on('request', lambda request: leaderboard_requests.append(request.url) if '/syncMulti' in request.url else None)
                 page.locator('#menu_button_multi').click()
-                page.wait_for_timeout(600)
-                if not page.locator('#leaderboard_status').is_visible() or page.locator('#table_multi tbody tr').count() != 2:
-                    raise AssertionError(('Offline leaderboard unavailable', width))
-                if page.locator('#table_multi tbody tr').nth(1).locator('td').nth(2).text_content() != suspicious[2]:
-                    raise AssertionError(('Leaderboard player name not escaped', width))
-                if page.locator('#table_multi tbody tr').nth(1).locator('td').nth(2).locator('img').count():
-                    raise AssertionError(('Untrusted leaderboard markup rendered', width))
-                search_box = page.locator('#table_multi_filter input').bounding_box()
-                if search_box['x'] < 0 or search_box['x'] + search_box['width'] > width + 1:
-                    raise AssertionError(('Leaderboard search clipped', width, search_box))
-                page.screenshot(path=str(ROOT / 'build' / ('leaderboard-ui-' + str(width) + '.png')), full_page=True)
-                page.locator('#table_multi tbody tr').first.click()
-                card = page.locator('#leaderboard_player_dialog')
-                if not card.is_visible() or card.locator('#leaderboard_player_name').text_content() != 'Malenia':
-                    raise AssertionError(('Player card failed to open', width))
-                if card.locator('[data-player-stat="victories"]').text_content() != '38' or card.locator('[data-player-stat="rate"]').text_content() != '74,51 %':
-                    raise AssertionError(('Player stats incorrect', width))
-                if not card.locator('#leaderboard_player_avatar').is_visible():
-                    raise AssertionError(('Player avatar not visible', width))
-                previous = card.locator('.leaderboard-player-prev')
-                following = card.locator('.leaderboard-player-next')
-                close_button = card.locator('.leaderboard-player-close')
-                if not previous.is_disabled() or following.is_disabled():
-                    raise AssertionError(('Initial player navigation incorrect', width))
-                if close_button.evaluate('(el) => getComputedStyle(el).borderTopWidth') != '0px':
-                    raise AssertionError(('Close button has a border', width))
-                close_box = close_button.bounding_box()
-                card_box = card.locator('.leaderboard-player-card').bounding_box()
-                if abs((card_box['x'] + card_box['width']) - (close_box['x'] + close_box['width'])) > 8:
-                    raise AssertionError(('Close button not in corner', width))
-                page.screenshot(path=str(ROOT / 'build' / ('player-card-ui-' + str(width) + '.png')), full_page=True)
-                following.click()
-                if card.locator('#leaderboard_player_name').text_content() != suspicious[2] or not following.is_disabled() or previous.is_disabled():
-                    raise AssertionError(('Next player incorrect', width))
-                page.keyboard.press('ArrowLeft')
-                if card.locator('#leaderboard_player_name').text_content() != 'Malenia':
-                    raise AssertionError(('Previous player keyboard shortcut failed', width))
-                page.keyboard.press('Escape')
-                if card.is_visible():
-                    raise AssertionError(('Player card failed to close with Escape', width))
-                if not page.locator('#table_multi tbody tr').first.evaluate('(row) => document.activeElement === row'):
-                    raise AssertionError(('Player card did not restore focus', width))
-                page.locator('#table_multi_filter input').fill('Malenia')
-                if page.locator('#table_multi tbody tr').count() != 1:
-                    raise AssertionError(('Leaderboard search failed', width))
-                page.locator('#table_multi tbody tr').first.click()
-                if not previous.is_disabled() or not following.is_disabled():
-                    raise AssertionError(('Player navigation ignored filter', width))
-                close_button.click()
-                page.locator('#table_multi_filter input').fill('')
-                page.evaluate("() => $('#table_multi').DataTable().order([5, 'desc']).page.len(1).draw()")
-                if page.locator('#table_multi tbody tr').count() != 1 or page.locator('#table_multi tbody tr').first.locator('td').nth(2).text_content() != 'Malenia':
-                    raise AssertionError(('Leaderboard sorting or pagination failed', width))
-                page.locator('#table_multi tbody tr').first.click()
-                following.click()
-                if card.locator('#leaderboard_player_name').text_content() != suspicious[2]:
-                    raise AssertionError(('Player navigation across pages failed', width))
-                close_button.click()
-                page.evaluate("() => $('#table_multi').DataTable().order([5, 'asc']).page.len(1).draw()")
-                page.locator('#table_multi tbody tr').first.click()
-                if card.locator('#leaderboard_player_name').text_content() != suspicious[2]:
-                    raise AssertionError(('Player sort order ignored', width))
-                following.click()
-                if card.locator('#leaderboard_player_name').text_content() != 'Malenia':
-                    raise AssertionError(('Next player did not follow sort order', width))
-                close_button.click()
-                page.evaluate("() => $('#table_multi').DataTable().order([5, 'desc']).page.len(1).draw()")
-                page.evaluate("() => $('#table_multi').DataTable().page('next').draw('page')")
-                if page.locator('#table_multi tbody tr').first.locator('td').nth(2).text_content() != suspicious[2]:
-                    raise AssertionError(('Leaderboard next page failed', width))
-                page.locator('#table_multi tbody tr').first.focus()
-                page.keyboard.press('Enter')
-                if not card.is_visible() or not card.locator('#leaderboard_player_no_avatar').is_visible() or card.locator('#leaderboard_player_name img').count():
-                    raise AssertionError(('Keyboard card or avatar fallback failed', width))
-                card.locator('.leaderboard-player-close').click()
-                page.route('**/syncMulti', lambda route: route.fulfill(json={'request':'error'}))
-                page.locator('#leaderboard_refresh').click()
                 page.wait_for_timeout(400)
-                if 'profil' not in page.locator('#leaderboard_status').text_content().lower() and 'pseudo' not in page.locator('#leaderboard_status').text_content().lower():
-                    raise AssertionError(('Missing profile status unavailable', width))
+                if not page.locator('#leaderboard_status').is_visible() or 'désactivé' not in page.locator('#leaderboard_status').text_content():
+                    raise AssertionError(('Disabled leaderboard message missing', width))
+                if page.locator('.panel_multi_body').is_visible() or page.locator('#leaderboard_refresh').is_visible():
+                    raise AssertionError(('Disabled leaderboard controls visible', width))
+                if leaderboard_requests:
+                    raise AssertionError(('Disabled leaderboard sent requests', leaderboard_requests))
+                page.screenshot(path=str(ROOT / 'build' / ('leaderboard-ui-' + str(width) + '.png')), full_page=True)
                 page.locator('#menu_button_multi').click()
                 page.locator('#menu_button_settings').click()
                 page.locator('.btn_menu_settings[menu="4"]').click()
@@ -191,7 +115,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 page.locator('#menu_button_settings').click()
                 information = page.locator('#information_panel')
                 page.locator('#menu_button_information').click()
-                if not information.is_visible() or information.locator('.faq-item').count() != 14:
+                if not information.is_visible() or information.locator('.faq-item').count() != 17:
                     raise AssertionError(('Information FAQ unavailable', width))
                 information.locator('.faq-item summary').first.click()
                 if not information.locator('.faq-item p').first.is_visible():
@@ -201,19 +125,22 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                     if information.locator('.faq-item summary').first.text_content() != page.evaluate('(code) => ELDEN_UI_PACKS[code].modern.faq_q_01', code):
                         raise AssertionError(('FAQ language did not change', width, code))
                 page.evaluate("() => launchLanguages('fra')")
-                if information.locator('.information-contact a').get_attribute('href') != 'mailto:gael.pitras@gmail.com':
-                    raise AssertionError(('FAQ contact missing', width))
+                if information.locator('.information-contact:visible').count():
+                    raise AssertionError(('FAQ contact still visible', width))
                 page.screenshot(path=str(ROOT / 'build' / ('information-ui-' + str(width) + '.png')), full_page=True)
                 page.locator('#menu_button_info').click()
                 if information.is_visible() or not page.locator('#stats_panel').is_visible():
                     raise AssertionError(('FAQ navigation did not close', width))
                 page.locator('#menu_button_info').click()
                 if width <= 760:
+                    page.wait_for_timeout(750)  # Allow the profile drawer transition to finish.
                     content = page.locator('.app-content').bounding_box()
                     if content['width'] < width * .95:
                         raise AssertionError(('Content too narrow', width, content))
                     counters = page.locator('.scoreboard li').all()
                     for counter in counters:
+                        if not counter.is_visible():
+                            continue
                         box = counter.bounding_box()
                         if box and (box['x'] < 0 or box['x'] + box['width'] > width + 1):
                             raise AssertionError(('Counter clipped', width, box))

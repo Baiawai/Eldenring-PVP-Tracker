@@ -17,5 +17,5 @@ a = Analysis([str(root / 'ELDENRING_Tracker.py')], pathex=[str(root)],
              hookspath=[], hooksconfig={}, runtime_hooks=[], excludes=[], noarchive=False)
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name='EldenRingTracker',
-          console=os.environ.get('TRACKER_BUILD_CONSOLE') == '1', icon=str(root / 'static' / 'tracker-eye.ico'))
+          console=os.environ.get('TRACKER_BUILD_CONSOLE') == '1', icon=str(root / 'static' / 'tracker-eye-ornament.ico'))
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name='EldenRingTracker')

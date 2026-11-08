@@ -2,11 +2,34 @@
 import json
 import re
 import unittest
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
 class InterfaceTranslationTests(unittest.TestCase):
+    def test_main_template_accessible_labels_have_translations(self):
+        class Labels(HTMLParser):
+            missing = []
+
+            def handle_starttag(self, tag, attrs):
+                attrs = dict(attrs)
+                for attribute, key in (('aria-label', 'data-i18n-aria'),
+                                       ('placeholder', 'data-i18n-placeholder')):
+                    if attrs.get(attribute) and not attrs.get(key):
+                        self.missing.append((self.getpos()[0], attribute))
+
+        parser = Labels()
+        parser.feed((ROOT / 'templates/index.html').read_text(encoding='utf-8'))
+        self.assertEqual(parser.missing, [])
+
+    def test_korean_basic_controls_are_not_corrupted(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        korean = packs['kor']
+        self.assertEqual(korean['legacy'][44:46], ['아니요', '예'])
+        self.assertEqual([korean['counter'][i] for i in (0, 2, 4)],
+                         ['시작', '중지', '불러오는 중...'])
+
     def test_all_interface_keys_exist_for_every_non_french_language(self):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         keys = set()

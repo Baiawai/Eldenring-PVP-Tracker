@@ -11,9 +11,10 @@ from PIL import Image, ImageDraw, ImageFont
 from pytesseract import pytesseract
 
 from application.locale_catalog import classify, messages
+from application.runtime_paths import tesseract_path
 
 ROOT = Path(__file__).resolve().parents[1]
-TESSERACT = Path(os.environ.get('ProgramFiles', r'C:\Program Files')) / 'Tesseract-OCR' / 'tesseract.exe'
+TESSERACT = Path(tesseract_path())
 FONT = Path(os.environ.get('WINDIR', r'C:\Windows')) / 'Fonts' / 'arial.ttf'
 MODELS = ROOT / 'application/locales/tessdata'
 
