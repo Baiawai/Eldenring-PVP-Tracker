@@ -157,6 +157,8 @@ def index():
 # Packaging smoke test: no web browser, listening socket, tray or game tracking.
 if getattr(sys, 'frozen', False) and len(sys.argv) == 3 and sys.argv[1] == '--distribution-smoke-test':
     import json
+    import tempfile
+    from pathlib import Path
     from unittest.mock import patch
     from application import online_leaderboard
     with app.test_client() as client:
@@ -170,6 +172,21 @@ if getattr(sys, 'frozen', False) and len(sys.argv) == 3 and sys.argv[1] == '--di
         with patch.object(online_leaderboard, '_call', return_value={'entries': []}) as leaderboard_call:
             leaderboard_response = client.get('/online-leaderboard/entries?mode=Arena')
         result['leaderboard_route'] = leaderboard_response.status_code == 200 and leaderboard_call.called
+        # A Store package must ignore legacy development configuration and
+        # never attach credentials to another origin. The fixture is isolated.
+        with tempfile.TemporaryDirectory(prefix='tracker-store-routing-') as directory:
+            (Path(directory) / 'leaderboard-config.json').write_text(
+                json.dumps({'environment': 'development', 'urls': {'development': 'http://127.0.0.1:8000'}}),
+                encoding='utf-8')
+            with patch.object(online_leaderboard, 'data_dir', return_value=Path(directory)):
+                result['production_ignores_local_config'] = online_leaderboard._base_url() == 'https://eldenringpvp.com'
+                with patch.object(online_leaderboard, 'build_opener') as opener:
+                    try:
+                        online_leaderboard._call('GET', '/api/v1/leaderboards', root='http://127.0.0.1:8000')
+                    except RuntimeError as error:
+                        result['other_origin_blocked'] = str(error) == 'server_not_allowed' and not opener.called
+                    else:
+                        result['other_origin_blocked'] = False
     with open(sys.argv[2], 'w', encoding='utf-8') as output:
         json.dump(result, output)
     sys.exit(0 if all(result.values()) else 1)

@@ -48,6 +48,9 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 page.on('request', lambda request: leaderboard_reads.append(request.url) if '/online-leaderboard/entries?' in request.url else None)
                 page.goto(url, wait_until='load')
                 page.wait_for_timeout(1500)
+                for selector in ('.online-server-move', '.online-server-consent-review'):
+                    if page.locator(selector).evaluate('(element) => getComputedStyle(element).display') != 'none':
+                        raise AssertionError(('Inactive server transition control is visible', width, selector))
                 for code in ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
                     page.evaluate('(code) => launchLanguages(code)', code)
                     if code != 'fra':
@@ -672,6 +675,97 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
             if not popup.is_closed():
                 raise AssertionError('Unconfigured Steam window did not close')
             context.close()
+
+            # Server migration requires a deliberate confirmation and a fresh
+            # consent dialog carrying the nonce received after the transition.
+            context = browser.new_context()
+            transition = {'migrated':False, 'posts':[]}
+            def migration_settings(route):
+                if route.request.method == 'POST':
+                    transition['posts'].append(route.request.post_data_json)
+                    route.fulfill(json={'enabled':True, 'configured':True, 'state':'idle', 'steam_consent':False})
+                else:
+                    route.fulfill(json={'enabled':not transition['migrated'], 'configured':True,
+                                        'state':'disabled' if transition['migrated'] else 'server_changed',
+                                        'steam_consent':False, 'migration_available':not transition['migrated'],
+                                        'transition_nonce':'fresh-nonce' if transition['migrated'] else None})
+            def migrate_server(route):
+                if route.request.post_data_json != {'confirm':True}:
+                    raise AssertionError('Migration did not require explicit confirmation')
+                transition['migrated'] = True
+                route.fulfill(json={'ok':True})
+            context.route('**/online-leaderboard/settings', migration_settings)
+            context.route('**/online-leaderboard/migrate-server', migrate_server)
+            page = context.new_page()
+            page.on('dialog', lambda dialog: dialog.accept())
+            page.goto(url, wait_until='load')
+            page.locator('#menu_button_settings').click()
+            page.locator('.btn_menu_settings[menu="7"]').click()
+            page.wait_for_function("() => document.querySelector('.online-main-status').textContent === window.uiT('online_server_move_required', 'Une ancienne connexion utilise un autre serveur. Utilise « Utiliser le serveur public » pour continuer sans la supprimer.')")
+            for width, height in [(1440, 900), (900, 700), (390, 844)]:
+                page.set_viewport_size({'width':width, 'height':height})
+                page.wait_for_timeout(400)
+                for code in ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
+                    page.evaluate('(code) => launchLanguages(code)', code)
+                    if page.locator('.online-server-move').evaluate('(element) => element.scrollWidth > element.clientWidth + 1'):
+                        raise AssertionError(('Server transition row overflows', width, code))
+            page.evaluate("() => launchLanguages('fra')")
+            page.set_viewport_size({'width':1440, 'height':900})
+            page.wait_for_timeout(400)
+            page.locator('.online-server-move button').click()
+            page.wait_for_function("() => !document.querySelector('.online-server-move-notice').hidden")
+            if not transition['migrated'] or page.locator('#online_enabled').is_checked():
+                raise AssertionError('Migration did not suspend participation')
+            page.evaluate('window.open = () => null')
+            page.locator('#online_enabled').evaluate('(element) => element.click()')
+            page.locator('#online_accept').click()
+            page.wait_for_function("() => document.querySelector('.online-dialog').dataset.step === 'blocked'")
+            if not transition['posts'] or transition['posts'][-1].get('transition_nonce') != 'fresh-nonce':
+                raise AssertionError('Fresh consent did not carry the transition nonce')
+            context.close()
+
+            # An older participation without an identity must also ask for
+            # fresh consent to the public server before creating an account.
+            context = browser.new_context()
+            consent_posts = []
+            def unbound_settings(route):
+                if route.request.method == 'POST':
+                    consent_posts.append(route.request.post_data_json)
+                    route.fulfill(json={'enabled':True, 'configured':True, 'state':'idle', 'steam_consent':False})
+                else:
+                    route.fulfill(json={'enabled':True, 'configured':True, 'state':'fresh_consent_required',
+                                        'steam_consent':False, 'server_consent_required':True,
+                                        'transition_nonce':'legacy-nonce'})
+            context.route('**/online-leaderboard/settings', unbound_settings)
+            page = context.new_page()
+            page.goto(url, wait_until='load')
+            page.evaluate("() => { document.body.dataset.storeBuild = 'true'; window.open = () => null; }")
+            page.locator('#menu_button_settings').click()
+            page.locator('.btn_menu_settings[menu="7"]').click()
+            page.locator('.online-server-consent-review button').click()
+            if 'https://eldenringpvp.com' not in page.locator('#online_dialog_text').text_content():
+                raise AssertionError('Public server was not disclosed in the consent dialog')
+            page.locator('#online_accept').click()
+            page.wait_for_function("() => document.querySelector('.online-dialog').dataset.step === 'blocked'")
+            if not consent_posts or consent_posts[-1].get('transition_nonce') != 'legacy-nonce':
+                raise AssertionError('Fresh legacy consent did not carry the transition nonce')
+            context.close()
+
+            # Partial identities and unbound pending events must direct the
+            # user to support instead of suggesting deletion or going offline.
+            for flag, key in [('partial_identity', 'online_server_identity_incomplete'), ('transition_blocked', 'online_server_move_blocked')]:
+                context = browser.new_context()
+                payload = {'enabled':True, 'configured':True, 'state':'server_changed', 'steam_consent':False,
+                           'server_consent_required':flag == 'transition_blocked', flag:True}
+                context.route('**/online-leaderboard/settings', lambda route: route.fulfill(json=payload))
+                page = context.new_page()
+                page.goto(url, wait_until='load')
+                page.locator('#menu_button_settings').click()
+                page.locator('.btn_menu_settings[menu="7"]').click()
+                page.wait_for_function("key => document.querySelector('.online-main-status').textContent === window.uiT(key, '')", arg=key)
+                if flag == 'transition_blocked' and page.locator('.online-server-consent-review').is_visible():
+                    raise AssertionError('Blocked pending events offered new consent')
+                context.close()
             browser.close()
     finally:
         # A Windows venv launcher can have a child interpreter holding SQLite files.

@@ -8,11 +8,10 @@ app = Flask(__name__)
 from application import online_leaderboard as online
 client = app.test_client()
 
-# Production is the default only when there is no explicit configuration.
-# Existing overrides, including an intentionally empty URL, never fall back.
+# In development, an explicit configuration remains authoritative.
 with tempfile.TemporaryDirectory(prefix='leaderboard-config-test-') as directory:
     config_path = Path(directory) / 'leaderboard-config.json'
-    with patch.object(online, 'data_dir', return_value=Path(directory)):
+    with patch.object(online, 'data_dir', return_value=Path(directory)), patch.object(online, 'FROZEN', False):
         assert online._base_url() == 'https://eldenringpvp.com'
         config_path.write_text(json.dumps({'environment':'development', 'urls':{'development':'http://127.0.0.1:8000'}}), encoding='utf-8')
         assert online._base_url() == 'http://127.0.0.1:8000'
@@ -22,6 +21,314 @@ with tempfile.TemporaryDirectory(prefix='leaderboard-config-test-') as directory
         assert online._base_url() is None
         config_path.write_text(json.dumps({'environment':'production', 'urls':{'production':'http://example.com'}}), encoding='utf-8')
         assert online._base_url() is None
+
+# Store builds must ignore even malformed or previously valid local overrides,
+# and may not contact an old server through an explicitly supplied root.
+with tempfile.TemporaryDirectory(prefix='leaderboard-store-config-test-') as directory:
+    config_path = Path(directory) / 'leaderboard-config.json'
+    with patch.object(online, 'data_dir', return_value=Path(directory)), patch.object(online, 'FROZEN', True):
+        for config in (None, '{invalid json',
+                       json.dumps({'environment':'development', 'urls':{'development':'http://127.0.0.1:8000'}}),
+                       json.dumps({'environment':'production', 'urls':{'production':'https://other.example'}}),
+                       json.dumps({'environment':'production', 'urls':{'production':''}})):
+            if config is not None:
+                config_path.write_text(config, encoding='utf-8')
+            assert online._base_url() == 'https://eldenringpvp.com'
+        with patch.object(online, 'build_opener') as opener:
+            for root in ('http://127.0.0.1:8000', 'https://other.example',
+                         'https://eldenringpvp.com.attacker.example', 'http://eldenringpvp.com'):
+                try:
+                    online._call('DELETE', '/api/v1/profile', token='old-test-token', root=root)
+                    raise AssertionError('Store build must reject non-production origins')
+                except RuntimeError as error:
+                    assert str(error) == 'server_not_allowed'
+            opener.assert_not_called()
+            opener.return_value.open.return_value.__enter__.return_value.read.return_value = b'{"ok":true}'
+            assert online._call('GET', '/api/v1/leaderboards', root='https://eldenringpvp.com') == {'ok':True}
+            opener.assert_called_once()
+
+# A previously configured development server cannot be contacted by a Store
+# build, including for pending withdrawals. The pending operation and encrypted
+# credential must stay intact so they can be handled explicitly later.
+with tempfile.TemporaryDirectory(prefix='leaderboard-store-pending-test-') as directory:
+    database = str(Path(directory) / 'settings.db')
+    local_token = online.win32crypt.CryptProtectData(b'local-test-token', 'test', None, None, None, 0)
+    with patch.object(online, '_database', return_value=database), patch.object(online, 'FROZEN', True), \
+         patch.object(online, 'build_opener') as opener, patch.object(online, '_clear_event_outbox') as clear_events:
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET uuid=?,token=?,server_url=? WHERE id=1',
+                       ('local-fixture', local_token, 'http://127.0.0.1:8000'))
+        for column, outcome in (('delete_pending', 'delete_failed'),
+                                ('steam_login_cancel_pending', 'steam_cancel_failed'),
+                                ('language_remove_pending', 'language_delete_failed'),
+                                ('steam_remove_pending', 'steam_delete_failed')):
+            with online.closing(online._db()) as db, db:
+                db.execute('UPDATE online_leaderboard SET ' + column + '=1 WHERE id=1')
+            assert online._sync() == outcome
+            with online.closing(online._db()) as db:
+                row = db.execute('SELECT ' + column + ',uuid,token,server_url FROM online_leaderboard WHERE id=1').fetchone()
+            assert row == (1, 'local-fixture', local_token, 'http://127.0.0.1:8000')
+            with online.closing(online._db()) as db, db:
+                db.execute('UPDATE online_leaderboard SET ' + column + '=0 WHERE id=1')
+        rotated = online.win32crypt.CryptProtectData(b'rotated-fixture-token', 'test', None, None, None, 0)
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET delete_pending=1,rotation_token=? WHERE id=1', (rotated,))
+        assert online._sync() == 'delete_failed'
+        with online.closing(online._db()) as db, db:
+            assert db.execute('SELECT delete_pending,token,rotation_token FROM online_leaderboard WHERE id=1').fetchone() == (1, local_token, rotated)
+            db.execute('UPDATE online_leaderboard SET delete_pending=0,rotation_token=NULL WHERE id=1')
+        payload = json.dumps({'uuid':'local-fixture', 'new_token':'new-fixture-token', 'grant':'grant-fixture'}).encode('utf-8')
+        protected_recovery = online.win32crypt.CryptProtectData(payload, 'test', None, None, None, 0)
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET delete_pending=1,recovery_payload=? WHERE id=1', (protected_recovery,))
+        assert online._sync() == 'delete_failed'
+        with online.closing(online._db()) as db, db:
+            assert db.execute('SELECT delete_pending,token,recovery_payload FROM online_leaderboard WHERE id=1').fetchone() == (1, local_token, protected_recovery)
+            db.execute('UPDATE online_leaderboard SET delete_pending=0,recovery_payload=NULL WHERE id=1')
+        # Missing credentials do not prove that a withdrawal on the old
+        # server happened, so the Store must not discard it or the outbox.
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET delete_pending=1,token=NULL WHERE id=1')
+        assert online._sync() == 'delete_failed'
+        with online.closing(online._db()) as db, db:
+            assert db.execute('SELECT delete_pending,uuid,server_url FROM online_leaderboard WHERE id=1').fetchone() == (
+                1, 'local-fixture', 'http://127.0.0.1:8000')
+            db.execute('UPDATE online_leaderboard SET delete_pending=0,token=? WHERE id=1', (local_token,))
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET enabled=1,event_permission=1 WHERE id=1')
+        online._sync()
+        assert online._STATUS['state'] == 'server_changed'
+        with online.closing(online._db()) as db:
+            assert db.execute('SELECT uuid,token,server_url FROM online_leaderboard WHERE id=1').fetchone() == (
+                'local-fixture', local_token, 'http://127.0.0.1:8000')
+        opener.assert_not_called()
+        clear_events.assert_not_called()
+
+# The Store switch is explicit, never uses the network, and cannot race an
+# active monitor or in-flight synchronization. It archives the old identity
+# before requiring a fresh approval for the public server.
+import threading
+from types import SimpleNamespace
+with tempfile.TemporaryDirectory(prefix='leaderboard-store-transition-test-') as directory:
+    settings_path = str(Path(directory) / 'settings.db')
+    user_path = str(Path(directory) / 'user.db')
+    with online.closing(online.sqlite3.connect(user_path)) as db:
+        db.execute('CREATE TABLE leaderboard_event_outbox (event_id TEXT)')
+        db.execute('CREATE TABLE leaderboard_event_state (active_match TEXT, last_no_result TEXT)')
+        db.commit()
+    token = online.win32crypt.CryptProtectData(b'local-fixture-token', 'test', None, None, None, 0)
+    tracking = SimpleNamespace(monitor_lock=threading.Lock(), run_monitor=False, fight=False)
+    with patch.object(online, '_database', return_value=settings_path), \
+         patch.object(online.init, 'database_user', user_path), patch.object(online, 'FROZEN', True), \
+         patch.object(online, '_tracking_module', return_value=tracking), \
+         patch.object(online, '_RUNNING', False), patch.object(online, '_RECOVERY_GRANT', None), \
+         patch.object(online, 'build_opener') as opener:
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET enabled=1,event_permission=1,uuid=?,token=?,server_url=? WHERE id=1',
+                       ('local-fixture', token, 'http://127.0.0.1:8000'))
+        assert client.get('/online-leaderboard/settings').json['migration_available'] is True
+        assert client.post('/online-leaderboard/migrate-server', json={}).status_code == 400
+        with patch.object(online, 'FROZEN', False):
+            assert client.post('/online-leaderboard/migrate-server', json={'confirm':True}).status_code == 404
+        with tracking.monitor_lock:
+            response = client.post('/online-leaderboard/migrate-server', json={'confirm':True})
+            assert response.status_code == 409 and response.json['error'] == 'tracking_running'
+        tracking.fight = True
+        assert client.post('/online-leaderboard/migrate-server', json={'confirm':True}).json['error'] == 'tracking_running'
+        tracking.fight = False
+        tracking.run_monitor = True
+        assert client.post('/online-leaderboard/migrate-server', json={'confirm':True}).json['error'] == 'tracking_running'
+        tracking.run_monitor = False
+        with patch.object(online, '_START_LOCK', threading.Lock()) as start_lock:
+            with start_lock:
+                assert client.post('/online-leaderboard/migrate-server', json={'confirm':True}).json['error'] == 'busy'
+        with patch.object(online, '_RUNNING', True):
+            assert client.post('/online-leaderboard/migrate-server', json={'confirm':True}).json['error'] == 'busy'
+        with patch.object(online, '_RECOVERY_GRANT', 'pending-fixture'):
+            assert client.post('/online-leaderboard/migrate-server', json={'confirm':True}).json['error'] == 'busy'
+        with patch.object(online, '_LOCK', threading.Lock()) as lock:
+            with lock:
+                assert client.post('/online-leaderboard/migrate-server', json={'confirm':True}).json['error'] == 'busy'
+        assert client.post('/online-leaderboard/migrate-server', json={'confirm':True}).json == {'ok':True}
+        with online.closing(online._db()) as db:
+            assert db.execute('SELECT server_url,uuid,token FROM online_leaderboard_archived_identities').fetchone() == (
+                'http://127.0.0.1:8000', 'local-fixture', token)
+            current = db.execute('SELECT enabled,uuid,token,event_permission,server_transition_nonce FROM online_leaderboard WHERE id=1').fetchone()
+        assert current[:4] == (0, None, None, 0) and current[4]
+        settings = client.get('/online-leaderboard/settings').json
+        assert settings['migration_available'] is False and settings['transition_nonce'] == current[4]
+        old_approval = {'enabled':True, 'consent':True, 'event_consent':True, 'language_consent':True}
+        assert client.post('/online-leaderboard/settings', json=old_approval).status_code == 409
+        transition_response = client.post('/online-leaderboard/settings', json={**old_approval, 'transition_nonce':current[4]})
+        assert transition_response.status_code == 200, transition_response.json
+        opener.assert_not_called()
+
+# A previous Store participation without a completed identity is not consent
+# to register on the production service. In-flight approvals from old tabs
+# must fail until a new dialog has read the transition nonce.
+with tempfile.TemporaryDirectory(prefix='leaderboard-store-unregistered-test-') as directory:
+    settings_path = str(Path(directory) / 'settings.db')
+    user_path = str(Path(directory) / 'user.db')
+    with online.closing(online.sqlite3.connect(user_path)) as db:
+        db.execute('CREATE TABLE leaderboard_event_outbox (event_id TEXT)')
+        db.execute('CREATE TABLE leaderboard_event_state (active_match TEXT, last_no_result TEXT)')
+        db.execute('INSERT INTO leaderboard_event_outbox VALUES (?)', ('orphan-event',))
+        db.commit()
+    tracking = SimpleNamespace(monitor_lock=threading.Lock(), run_monitor=False, fight=False)
+    with patch.object(online, '_database', return_value=settings_path), patch.object(online, 'FROZEN', True), \
+         patch.object(online.init, 'database_user', user_path), patch.object(online, '_tracking_module', return_value=tracking):
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET enabled=1,event_permission=1,uuid=NULL,token=NULL,server_url=NULL,server_consent_url=NULL WHERE id=1')
+        with patch.object(online, '_call') as request:
+            online._sync()
+            assert online._STATUS['state'] == 'pending_events'
+            request.assert_not_called()
+        settings = client.get('/online-leaderboard/settings').json
+        assert settings['server_consent_required'] is True and settings['transition_nonce'] and settings['transition_blocked'] is True
+        assert settings['partial_identity'] is False
+        approval = {'enabled':True, 'consent':True, 'event_consent':True, 'language_consent':True}
+        assert client.post('/online-leaderboard/settings', json=approval).status_code == 409
+        assert client.post('/online-leaderboard/settings', json={**approval, 'transition_nonce':'stale-fixture'}).status_code == 409
+        with tracking.monitor_lock:
+            blocked = client.post('/online-leaderboard/settings', json={**approval, 'transition_nonce':settings['transition_nonce']})
+            assert blocked.status_code == 409 and blocked.json['error'] == 'tracking_running'
+        blocked = client.post('/online-leaderboard/settings', json={**approval, 'transition_nonce':settings['transition_nonce']})
+        assert blocked.status_code == 409 and blocked.json['error'] == 'pending_events'
+        with online.closing(online.sqlite3.connect(user_path)) as db, db:
+            assert db.execute('SELECT event_id FROM leaderboard_event_outbox').fetchall() == [('orphan-event',)]
+            db.execute('DELETE FROM leaderboard_event_outbox')
+            db.execute('INSERT INTO leaderboard_event_state VALUES (?,?)', ('old-match',None))
+        blocked = client.post('/online-leaderboard/settings', json={**approval, 'transition_nonce':settings['transition_nonce']})
+        assert blocked.status_code == 409 and blocked.json['error'] == 'active_match'
+        with online.closing(online.sqlite3.connect(user_path)) as db, db:
+            db.execute('UPDATE leaderboard_event_state SET active_match=NULL,last_no_result=?', ('old-match',))
+        blocked = client.post('/online-leaderboard/settings', json={**approval, 'transition_nonce':settings['transition_nonce']})
+        assert blocked.status_code == 409 and blocked.json['error'] == 'active_match'
+        with online.closing(online.sqlite3.connect(user_path)) as db, db:
+            db.execute('DELETE FROM leaderboard_event_state')
+        missing_path = str(Path(directory) / 'missing-user.db')
+        with patch.object(online.init, 'database_user', missing_path):
+            assert client.get('/online-leaderboard/settings').json['transition_blocked'] is True
+            blocked = client.post('/online-leaderboard/settings', json={**approval, 'transition_nonce':settings['transition_nonce']})
+            assert blocked.status_code == 409 and blocked.json['error'] == 'invalid_data'
+            assert not Path(missing_path).exists()
+        # Once the check starts, neither the monitor nor another SQLite writer
+        # can race an old event into the file before consent is committed.
+        check_started, finish_check = threading.Event(), threading.Event()
+        original_blocker = online._event_transition_blocker
+        def slow_blocker(db, schema='main'):
+            if schema == 'tracker_user':
+                check_started.set()
+                assert finish_check.wait(5)
+            return original_blocker(db, schema)
+        result = {}
+        def approve_in_thread():
+            with app.test_client() as concurrent_client:
+                result['response'] = concurrent_client.post('/online-leaderboard/settings', json={**approval, 'transition_nonce':settings['transition_nonce']})
+        with patch.object(online, '_event_transition_blocker', side_effect=slow_blocker):
+            worker = threading.Thread(target=approve_in_thread)
+            worker.start()
+            assert check_started.wait(5)
+            assert not tracking.monitor_lock.acquire(blocking=False)
+            try:
+                with online.closing(online.sqlite3.connect(user_path, timeout=.1)) as db, db:
+                    db.execute('INSERT INTO leaderboard_event_outbox VALUES (?)', ('racing-event',))
+                raise AssertionError('The transaction must prevent a concurrent event write')
+            except online.sqlite3.OperationalError as error:
+                assert 'locked' in str(error).lower()
+            finally:
+                finish_check.set()
+            worker.join(5)
+            assert not worker.is_alive()
+        assert result['response'].status_code == 200, result['response'].json
+        def register(method, path, data=None, token=None, root=None):
+            assert (method, path, root) == ('POST', '/api/v1/installations', 'https://eldenringpvp.com')
+            return {'uuid':data['uuid'], 'token':'new-fixture-token'}
+        with patch.object(online, '_call', side_effect=register):
+            assert online._credentials('https://eldenringpvp.com') == 'new-fixture-token'
+        with online.closing(online._db()) as db:
+            assert db.execute('SELECT server_url,server_consent_url,server_transition_nonce FROM online_leaderboard WHERE id=1').fetchone() == (
+                'https://eldenringpvp.com', 'https://eldenringpvp.com', None)
+
+# Previously registered production identities continue working, while a
+# partial old identity is kept rather than overwritten during registration.
+with tempfile.TemporaryDirectory(prefix='leaderboard-store-existing-test-') as directory:
+    settings_path = str(Path(directory) / 'settings.db')
+    protected = online.win32crypt.CryptProtectData(b'production-fixture-token', 'test', None, None, None, 0)
+    with patch.object(online, '_database', return_value=settings_path), patch.object(online, 'FROZEN', True):
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET enabled=1,uuid=?,token=?,server_url=?,server_consent_url=NULL WHERE id=1',
+                       ('production-fixture', protected, 'https://eldenringpvp.com'))
+        assert online._credentials('https://eldenringpvp.com') == 'production-fixture-token'
+        assert client.get('/online-leaderboard/settings').json['server_consent_required'] is False
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET uuid=?,token=NULL,server_url=? WHERE id=1',
+                       ('partial-fixture', 'http://127.0.0.1:8000'))
+        assert client.get('/online-leaderboard/settings').json['partial_identity'] is True
+        with patch.object(online, '_call') as request:
+            try:
+                online._credentials('https://eldenringpvp.com')
+                raise AssertionError('Partial old identity must not be overwritten')
+            except RuntimeError as error:
+                assert str(error) == 'server_changed'
+            request.assert_not_called()
+        with online.closing(online._db()) as db:
+            assert db.execute('SELECT uuid,token,server_url FROM online_leaderboard WHERE id=1').fetchone() == (
+                'partial-fixture', None, 'http://127.0.0.1:8000')
+
+# Preserve the existing development behavior for an incomplete registration.
+with tempfile.TemporaryDirectory(prefix='leaderboard-development-existing-test-') as directory:
+    settings_path = str(Path(directory) / 'settings.db')
+    user_path = str(Path(directory) / 'user.db')
+    with online.closing(online.sqlite3.connect(user_path)) as db:
+        db.execute('CREATE TABLE leaderboard_event_outbox (event_id TEXT)')
+        db.execute('INSERT INTO leaderboard_event_outbox VALUES (?)', ('development-event',))
+        db.commit()
+    with patch.object(online, '_database', return_value=settings_path), patch.object(online, 'FROZEN', False), \
+         patch.object(online.init, 'database_user', user_path):
+        response = client.post('/online-leaderboard/settings', json={'enabled':True,'consent':True,'event_consent':True})
+        assert response.status_code == 200 and response.json['transition_blocked'] is False
+        with online.closing(online._db()) as db, db:
+            db.execute('UPDATE online_leaderboard SET enabled=1,uuid=?,token=NULL,server_url=? WHERE id=1',
+                       ('partial-fixture', 'http://127.0.0.1:8000'))
+        def register_development(method, path, data=None, token=None, root=None):
+            assert (method, path, root) == ('POST', '/api/v1/installations', 'http://127.0.0.1:8000')
+            return {'uuid':data['uuid'], 'token':'development-fixture-token'}
+        with patch.object(online, '_call', side_effect=register_development):
+            assert online._credentials('http://127.0.0.1:8000') == 'development-fixture-token'
+
+# A fresh installation records the actual production destination when the
+# user accepts; a previously registered production user can explicitly log
+# in again after an expired registration without losing that consent.
+with tempfile.TemporaryDirectory(prefix='leaderboard-store-new-test-') as directory:
+    settings_path = str(Path(directory) / 'settings.db')
+    with patch.object(online, '_database', return_value=settings_path), patch.object(online, 'FROZEN', True):
+        assert client.get('/online-leaderboard/settings').json['transition_nonce'] is None
+        assert client.post('/online-leaderboard/settings', json={
+            'enabled':True, 'consent':True, 'event_consent':True, 'language_consent':True}).status_code == 200
+        with online.closing(online._db()) as db:
+            assert db.execute('SELECT server_consent_url FROM online_leaderboard WHERE id=1').fetchone()[0] == 'https://eldenringpvp.com'
+        protected = online.win32crypt.CryptProtectData(b'old-production-token', 'test', None, None, None, 0)
+        with online.closing(online._db()) as db, db:
+            # Model an installation from a build predating server_consent_url.
+            db.execute('UPDATE online_leaderboard SET uuid=?,token=?,server_url=?,server_consent_url=NULL WHERE id=1',
+                       ('production-fixture', protected, 'https://eldenringpvp.com'))
+        login_requests = []
+        def expired_registration(method, path, data=None, token=None, root=None, **kwargs):
+            assert root == 'https://eldenringpvp.com'
+            login_requests.append(path)
+            if path == '/api/v1/steam/login' and login_requests.count(path) == 1:
+                raise online.HTTPError(root + path, 401, 'expired', {}, None)
+            if path == '/api/v1/installations':
+                return {'uuid':data['uuid'], 'token':'replacement-fixture-token'}
+            if path == '/api/v1/steam/login':
+                return {'url':'https://steamcommunity.com/openid/login?state=fixture'}
+            raise AssertionError(path)
+        with patch.object(online, '_call', side_effect=expired_registration):
+            assert client.post('/online-leaderboard/steam-login').status_code == 200
+        with online.closing(online._db()) as db:
+            assert db.execute('SELECT server_url,server_consent_url FROM online_leaderboard WHERE id=1').fetchone() == (
+                'https://eldenringpvp.com', 'https://eldenringpvp.com')
 
 # These tests focus on synchronization and consent; verification itself is
 # covered separately with explicit mocked Steam-status responses below.
@@ -34,6 +341,20 @@ with patch.object(online, '_call', return_value={'ok':True}) as request_consent:
     assert request_consent.call_args.args[:3] == ('POST', '/api/v1/events/consent', {'consent':True, 'version':'events-1'})
 assert client.get('/online-leaderboard/settings').json['enabled'] is False
 assert client.get('/online-leaderboard/settings').json['steam_status_observe'] is True
+# Old browser tabs and in-flight requests cannot reactivate the newly switched
+# server using an approval collected for the old server.
+with online.closing(online._db()) as db, db:
+    db.execute('UPDATE online_leaderboard SET server_transition_nonce=? WHERE id=1', ('new-server-fixture',))
+assert client.get('/online-leaderboard/settings').json['transition_nonce'] == 'new-server-fixture'
+old_enable = {'enabled':True, 'consent':True, 'event_consent':True, 'language_consent':True}
+assert client.post('/online-leaderboard/settings', json=old_enable).status_code == 409
+assert client.post('/online-leaderboard/settings', json={'enabled':False, 'remove':False}).status_code == 409
+with online.closing(online._db()) as db:
+    assert db.execute('SELECT enabled,server_transition_nonce FROM online_leaderboard WHERE id=1').fetchone() == (0, 'new-server-fixture')
+assert client.post('/online-leaderboard/settings', json={**old_enable, 'transition_nonce':'new-server-fixture'}).status_code == 200
+with online.closing(online._db()) as db, db:
+    assert db.execute('SELECT enabled,server_transition_nonce FROM online_leaderboard WHERE id=1').fetchone() == (1, None)
+    db.execute('UPDATE online_leaderboard SET enabled=0,event_permission=0,language_permission=0 WHERE id=1')
 with online.closing(online._db()) as db, db:
     db.execute('UPDATE online_leaderboard SET enabled=1,event_permission=0 WHERE id=1')
 assert client.get('/online-leaderboard/settings').json['event_consent_pending'] is True

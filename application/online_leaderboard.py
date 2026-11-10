@@ -20,7 +20,7 @@ from urllib.error import HTTPError
 from flask import jsonify, request
 from __main__ import app
 from application import init, mode_stats
-from application.runtime_paths import data_dir
+from application.runtime_paths import FROZEN, data_dir
 from application.secur import decrypt_value
 import win32crypt
 import pywintypes
@@ -47,7 +47,9 @@ def _database():
 
 
 def _db():
-    db = sqlite3.connect(_database(), timeout=10)
+    # URI support is needed for attaching the existing user DB in mode=rw;
+    # normal absolute paths continue to work unchanged.
+    db = sqlite3.connect(_database(), timeout=10, uri=True)
     try:
         with _SCHEMA_LOCK:
             db.execute('CREATE TABLE IF NOT EXISTS online_leaderboard (id INTEGER PRIMARY KEY CHECK(id=1), enabled INTEGER NOT NULL DEFAULT 0, uuid TEXT, token BLOB)')
@@ -61,10 +63,26 @@ def _db():
                 ('recovery_payload', 'BLOB'),
                 ('previous_token', 'BLOB'),
                 ('event_permission', 'INTEGER NOT NULL DEFAULT 0'),
+                ('server_transition_nonce', 'TEXT'),
+                ('server_consent_url', 'TEXT'),
+                ('legacy_unbound_guard', 'INTEGER NOT NULL DEFAULT 0'),
             ):
                 if name not in columns:
                     db.execute('ALTER TABLE online_leaderboard ADD COLUMN ' + name + ' ' + definition)
             db.execute('INSERT OR IGNORE INTO online_leaderboard(id) VALUES (1)')
+            if FROZEN:
+                # An older Store build could have accepted participation while
+                # configured to localhost without completing registration. Do
+                # not let an already-open browser tab reuse that old approval
+                # for the public service after this build starts.
+                row = db.execute('SELECT enabled,uuid,token,server_url,server_consent_url,server_transition_nonce,legacy_unbound_guard FROM online_leaderboard WHERE id=1').fetchone()
+                if row and row[0] and not any(row[1:4]) and row[4] != _DEFAULT_BASE_URL and (not row[5] or not row[6]):
+                    db.execute('''UPDATE online_leaderboard SET server_transition_nonce=COALESCE(NULLIF(server_transition_nonce,''),?), legacy_unbound_guard=1
+                        WHERE id=1 AND enabled=1 AND (uuid IS NULL OR uuid='')
+                        AND (token IS NULL OR length(token)=0) AND (server_url IS NULL OR server_url='')
+                        AND (server_transition_nonce IS NULL OR server_transition_nonce='' OR legacy_unbound_guard=0)
+                        AND (server_consent_url IS NULL OR server_consent_url != ?)''',
+                               (secrets.token_urlsafe(32), _DEFAULT_BASE_URL))
             db.commit()
     except Exception:
         db.close()
@@ -133,7 +151,11 @@ def _active_steam_id():
 
 
 def _base_url():
-    # A separate configuration file allows changing environments without touching the venv.
+    # Store packages always use the public service, regardless of a previous
+    # development configuration left in the user's data directory.
+    if FROZEN:
+        return _DEFAULT_BASE_URL
+    # The source version can use an explicit local or production environment.
     path = data_dir() / 'leaderboard-config.json'
     if not path.is_file():
         return _DEFAULT_BASE_URL
@@ -160,6 +182,11 @@ def _call(method, path, data=None, token=None, root=None, extra_headers=None):
     root = root or _base_url()
     if not root:
         raise RuntimeError('not_configured')
+    # Pending withdrawals and token rotations pass their old origin explicitly.
+    # Enforce the Store destination here too, before opening a connection or
+    # attaching credentials, and let callers retain any pending operation.
+    if FROZEN and root != _DEFAULT_BASE_URL:
+        raise RuntimeError('server_not_allowed')
     headers = {'Accept': 'application/json'}
     if token:
         headers['Authorization'] = 'Bearer ' + token
@@ -218,6 +245,30 @@ def _profile():
     return {'name': name, 'level': level, 'avatar': avatar, 'language': language if language in _LANGUAGES else None, 'event_protocol': 1}
 
 
+def _event_transition_blocker(db, schema='main'):
+    """Identify unresolved old combat data without reading its contents."""
+    if schema not in ('main', 'tracker_user'):
+        raise ValueError('invalid schema')
+    tables = {row[0] for row in db.execute("SELECT name FROM " + schema + ".sqlite_master WHERE type='table'")}
+    if 'leaderboard_event_outbox' in tables and db.execute('SELECT 1 FROM ' + schema + '.leaderboard_event_outbox LIMIT 1').fetchone():
+        return 'pending_events'
+    if 'leaderboard_event_state' in tables and db.execute('SELECT 1 FROM ' + schema + '.leaderboard_event_state WHERE active_match IS NOT NULL OR last_no_result IS NOT NULL LIMIT 1').fetchone():
+        return 'active_match'
+    return None
+
+
+def _unbound_events_pending():
+    """Fail closed if the old outbox cannot be inspected without writing."""
+    try:
+        path = Path(init.database_user)
+        if not path.is_file():
+            return 'invalid_data'
+        with closing(sqlite3.connect(path.absolute().as_uri() + '?mode=ro', uri=True, timeout=5)) as db:
+            return _event_transition_blocker(db)
+    except (OSError, ValueError, sqlite3.Error):
+        return 'invalid_data'
+
+
 def _credentials(root):
     """Create or load the credential while holding _LOCK."""
     enabled, ident, encrypted, pending, server = _settings()
@@ -227,6 +278,16 @@ def _credentials(root):
         if server != root:
             raise RuntimeError('server_changed')
         return _stored_token(root)
+    # A Store build must not silently overwrite an incomplete old identity.
+    if FROZEN and (ident or server):
+        raise RuntimeError('server_changed')
+    if FROZEN:
+        with closing(_db()) as db:
+            consent_url, legacy_guard = db.execute('SELECT server_consent_url,legacy_unbound_guard FROM online_leaderboard WHERE id=1').fetchone()
+        if legacy_guard:
+            raise RuntimeError(_unbound_events_pending() or 'fresh_consent_required')
+        if consent_url != root:
+            raise RuntimeError('fresh_consent_required')
     ident = str(uuid.uuid4())
     result = _call('POST', '/api/v1/installations', {'uuid': ident, 'consent_version': '1'}, root=root)
     if not isinstance(result, dict) or result.get('uuid') != ident or not isinstance(result.get('token'), str):
@@ -370,6 +431,22 @@ def _clear_event_outbox():
 def _sync():
     with _LOCK:
         enabled, ident, encrypted, pending, server = _settings()
+        # An old or incomplete identity may still carry a pending operation.
+        # Even without a readable token, a Store build must not treat that
+        # operation as completed or clear its queued events locally.
+        if FROZEN and server != _DEFAULT_BASE_URL and (server or ident or encrypted):
+            if pending:
+                _STATUS['state'] = 'delete_pending'
+                return 'delete_failed'
+            if _login_cancel_pending():
+                _STATUS['state'] = 'steam_cancel_pending'
+                return 'steam_cancel_failed'
+            if _language_remove_pending():
+                _STATUS['state'] = 'language_remove_pending'
+                return 'language_delete_failed'
+            if _steam_settings()[1]:
+                _STATUS['state'] = 'steam_remove_pending'
+                return 'steam_delete_failed'
         if pending:
             try:
                 if encrypted:
@@ -455,7 +532,7 @@ def _sync():
             _call('PUT', '/api/v1/profile', profile, token, root=root)
             _STATUS['state'] = 'success'
         except Exception as error:
-            _STATUS['state'] = str(error) if str(error) in ('not_configured', 'profile_required', 'invalid_statistics', 'server_changed', 'event_conflict', 'server_update_required') else 'offline'
+            _STATUS['state'] = str(error) if str(error) in ('not_configured', 'profile_required', 'invalid_statistics', 'server_changed', 'fresh_consent_required', 'pending_events', 'active_match', 'invalid_data', 'event_conflict', 'server_update_required') else 'offline'
 
 
 @app.route('/online-leaderboard/settings', methods=['GET', 'POST'])
@@ -468,26 +545,121 @@ def online_leaderboard_settings():
         enabled = data.get('enabled')
         if not isinstance(enabled, bool) or (enabled and data.get('consent') is not True) or (not enabled and data.get('remove') not in (True, False)):
             return jsonify(error='invalid_request'), 400
-        # Never wait for a network request on the settings route. A running
-        # upload finishes before the serialized pending deletion is attempted.
-        with closing(_db()) as db, db:
-            db.execute('BEGIN IMMEDIATE')
-            pending, cancel_pending = db.execute('SELECT delete_pending,steam_login_cancel_pending FROM online_leaderboard WHERE id=1').fetchone()
-            if enabled and (pending or cancel_pending):
-                return jsonify(error='delete_pending'), 409
-            if enabled:
-                db.execute('UPDATE online_leaderboard SET enabled=1,delete_pending=0,language_permission=?,event_permission=? WHERE id=1', (int(data.get('language_consent') is True), int(data.get('event_consent') is True)))
-            else:
-                db.execute('UPDATE online_leaderboard SET enabled=0,delete_pending=?,steam_login_cancel_pending=? WHERE id=1', (int(data.get('remove') is True), int(data.get('remove') is False)))
+        # Do not transfer orphaned events from a prior, unbound installation
+        # under a new server's consent. Lock both databases for the final check
+        # and consent update; an old active monitor must first be stopped.
+        tracking = None
+        try:
+            with closing(_db()) as db:
+                prior = db.execute('SELECT uuid,token,server_url,server_consent_url,legacy_unbound_guard FROM online_leaderboard WHERE id=1').fetchone()
+                inspect_old_events = bool(FROZEN and enabled and not any(prior[:3]) and prior[3] != _DEFAULT_BASE_URL)
+                if inspect_old_events and prior[4]:
+                    tracking = _tracking_module()
+                    if not tracking.monitor_lock.acquire(blocking=False):
+                        tracking = None
+                        return jsonify(error='tracking_running'), 409
+                    if tracking.run_monitor or tracking.fight:
+                        return jsonify(error='tracking_running'), 409
+                if inspect_old_events:
+                    path = Path(init.database_user)
+                    if not path.is_file():
+                        return jsonify(error='invalid_data'), 409
+                    db.execute('ATTACH DATABASE ? AS tracker_user', (path.absolute().as_uri() + '?mode=rw',))
+                with db:
+                    db.execute('BEGIN IMMEDIATE')
+                    row = db.execute('SELECT delete_pending,steam_login_cancel_pending,server_transition_nonce,uuid,token,server_url,server_consent_url,legacy_unbound_guard FROM online_leaderboard WHERE id=1').fetchone()
+                    pending, cancel_pending, transition_nonce = row[:3]
+                    if enabled and (pending or cancel_pending):
+                        return jsonify(error='delete_pending'), 409
+                    supplied_nonce = data.get('transition_nonce')
+                    if transition_nonce and (not isinstance(supplied_nonce, str) or not supplied_nonce.isascii()
+                                             or not secrets.compare_digest(supplied_nonce, transition_nonce)):
+                        return jsonify(error='fresh_consent_required'), 409
+                    check_old_events = bool(FROZEN and enabled and not any(row[3:6]) and row[6] != _DEFAULT_BASE_URL)
+                    if check_old_events:
+                        if not inspect_old_events or (row[7] and tracking is None):
+                            return jsonify(error='busy'), 409
+                        blocker = _event_transition_blocker(db, 'tracker_user')
+                        if blocker:
+                            return jsonify(error=blocker), 409
+                    if enabled:
+                        db.execute('UPDATE online_leaderboard SET enabled=1,delete_pending=0,language_permission=?,event_permission=?,server_transition_nonce=NULL,server_consent_url=?,legacy_unbound_guard=0 WHERE id=1', (int(data.get('language_consent') is True), int(data.get('event_consent') is True), _base_url()))
+                    else:
+                        db.execute('UPDATE online_leaderboard SET enabled=0,delete_pending=?,steam_login_cancel_pending=? WHERE id=1', (int(data.get('remove') is True), int(data.get('remove') is False)))
+        except (OSError, ValueError, sqlite3.Error):
+            return jsonify(error='invalid_data'), 409
+        finally:
+            if tracking is not None:
+                tracking.monitor_lock.release()
         if not enabled:
             _RECOVERY_GRANT = None
             _STATUS['state'] = 'delete_pending' if data.get('remove') else 'disabled'
             start_sync()
-    enabled, _, _, pending, _ = _settings()
+    enabled, ident, token, pending, server = _settings()
     permission = _language_permission()
     with closing(_db()) as db:
-        event_permission = bool(db.execute('SELECT event_permission FROM online_leaderboard WHERE id=1').fetchone()[0])
-    return jsonify(enabled=enabled, configured=bool(_base_url()), language_consent_pending=enabled and permission == 0, event_consent_pending=enabled and not event_permission, language_shared=permission == 1, steam_status_observe=True, language_remove_pending=_language_remove_pending(), steam_consent=_steam_settings()[0], steam_remove_pending=_steam_settings()[1], state='delete_pending' if pending else _STATUS['state'], retry_after_ms=sync_cooldown_remaining_ms())
+        event_value, transition_nonce, consent_url = db.execute('SELECT event_permission,server_transition_nonce,server_consent_url FROM online_leaderboard WHERE id=1').fetchone()
+        event_permission = bool(event_value)
+    migration_available = bool(FROZEN and ident and token and server and server != _DEFAULT_BASE_URL)
+    server_consent_required = bool(FROZEN and enabled and not ident and not token and not server and consent_url != _DEFAULT_BASE_URL)
+    partial_identity = bool(FROZEN and any((ident, token, server)) and not all((ident, token, server)))
+    transition_blocked = bool(FROZEN and not any((ident, token, server)) and consent_url != _DEFAULT_BASE_URL and _unbound_events_pending())
+    return jsonify(enabled=enabled, configured=bool(_base_url()), language_consent_pending=enabled and permission == 0, event_consent_pending=enabled and not event_permission, language_shared=permission == 1, steam_status_observe=True, language_remove_pending=_language_remove_pending(), steam_consent=_steam_settings()[0], steam_remove_pending=_steam_settings()[1], state='delete_pending' if pending else _STATUS['state'], retry_after_ms=sync_cooldown_remaining_ms(), transition_nonce=transition_nonce, migration_available=migration_available, server_consent_required=server_consent_required, partial_identity=partial_identity, transition_blocked=transition_blocked)
+
+
+def _tracking_module():
+    # Import only during this explicit action, once the tracker has started.
+    from application import functions
+    return functions
+
+
+@app.route('/online-leaderboard/migrate-server', methods=['POST'])
+def online_leaderboard_migrate_server():
+    global _LAST_SYNC_START, _LANGUAGE_SYNC_REQUIRED
+    if not FROZEN:
+        return jsonify(error='not_available'), 404
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or data.get('confirm') is not True:
+        return jsonify(error='invalid_request'), 400
+    from application import leaderboard_migration
+    tracking = _tracking_module()
+    if not tracking.monitor_lock.acquire(blocking=False):
+        return jsonify(error='tracking_running'), 409
+    try:
+        if tracking.run_monitor or tracking.fight:
+            return jsonify(error='tracking_running'), 409
+        if not _START_LOCK.acquire(blocking=False):
+            return jsonify(error='busy'), 409
+        try:
+            if _RUNNING or _RECOVERY_GRANT:
+                return jsonify(error='busy'), 409
+            if not _LOCK.acquire(blocking=False):
+                return jsonify(error='busy'), 409
+            try:
+                if _RECOVERY_GRANT:
+                    return jsonify(error='busy'), 409
+                # Ensure the settings schema is initialized before the
+                # cross-database transaction reads its transition fields.
+                with closing(_db()):
+                    pass
+                leaderboard_migration.migrate(_database(), init.database_user, _DEFAULT_BASE_URL)
+                _LAST_SYNC_START = None
+                _LANGUAGE_SYNC_REQUIRED = False
+                _STATUS['state'] = 'disabled'
+                return jsonify(ok=True)
+            except leaderboard_migration.MigrationError as error:
+                code = str(error)
+                if code not in ('no_identity', 'already_current', 'pending_operations', 'pending_events', 'active_match', 'invalid_data'):
+                    code = 'invalid_data'
+                return jsonify(error=code), 409
+            except sqlite3.Error:
+                return jsonify(error='unavailable'), 503
+            finally:
+                _LOCK.release()
+        finally:
+            _START_LOCK.release()
+    finally:
+        tracking.monitor_lock.release()
 
 
 @app.route('/online-leaderboard/event-consent', methods=['POST'])
@@ -566,7 +738,7 @@ def online_leaderboard_steam_login():
                     row = db.execute('SELECT enabled,delete_pending,server_url,token,rotation_token,recovery_payload,steam_remove_pending,language_remove_pending,steam_login_cancel_pending FROM online_leaderboard WHERE id=1').fetchone()
                     if not row[0] or row[1] or row[2] != root or not row[3] or any(row[4:]):
                         raise
-                    db.execute('UPDATE online_leaderboard SET previous_token=COALESCE(previous_token,token),uuid=NULL,token=NULL,server_url=NULL WHERE id=1')
+                    db.execute('UPDATE online_leaderboard SET previous_token=COALESCE(previous_token,token),uuid=NULL,token=NULL,server_url=NULL,server_consent_url=? WHERE id=1', (root,))
                 token = _credentials(root)
             if not _settings()[0]:
                 return jsonify(error='participation_disabled'), 409
@@ -580,7 +752,7 @@ def online_leaderboard_steam_login():
                 # An abandoned unverified installation may have expired on the
                 # server. Re-register only when the user explicitly reconnects.
                 with closing(_db()) as db, db:
-                    db.execute('UPDATE online_leaderboard SET uuid=NULL,token=NULL,rotation_token=NULL,recovery_payload=NULL,server_url=NULL WHERE id=1 AND enabled=1 AND delete_pending=0')
+                    db.execute('UPDATE online_leaderboard SET uuid=NULL,token=NULL,rotation_token=NULL,recovery_payload=NULL,server_url=NULL,server_consent_url=? WHERE id=1 AND enabled=1 AND delete_pending=0', (root,))
                 token = _credentials(root)
                 result = _call('POST', '/api/v1/steam/login', {'language': selected}, token=token, root=root)
             url = result.get('url') if isinstance(result, dict) else None

@@ -18,13 +18,20 @@
   const eventReview = document.createElement('div'); eventReview.className = 'form_single online-event-review'; eventReview.hidden = true;
   eventReview.innerHTML = '<span class="form_single_left" data-online="online_conditions_label">Conditions du classement</span><div class="form_single_right"><button type="button" data-online="online_conditions_review">Consulter</button></div>';
   section.appendChild(eventReview);
+  const serverConsentReview = document.createElement('div'); serverConsentReview.className = 'form_single online-server-consent-review'; serverConsentReview.hidden = true;
+  serverConsentReview.innerHTML = '<span class="form_single_left" data-online="online_conditions_label">Conditions du classement</span><div class="form_single_right"><button type="button" data-online="online_conditions_review">Consulter</button></div>';
+  section.appendChild(serverConsentReview);
+  const serverMove = document.createElement('div'); serverMove.className = 'form_single online-server-move'; serverMove.hidden = true;
+  serverMove.innerHTML = '<span class="form_single_left" data-online="online_title">Classement en ligne</span><div class="form_single_right"><button type="button" data-online="online_server_move_button">Utiliser le serveur public</button></div>';
+  section.appendChild(serverMove);
+  const serverMoveNotice = document.createElement('p'); serverMoveNotice.className = 'online-server-move-notice'; serverMoveNotice.setAttribute('role', 'status'); serverMoveNotice.hidden = true; section.appendChild(serverMoveNotice);
   parent.appendChild(section);
   tab.addEventListener('click', () => {
     nav.querySelectorAll('.btn_menu_settings').forEach(n => n.classList.remove('active_setting'));
     tab.classList.add('active_setting'); parent.querySelectorAll('.contente_settings').forEach(n => n.classList.add('hide'));
     section.classList.remove('hide');
     const heading = nav.querySelector('.settings-section-title'); if (heading) heading.textContent = t('online_title', 'Classement en ligne');
-    if (['not_configured', 'offline', 'restart_required', 'profile_required', 'server_changed', 'invalid_statistics', 'event_consent_required', 'event_conflict', 'server_update_required', 'delete_pending', 'language_remove_pending', 'steam_cancel_pending', 'steam_remove_pending'].includes(activeState)) { noticeAllowed = true; show(activeState); }
+    if (['not_configured', 'offline', 'restart_required', 'profile_required', 'server_changed', 'server_move_required', 'partial_identity', 'server_transition_blocked', 'fresh_consent_required', 'invalid_statistics', 'event_consent_required', 'event_conflict', 'server_update_required', 'delete_pending', 'language_remove_pending', 'steam_cancel_pending', 'steam_remove_pending'].includes(activeState)) { noticeAllowed = true; show(activeState); }
     if (enabled) refreshSteamConnection();
   });
   const dialog = document.createElement('dialog'); dialog.className = 'online-dialog';
@@ -47,7 +54,7 @@
   if (window.initSettingsYesNo) window.initSettingsYesNo(section);
   const mainStatus = document.createElement('p'); mainStatus.className = 'online-main-status'; mainStatus.setAttribute('role', 'status');
   const content = document.querySelector('.app-content'); if (content) content.prepend(mainStatus);
-  let enabled = false, pending = false, busy = false, timer, steamConnection = 'disconnected', steamCheckGeneration = 0, lastSteamCheckAt = 0, loginGeneration = 0, loginPopup = null, startedParticipation = false, languageAllowed = false, supportsObservation = false, recoveryMode = false;
+  let enabled = false, pending = false, busy = false, timer, steamConnection = 'disconnected', steamCheckGeneration = 0, lastSteamCheckAt = 0, loginGeneration = 0, loginPopup = null, startedParticipation = false, languageAllowed = false, supportsObservation = false, recoveryMode = false, transitionNonce = '';
   const fallbacks = {online_title:'Classement en ligne', online_participate:'Participer au classement', online_steam_status_label:'Compte Steam', online_steam_login:'Connecter mon compte Steam', online_steam_share:'Partager mon profil Steam', online_explain:'La participation est facultative. Le tracker reste utilisable hors ligne.', online_mode:'Mode', online_refresh:'Actualiser', online_name:'Pseudo', online_level:'Niveau', online_wins:'Victoires', online_losses:'Défaites', arena:'Arène 1v1', invasion:'Invasion', defense:'Monde envahi', online_previous:'Précédent', online_next:'Suivant'};
   function renderSteamConnection() {
     const words = {connected:['online_steam_connected','Connecté'], disconnected:['online_steam_disconnected','Connexion requise'], checking:['online_steam_checking','Vérification…'], unavailable:['online_steam_status_unavailable','Indisponible']};
@@ -58,7 +65,7 @@
     recoveryButton.disabled = !enabled;
     steamCheck.dispatchEvent(new Event('tracker-setting-render'));
   }
-  Object.assign(fallbacks, {online_recovery_label:'Récupérer une installation', online_recovery_start:'Récupérer', online_conditions_label:'Conditions du classement', online_conditions_review:'Consulter'});
+  Object.assign(fallbacks, {online_recovery_label:'Récupérer une installation', online_recovery_start:'Récupérer', online_conditions_label:'Conditions du classement', online_conditions_review:'Consulter', online_server_move_button:'Utiliser le serveur public'});
   function translate() { document.querySelectorAll('[data-online]').forEach(n => n.textContent = t(n.dataset.online, fallbacks[n.dataset.online])); tab.title = t('online_title', fallbacks.online_title); tab.setAttribute('aria-label', tab.title); renderSteamConnection(); }
   document.addEventListener('ui-language-change', translate); translate();
   const stateWords = {
@@ -67,6 +74,10 @@
     not_configured:['online_not_configured','Serveur du classement non configuré.'],
     profile_required:['online_profile_required','Ajoute un pseudo dans ton profil avant la synchronisation.'],
     server_changed:['online_server_changed','Le serveur a changé. Rétablis le serveur précédent ou retire les données avant de changer de serveur.'],
+    server_move_required:['online_server_move_required','Une ancienne connexion utilise un autre serveur. Utilise « Utiliser le serveur public » pour continuer sans la supprimer.'],
+    partial_identity:['online_server_identity_incomplete','L’ancienne connexion est incomplète et reste conservée. Contacte l’assistance avant de changer de serveur.'],
+    server_transition_blocked:['online_server_move_blocked','Arrête le suivi. Les données en attente sont conservées. Si des opérations restent liées à l’ancien serveur, utilise son environnement de développement ou contacte l’assistance.'],
+    fresh_consent_required:['online_server_consent_required','Accepte de nouveau les conditions pour utiliser le classement public.'],
     invalid_statistics:['online_invalid_stats','Les statistiques ne peuvent pas être synchronisées.'],
     event_conflict:['online_event_conflict','Des événements ne peuvent pas être synchronisés. Les données restent locales ; contacte le support.'],
     event_consent_required:['online_event_consent_required','Accepte les nouvelles conditions pour reprendre la synchronisation du classement.'],
@@ -134,7 +145,7 @@
     if (!r.ok) {
       if (r.status === 404 || r.status === 405) throw Error('restart_required');
       const details = await r.json().catch(() => ({}));
-      throw Error(details.error === 'not_configured' ? 'not_configured' : 'request');
+      throw Error(['not_configured', 'pending_events', 'active_match', 'pending_operations', 'invalid_data', 'tracking_running', 'fresh_consent_required'].includes(details.error) ? details.error : 'request');
     }
     return r.json();
   }
@@ -246,7 +257,7 @@
     }
   }
   async function settings(showCompleted = true) {
-    try { const s = await call('settings'); updateServerCooldown(s); enabled = s.enabled; eventReview.hidden = !(enabled && s.event_consent_pending); supportsObservation = s.steam_status_observe === true; if (typeof s.language_shared === 'boolean') languageAllowed = s.language_shared; pending = s.state === 'delete_pending'; steamCheck.checked = s.steam_consent === true; check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render')); if (enabled && s.configured !== false && supportsObservation) refreshSteamConnection(); else { ++steamCheckGeneration; if (!enabled) steamConnection = 'disconnected'; else if (s.configured === false) steamConnection = 'unavailable'; else if (s.state === 'success') steamConnection = 'connected'; else if (steamConnection === 'checking') steamConnection = 'unavailable'; renderSteamConnection(); } show(enabled && s.configured === false ? 'not_configured' : (s.steam_remove_pending && s.state !== 'syncing' ? 'steam_remove_pending' : (!showCompleted && s.state === 'success' ? '' : s.state))); return s; } catch (_) { return null; }
+    try { const s = await call('settings'); updateServerCooldown(s); transitionNonce = typeof s.transition_nonce === 'string' ? s.transition_nonce : ''; serverMove.hidden = s.migration_available !== true; serverConsentReview.hidden = s.server_consent_required !== true || s.transition_blocked === true; enabled = s.enabled; eventReview.hidden = s.server_consent_required === true || !(enabled && s.event_consent_pending); supportsObservation = s.steam_status_observe === true; if (typeof s.language_shared === 'boolean') languageAllowed = s.language_shared; pending = s.state === 'delete_pending'; steamCheck.checked = s.steam_consent === true; check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render')); if (enabled && s.configured !== false && supportsObservation && s.server_consent_required !== true) refreshSteamConnection(); else { ++steamCheckGeneration; if (!enabled) steamConnection = 'disconnected'; else if (s.configured === false || s.server_consent_required === true) steamConnection = 'unavailable'; else if (s.state === 'success') steamConnection = 'connected'; else if (steamConnection === 'checking') steamConnection = 'unavailable'; renderSteamConnection(); } show(s.partial_identity === true ? 'partial_identity' : (s.transition_blocked === true ? 'server_transition_blocked' : (s.migration_available === true ? 'server_move_required' : (s.server_consent_required === true ? 'fresh_consent_required' : (enabled && s.configured === false ? 'not_configured' : (s.steam_remove_pending && s.state !== 'syncing' ? 'steam_remove_pending' : (!showCompleted && s.state === 'success' ? '' : s.state))))))); return s; } catch (_) { return null; }
   }
   async function watchSync(s) {
     show(s.state);
@@ -310,15 +321,32 @@
     document.getElementById('online_recovery_select').hidden = true;
     document.getElementById('online_dialog_title').textContent = disabling ? t('online_disable_title','Désactiver la participation') : t('online_consent_title','Participer au classement');
     document.getElementById('online_dialog_text').textContent = disabling ? t('online_disable_text','Veux-tu conserver tes données déjà publiées dans le classement ou demander leur suppression ? La suppression sera réessayée si le serveur est indisponible.') : t('online_consent_text','La participation au classement PvP est facultative. Si tu acceptes, ton pseudo, ton niveau, ton avatar et la langue de jeu sélectionnée sont envoyés au serveur et peuvent être publiés. Un drapeau représente la langue, pas la nationalité. Tu peux arrêter de participer à tout moment.');
+    if (!disabling && document.body.dataset.storeBuild === 'true') document.getElementById('online_dialog_text').textContent += ' ' + t('online_server_consent_domain', 'Le classement public est hébergé sur https://eldenringpvp.com.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_steam_login_required', 'Connecte ton compte Steam pour participer au classement.') + ' ' + t('online_steam_identity_consent', 'Le serveur conserve ton identifiant Steam vérifié. La publication du lien vers ton profil Steam est facultative.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_notice', 'Les débuts et résultats des combats, leur mode et leur date sont envoyés au serveur pour calculer le classement. Les anciens scores déjà publiés ne sont pas vérifiés. Les événements sont conservés jusqu’au retrait du profil.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_new_only', 'Pour une nouvelle inscription, seuls les combats détectés après accord comptent ; les anciennes statistiques locales ne sont pas importées.');
     const cancel = document.getElementById('online_cancel'); cancel.hidden = false; cancel.textContent = t('online_cancel','Annuler');
     const keep = document.getElementById('online_keep'); keep.hidden = !disabling; keep.textContent = t('online_keep','Conserver les données');
     const accept = document.getElementById('online_accept'); accept.hidden = false; accept.disabled = false; accept.textContent = disabling ? t('online_remove','Retirer les données') : t('online_accept','J’accepte');
-    dialog.dataset.action = revalidate ? 'revalidate' : 'participation'; dialog.dataset.disabling = disabling ? '1' : '0'; dialog.showModal();
+    dialog.dataset.action = revalidate ? 'revalidate' : 'participation'; dialog.dataset.disabling = disabling ? '1' : '0'; dialog.dataset.transitionNonce = transitionNonce; dialog.showModal();
   }
+  serverMove.querySelector('button').addEventListener('click', async event => {
+    if (!window.confirm('https://eldenringpvp.com\n\n' + t('online_server_move_confirm', 'L’ancienne connexion restera sur ce PC. Les statistiques locales restent intactes ; les anciens combats ne seront pas transférés. Tu devras accepter les conditions et reconnecter Steam. Continuer ?'))) return;
+    const button = event.currentTarget; button.disabled = true; serverMoveNotice.hidden = true;
+    try {
+      const result = await call('migrate-server', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({confirm:true})});
+      if (!result || result.ok !== true) throw Error('request');
+      await settings();
+      serverMoveNotice.dataset.i18n = 'online_server_move_done'; serverMoveNotice.dataset.i18nFr = 'Ancienne connexion conservée. Active la participation, accepte les conditions et reconnecte Steam.';
+    } catch (_) {
+      serverMoveNotice.dataset.i18n = 'online_server_move_blocked'; serverMoveNotice.dataset.i18nFr = 'Arrête le suivi. Les données en attente sont conservées. Si des opérations restent liées à l’ancien serveur, utilise son environnement de développement ou contacte l’assistance.';
+    } finally {
+      serverMoveNotice.textContent = t(serverMoveNotice.dataset.i18n, serverMoveNotice.dataset.i18nFr); serverMoveNotice.hidden = false;
+      button.disabled = false;
+    }
+  });
   eventReview.querySelector('button').addEventListener('click', () => showDialog(false, true));
+  serverConsentReview.querySelector('button').addEventListener('click', () => showDialog(false));
   check.addEventListener('change', () => {
     check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render'));
     if (enabled && steamConnection !== 'connected') { startedParticipation = false; steamStep('ready'); dialog.showModal(); }
@@ -368,16 +396,16 @@
     noticeAllowed = true;
     const generation = ++loginGeneration;
     try {
-      const s = await call('settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:turnOn, consent:turnOn, language_consent:turnOn, event_consent:turnOn, remove:remove})});
+      const s = await call('settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:turnOn, consent:turnOn, language_consent:turnOn, event_consent:turnOn, remove:remove, transition_nonce:dialog.dataset.transitionNonce || ''})});
       if (turnOn && generation !== loginGeneration) {
         if (popup) popup.close();
         await call('settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:false, remove:false})}).catch(() => {});
         await settings();
         return;
       }
-      enabled = s.enabled; eventReview.hidden = !(enabled && s.event_consent_pending); if (turnOn) languageAllowed = true; else if (typeof s.language_shared === 'boolean') languageAllowed = s.language_shared; pending = s.state === 'delete_pending'; steamCheck.checked = s.steam_consent === true; renderSteamConnection(); check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render')); show(s.state);
+      transitionNonce = typeof s.transition_nonce === 'string' ? s.transition_nonce : ''; serverConsentReview.hidden = s.server_consent_required !== true; enabled = s.enabled; eventReview.hidden = s.server_consent_required === true || !(enabled && s.event_consent_pending); if (turnOn) languageAllowed = true; else if (typeof s.language_shared === 'boolean') languageAllowed = s.language_shared; pending = s.state === 'delete_pending'; steamCheck.checked = s.steam_consent === true; renderSteamConnection(); check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render')); show(s.state);
       if (turnOn) connectSteam(popup); else if (remove) sync();
-    } catch (error) { if (popup) popup.close(); if (turnOn && generation === loginGeneration) steamStep(error.message === 'not_configured' ? 'not_configured' : 'offline'); else show(pending ? 'delete_pending' : 'offline'); }
+    } catch (error) { if (popup) popup.close(); if (['pending_events', 'active_match', 'pending_operations', 'invalid_data', 'tracking_running'].includes(error.message)) { dialog.close(); noticeAllowed = true; show('server_transition_blocked'); } else if (error.message === 'fresh_consent_required') { dialog.close(); await settings(); } else if (turnOn && generation === loginGeneration) steamStep(error.message === 'not_configured' ? 'not_configured' : 'offline'); else show(pending ? 'delete_pending' : 'offline'); }
   }
   async function confirmExistingConsent() {
     dialog.close();

@@ -682,7 +682,15 @@
       "leaderboard_report_body": "Spielername:\nBeschreibung:\n\nBitte keine vertraulichen Informationen angeben.",
       "leaderboard_content_filter_explain": "Spielernamen und Avatare werden von Spielern bereitgestellt und manuell moderiert. Wähle ihre Anzeige, um die Rangliste anzusehen.",
       "leaderboard_content_show": "Spielerinhalte anzeigen",
-      "leaderboard_content_hide": "Spielerinhalte ausblenden"
+      "leaderboard_content_hide": "Spielerinhalte ausblenden",
+      "online_server_move_button": "Öffentlichen Server verwenden",
+      "online_server_move_confirm": "Die bisherige Verbindung bleibt auf diesem PC. Lokale Statistiken bleiben erhalten; frühere Kämpfe werden nicht übertragen. Du musst die Bedingungen erneut akzeptieren und Steam neu verbinden. Fortfahren?",
+      "online_server_move_blocked": "Stoppe die Verfolgung. Ausstehende Daten bleiben erhalten. Wenn Vorgänge auf dem früheren Server ausstehen, nutze dessen Entwicklungsumgebung oder kontaktiere den Support.",
+      "online_server_move_done": "Bisherige Verbindung gespeichert. Aktiviere die Teilnahme, akzeptiere die Bedingungen und verbinde Steam erneut.",
+      "online_server_consent_required": "Akzeptiere die Bedingungen erneut, um die öffentliche Rangliste zu nutzen.",
+      "online_server_consent_domain": "Die öffentliche Rangliste wird unter https://eldenringpvp.com betrieben.",
+      "online_server_move_required": "Eine frühere Verbindung nutzt einen anderen Server. Wähle „Öffentlichen Server verwenden“, um fortzufahren, ohne sie zu löschen.",
+      "online_server_identity_incomplete": "Die frühere Verbindung ist unvollständig und bleibt gespeichert. Kontaktiere vor dem Serverwechsel den Support."
     },
     "html_lang": "de"
   },
@@ -1369,7 +1377,15 @@
       "leaderboard_report_body": "Nome del giocatore:\nDescrizione:\n\nNon includere informazioni sensibili.",
       "leaderboard_content_filter_explain": "I nomi e gli avatar sono forniti dai giocatori e moderati manualmente. Scegli di mostrarli per consultare la classifica.",
       "leaderboard_content_show": "Mostra i contenuti dei giocatori",
-      "leaderboard_content_hide": "Nascondi i contenuti dei giocatori"
+      "leaderboard_content_hide": "Nascondi i contenuti dei giocatori",
+      "online_server_move_button": "Usa il server pubblico",
+      "online_server_move_confirm": "La connessione precedente rimane su questo PC. Le statistiche locali restano intatte; i combattimenti passati non saranno trasferiti. Dovrai accettare di nuovo le condizioni e riconnettere Steam. Continuare?",
+      "online_server_move_blocked": "Interrompi il monitoraggio. I dati in sospeso sono conservati. Se restano operazioni sul server precedente, usa il suo ambiente di sviluppo o contatta il supporto.",
+      "online_server_move_done": "Connessione precedente salvata. Attiva la partecipazione, accetta le condizioni e riconnetti Steam.",
+      "online_server_consent_required": "Accetta nuovamente le condizioni per usare la classifica pubblica.",
+      "online_server_consent_domain": "La classifica pubblica è ospitata su https://eldenringpvp.com.",
+      "online_server_move_required": "Una connessione precedente usa un altro server. Seleziona «Usa il server pubblico» per continuare senza eliminarla.",
+      "online_server_identity_incomplete": "La connessione precedente è incompleta e rimane salvata. Contatta il supporto prima di cambiare server."
     },
     "html_lang": "it"
   },
@@ -2056,7 +2072,15 @@
       "leaderboard_report_body": "Nome do jogador:\nDescrição:\n\nNão inclua informações sensíveis.",
       "leaderboard_content_filter_explain": "Os nomes e avatares são fornecidos pelos jogadores e moderados manualmente. Escolha exibi-los para consultar a classificação.",
       "leaderboard_content_show": "Mostrar conteúdo dos jogadores",
-      "leaderboard_content_hide": "Ocultar conteúdo dos jogadores"
+      "leaderboard_content_hide": "Ocultar conteúdo dos jogadores",
+      "online_server_move_button": "Usar servidor público",
+      "online_server_move_confirm": "A conexão anterior fica neste PC. Suas estatísticas locais permanecem intactas; combates anteriores não serão transferidos. Você precisará aceitar as condições novamente e reconectar o Steam. Continuar?",
+      "online_server_move_blocked": "Pare o monitoramento. Os dados pendentes são mantidos. Se houver operações no servidor anterior, use o ambiente de desenvolvimento dele ou contate o suporte.",
+      "online_server_move_done": "Conexão anterior salva. Ative a participação, aceite as condições e reconecte o Steam.",
+      "online_server_consent_required": "Aceite novamente as condições para usar o ranking público.",
+      "online_server_consent_domain": "O ranking público está hospedado em https://eldenringpvp.com.",
+      "online_server_move_required": "Uma conexão anterior usa outro servidor. Escolha “Usar servidor público” para continuar sem excluí-la.",
+      "online_server_identity_incomplete": "A conexão anterior está incompleta e continua salva. Contate o suporte antes de mudar de servidor."
     },
     "html_lang": "pt-BR"
   },
@@ -2743,7 +2767,15 @@
       "leaderboard_report_body": "Nazwa gracza:\nOpis:\n\nNie podawaj danych wrażliwych.",
       "leaderboard_content_filter_explain": "Nazwy i awatary są dostarczane przez graczy i moderowane ręcznie. Wybierz ich wyświetlanie, aby zobaczyć ranking.",
       "leaderboard_content_show": "Pokaż treści graczy",
-      "leaderboard_content_hide": "Ukryj treści graczy"
+      "leaderboard_content_hide": "Ukryj treści graczy",
+      "online_server_move_button": "Użyj serwera publicznego",
+      "online_server_move_confirm": "Poprzednie połączenie pozostanie na tym komputerze. Lokalne statystyki pozostaną bez zmian; wcześniejsze walki nie zostaną przeniesione. Trzeba ponownie zaakceptować warunki i połączyć Steam. Kontynuować?",
+      "online_server_move_blocked": "Zatrzymaj śledzenie. Oczekujące dane pozostają zapisane. Jeśli operacje czekają na poprzednim serwerze, użyj jego środowiska deweloperskiego lub skontaktuj się z pomocą.",
+      "online_server_move_done": "Poprzednie połączenie zapisano. Włącz udział, zaakceptuj warunki i ponownie połącz Steam.",
+      "online_server_consent_required": "Ponownie zaakceptuj warunki, aby korzystać z publicznego rankingu.",
+      "online_server_consent_domain": "Publiczny ranking działa pod adresem https://eldenringpvp.com.",
+      "online_server_move_required": "Poprzednie połączenie używa innego serwera. Wybierz „Użyj serwera publicznego”, aby kontynuować bez jego usuwania.",
+      "online_server_identity_incomplete": "Poprzednie połączenie jest niepełne i pozostaje zapisane. Przed zmianą serwera skontaktuj się z pomocą."
     },
     "html_lang": "pl"
   },
@@ -3430,7 +3462,15 @@
       "leaderboard_report_body": "Имя игрока:\nОписание:\n\nНе указывайте конфиденциальные сведения.",
       "leaderboard_content_filter_explain": "Имена и аватары предоставляются игроками и модерируются вручную. Разрешите их показ, чтобы просмотреть таблицу лидеров.",
       "leaderboard_content_show": "Показать контент игроков",
-      "leaderboard_content_hide": "Скрыть контент игроков"
+      "leaderboard_content_hide": "Скрыть контент игроков",
+      "online_server_move_button": "Использовать публичный сервер",
+      "online_server_move_confirm": "Предыдущее подключение останется на этом компьютере. Локальная статистика сохранится; прошлые бои не будут перенесены. Нужно заново принять условия и подключить Steam. Продолжить?",
+      "online_server_move_blocked": "Остановите отслеживание. Ожидающие данные сохраняются. Если операции остались на прежнем сервере, используйте его среду разработки или обратитесь в поддержку.",
+      "online_server_move_done": "Предыдущее подключение сохранено. Включите участие, примите условия и подключите Steam заново.",
+      "online_server_consent_required": "Примите условия повторно, чтобы пользоваться публичным рейтингом.",
+      "online_server_consent_domain": "Публичный рейтинг размещён на https://eldenringpvp.com.",
+      "online_server_move_required": "Предыдущее подключение использует другой сервер. Выберите «Использовать публичный сервер», чтобы продолжить без его удаления.",
+      "online_server_identity_incomplete": "Предыдущее подключение неполное и остаётся сохранённым. Перед сменой сервера обратитесь в поддержку."
     },
     "html_lang": "ru"
   },
@@ -4117,7 +4157,15 @@
       "leaderboard_report_body": "プレイヤー名：\n内容：\n\n機密情報は記載しないでください。",
       "leaderboard_content_filter_explain": "プレイヤー名とアバターはプレイヤーが提供し、管理者が手動で確認します。ランキングを見るには表示を選んでください。",
       "leaderboard_content_show": "プレイヤーのコンテンツを表示",
-      "leaderboard_content_hide": "プレイヤーのコンテンツを非表示"
+      "leaderboard_content_hide": "プレイヤーのコンテンツを非表示",
+      "online_server_move_button": "公開サーバーを使用",
+      "online_server_move_confirm": "以前の接続はこのPCに保存されます。ローカルの統計は残り、過去の対戦は移行されません。再度条件に同意してSteamを接続する必要があります。続けますか？",
+      "online_server_move_blocked": "追跡を停止してください。保留中のデータは保持されます。以前のサーバーに処理が残る場合は、その開発環境を使うかサポートに連絡してください。",
+      "online_server_move_done": "以前の接続を保存しました。参加を有効にし、条件に同意してSteamを再接続してください。",
+      "online_server_consent_required": "公開ランキングを利用するには、もう一度条件に同意してください。",
+      "online_server_consent_domain": "公開ランキングは https://eldenringpvp.com で運営されています。",
+      "online_server_move_required": "以前の接続は別のサーバーを使用しています。削除せずに続けるには「公開サーバーを使用」を選択してください。",
+      "online_server_identity_incomplete": "以前の接続は不完全なまま保存されています。サーバーを変更する前にサポートに連絡してください。"
     },
     "html_lang": "ja"
   },
@@ -4804,7 +4852,15 @@
       "leaderboard_report_body": "플레이어 이름:\n설명:\n\n민감한 정보는 포함하지 마세요.",
       "leaderboard_content_filter_explain": "플레이어 이름과 아바타는 플레이어가 제공하며 수동으로 관리됩니다. 순위표를 보려면 표시를 선택하세요.",
       "leaderboard_content_show": "플레이어 콘텐츠 표시",
-      "leaderboard_content_hide": "플레이어 콘텐츠 숨기기"
+      "leaderboard_content_hide": "플레이어 콘텐츠 숨기기",
+      "online_server_move_button": "공개 서버 사용",
+      "online_server_move_confirm": "이전 연결은 이 PC에 보관됩니다. 로컬 통계는 유지되며 이전 전투는 이전되지 않습니다. 약관에 다시 동의하고 Steam을 다시 연결해야 합니다. 계속할까요?",
+      "online_server_move_blocked": "추적을 중지하세요. 대기 중인 데이터는 보존됩니다. 이전 서버에 작업이 남아 있으면 해당 개발 환경을 사용하거나 지원팀에 문의하세요.",
+      "online_server_move_done": "이전 연결을 저장했습니다. 참여를 켜고 약관에 동의한 다음 Steam을 다시 연결하세요.",
+      "online_server_consent_required": "공개 순위표를 사용하려면 약관에 다시 동의하세요.",
+      "online_server_consent_domain": "공개 순위표는 https://eldenringpvp.com에서 운영됩니다.",
+      "online_server_move_required": "이전 연결이 다른 서버를 사용합니다. 삭제하지 않고 계속하려면 “공개 서버 사용”을 선택하세요.",
+      "online_server_identity_incomplete": "이전 연결이 불완전한 상태로 보존됩니다. 서버를 변경하기 전에 지원팀에 문의하세요."
     },
     "html_lang": "ko"
   },
@@ -5491,7 +5547,15 @@
       "leaderboard_report_body": "玩家名称：\n说明：\n\n请勿包含敏感信息。",
       "leaderboard_content_filter_explain": "玩家名称和头像由玩家提供，并由管理员手动审核。选择显示这些内容以查看排行榜。",
       "leaderboard_content_show": "显示玩家内容",
-      "leaderboard_content_hide": "隐藏玩家内容"
+      "leaderboard_content_hide": "隐藏玩家内容",
+      "online_server_move_button": "使用公共服务器",
+      "online_server_move_confirm": "之前的连接将保存在此电脑上。本地统计数据保持不变；过去的战斗不会转移。你需要重新接受条款并连接 Steam。继续吗？",
+      "online_server_move_blocked": "请停止追踪。待处理数据会被保留。如果旧服务器仍有待处理操作，请使用其开发环境或联系支持。",
+      "online_server_move_done": "之前的连接已保存。请启用参与、接受条款并重新连接 Steam。",
+      "online_server_consent_required": "请重新接受条款以使用公共排行榜。",
+      "online_server_consent_domain": "公共排行榜由 https://eldenringpvp.com 提供。",
+      "online_server_move_required": "之前的连接使用其他服务器。请选择“使用公共服务器”以继续，而不删除该连接。",
+      "online_server_identity_incomplete": "之前的连接不完整，仍会被保留。更换服务器前请联系支持。"
     },
     "html_lang": "zh-Hans"
   },
@@ -6178,7 +6242,15 @@
       "leaderboard_report_body": "玩家名稱：\n說明：\n\n請勿包含敏感資訊。",
       "leaderboard_content_filter_explain": "玩家名稱與頭像由玩家提供，並由管理員手動審核。選擇顯示這些內容以查看排行榜。",
       "leaderboard_content_show": "顯示玩家內容",
-      "leaderboard_content_hide": "隱藏玩家內容"
+      "leaderboard_content_hide": "隱藏玩家內容",
+      "online_server_move_button": "使用公開伺服器",
+      "online_server_move_confirm": "先前的連線會保存在此電腦上。本機統計資料保持不變；過去的戰鬥不會轉移。你需要重新接受條款並連接 Steam。要繼續嗎？",
+      "online_server_move_blocked": "請停止追蹤。待處理資料會保留。如果舊伺服器仍有待處理操作，請使用其開發環境或聯絡支援。",
+      "online_server_move_done": "先前的連線已儲存。請啟用參與、接受條款並重新連接 Steam。",
+      "online_server_consent_required": "請重新接受條款以使用公開排行榜。",
+      "online_server_consent_domain": "公開排行榜由 https://eldenringpvp.com 提供。",
+      "online_server_move_required": "先前的連線使用其他伺服器。請選擇「使用公開伺服器」繼續，而不刪除該連線。",
+      "online_server_identity_incomplete": "先前的連線不完整，仍會保留。更換伺服器前請聯絡支援。"
     },
     "html_lang": "zh-Hant"
   },
@@ -6865,7 +6937,15 @@
       "leaderboard_report_body": "ชื่อผู้เล่น:\nรายละเอียด:\n\nโปรดอย่าใส่ข้อมูลอ่อนไหว",
       "leaderboard_content_filter_explain": "ผู้เล่นเป็นผู้ให้ชื่อและอวาตาร์ ซึ่งผู้ดูแลจะตรวจสอบด้วยตนเอง เลือกแสดงเนื้อหาเพื่อดูตารางอันดับ",
       "leaderboard_content_show": "แสดงเนื้อหาของผู้เล่น",
-      "leaderboard_content_hide": "ซ่อนเนื้อหาของผู้เล่น"
+      "leaderboard_content_hide": "ซ่อนเนื้อหาของผู้เล่น",
+      "online_server_move_button": "ใช้เซิร์ฟเวอร์สาธารณะ",
+      "online_server_move_confirm": "การเชื่อมต่อเดิมจะเก็บไว้ในพีซีนี้ สถิติในเครื่องยังคงเดิม แต่การต่อสู้ที่ผ่านมาไม่ถูกโอน คุณต้องยอมรับเงื่อนไขและเชื่อมต่อ Steam อีกครั้ง ดำเนินการต่อหรือไม่?",
+      "online_server_move_blocked": "หยุดการติดตาม ข้อมูลที่ค้างอยู่จะยังเก็บไว้ หากมีรายการค้างบนเซิร์ฟเวอร์เดิม ให้ใช้สภาพแวดล้อมพัฒนาของเซิร์ฟเวอร์นั้นหรือติดต่อฝ่ายช่วยเหลือ",
+      "online_server_move_done": "บันทึกการเชื่อมต่อเดิมแล้ว เปิดการเข้าร่วม ยอมรับเงื่อนไข และเชื่อมต่อ Steam อีกครั้ง",
+      "online_server_consent_required": "ยอมรับเงื่อนไขอีกครั้งเพื่อใช้กระดานอันดับสาธารณะ",
+      "online_server_consent_domain": "กระดานอันดับสาธารณะอยู่ที่ https://eldenringpvp.com",
+      "online_server_move_required": "การเชื่อมต่อเดิมใช้เซิร์ฟเวอร์อื่น เลือก “ใช้เซิร์ฟเวอร์สาธารณะ” เพื่อดำเนินการต่อโดยไม่ลบการเชื่อมต่อเดิม",
+      "online_server_identity_incomplete": "การเชื่อมต่อเดิมไม่สมบูรณ์และยังคงเก็บไว้ โปรดติดต่อฝ่ายช่วยเหลือก่อนเปลี่ยนเซิร์ฟเวอร์"
     },
     "html_lang": "th"
   },
@@ -7552,7 +7632,15 @@
       "leaderboard_report_body": "اسم اللاعب:\nالوصف:\n\nيرجى عدم تضمين معلومات حساسة.",
       "leaderboard_content_filter_explain": "يقدّم اللاعبون الأسماء والصور الرمزية وتُراجع يدويًا. اختر عرضها للاطلاع على لوحة الصدارة.",
       "leaderboard_content_show": "إظهار محتوى اللاعبين",
-      "leaderboard_content_hide": "إخفاء محتوى اللاعبين"
+      "leaderboard_content_hide": "إخفاء محتوى اللاعبين",
+      "online_server_move_button": "استخدام الخادم العام",
+      "online_server_move_confirm": "سيُحتفظ بالاتصال السابق على هذا الجهاز. تبقى الإحصاءات المحلية كما هي، ولن تُنقل المعارك السابقة. ستحتاج إلى قبول الشروط وإعادة ربط Steam. هل تريد المتابعة؟",
+      "online_server_move_blocked": "أوقف التتبع. ستبقى البيانات المعلقة محفوظة. إذا بقيت عمليات على الخادم السابق، فاستخدم بيئة التطوير الخاصة به أو اتصل بالدعم.",
+      "online_server_move_done": "تم حفظ الاتصال السابق. فعّل المشاركة واقبل الشروط وأعد ربط Steam.",
+      "online_server_consent_required": "اقبل الشروط مجددًا لاستخدام التصنيف العام.",
+      "online_server_consent_domain": "يستضيف https://eldenringpvp.com التصنيف العام.",
+      "online_server_move_required": "يستخدم الاتصال السابق خادمًا آخر. اختر «استخدام الخادم العام» للمتابعة دون حذفه.",
+      "online_server_identity_incomplete": "الاتصال السابق غير مكتمل وما زال محفوظًا. اتصل بالدعم قبل تغيير الخادم."
     },
     "html_lang": "ar"
   },
@@ -8239,7 +8327,15 @@
       "leaderboard_report_body": "Player name:\nDescription:\n\nPlease do not include sensitive information.",
       "leaderboard_content_filter_explain": "Player names and avatars are provided by players and moderated manually. Choose to show them to view the leaderboard.",
       "leaderboard_content_show": "Show player content",
-      "leaderboard_content_hide": "Hide player content"
+      "leaderboard_content_hide": "Hide player content",
+      "online_server_move_button": "Use public server",
+      "online_server_move_confirm": "The previous connection stays on this PC. Local statistics remain intact; past fights are not transferred. You must accept the terms and reconnect Steam. Continue?",
+      "online_server_move_blocked": "Stop tracking. Pending data is kept. If operations remain on the previous server, use its development environment or contact support.",
+      "online_server_move_done": "Previous connection saved. Enable participation, accept the terms and reconnect Steam.",
+      "online_server_consent_required": "Accept the terms again to use the public leaderboard.",
+      "online_server_consent_domain": "The public leaderboard is hosted at https://eldenringpvp.com.",
+      "online_server_move_required": "An earlier connection uses another server. Choose “Use public server” to continue without deleting it.",
+      "online_server_identity_incomplete": "The previous connection is incomplete and remains saved. Contact support before changing server."
     },
     "html_lang": "en"
   },
@@ -8926,7 +9022,15 @@
       "leaderboard_report_body": "Nombre del jugador:\nDescripción:\n\nNo incluyas información sensible.",
       "leaderboard_content_filter_explain": "Los nombres y avatares los proporcionan los jugadores y se moderan manualmente. Elige mostrarlos para consultar la clasificación.",
       "leaderboard_content_show": "Mostrar contenido de los jugadores",
-      "leaderboard_content_hide": "Ocultar contenido de los jugadores"
+      "leaderboard_content_hide": "Ocultar contenido de los jugadores",
+      "online_server_move_button": "Usar servidor público",
+      "online_server_move_confirm": "La conexión anterior se conservará en este PC. Las estadísticas locales permanecerán intactas; los combates anteriores no se transferirán. Debes aceptar de nuevo las condiciones y conectar Steam. ¿Continuar?",
+      "online_server_move_blocked": "Detén el seguimiento. Los datos pendientes se conservan. Si quedan operaciones en el servidor anterior, utiliza su entorno de desarrollo o contacta con soporte.",
+      "online_server_move_done": "Conexión anterior guardada. Activa la participación, acepta las condiciones y vuelve a conectar Steam.",
+      "online_server_consent_required": "Acepta de nuevo las condiciones para usar la clasificación pública.",
+      "online_server_consent_domain": "La clasificación pública está alojada en https://eldenringpvp.com.",
+      "online_server_move_required": "Una conexión anterior usa otro servidor. Elige «Usar servidor público» para continuar sin eliminarla.",
+      "online_server_identity_incomplete": "La conexión anterior está incompleta y se conserva. Contacta con soporte antes de cambiar de servidor."
     },
     "html_lang": "es-ES"
   },
@@ -9613,7 +9717,15 @@
       "leaderboard_report_body": "Nombre del jugador:\nDescripción:\n\nNo incluyas información sensible.",
       "leaderboard_content_filter_explain": "Los nombres y avatares son proporcionados por los jugadores y moderados manualmente. Elige mostrarlos para consultar la clasificación.",
       "leaderboard_content_show": "Mostrar contenido de los jugadores",
-      "leaderboard_content_hide": "Ocultar contenido de los jugadores"
+      "leaderboard_content_hide": "Ocultar contenido de los jugadores",
+      "online_server_move_button": "Usar servidor público",
+      "online_server_move_confirm": "La conexión anterior se guardará en esta PC. Las estadísticas locales seguirán intactas; los combates anteriores no se transferirán. Debes aceptar otra vez las condiciones y conectar Steam. ¿Continuar?",
+      "online_server_move_blocked": "Detén el seguimiento. Los datos pendientes se conservan. Si quedan operaciones en el servidor anterior, usa su entorno de desarrollo o contacta al soporte.",
+      "online_server_move_done": "Conexión anterior guardada. Activa la participación, acepta las condiciones y vuelve a conectar Steam.",
+      "online_server_consent_required": "Acepta otra vez las condiciones para usar la clasificación pública.",
+      "online_server_consent_domain": "La clasificación pública está alojada en https://eldenringpvp.com.",
+      "online_server_move_required": "Una conexión anterior usa otro servidor. Elige «Usar servidor público» para continuar sin eliminarla.",
+      "online_server_identity_incomplete": "La conexión anterior está incompleta y se conserva. Contacta al soporte antes de cambiar de servidor."
     },
     "html_lang": "es-419"
   }
