@@ -674,7 +674,15 @@
       "online_recovery_help": "Finde eine frühere Installation deines Steam-Kontos und behalte ihren veröffentlichten Punktestand. Bestätige Steam erneut; die alte Installation verliert ihren Zugriff.",
       "online_steam_waiting_code": "Schließe die Anmeldung im Steam-Fenster ab und gib dann den achtstelligen Code von der Seite hier ein.",
       "faq_q_18": "Wie verbinde ich Steam und nehme an der Rangliste teil?",
-      "faq_a_18": "Aktiviere unter Einstellungen → Online-Rangliste die Teilnahme und akzeptiere die Bedingungen. Melde dich im geöffneten Fenster bei Steam an und gib den auf der Website angezeigten temporären Code im Tracker ein. Teile diesen Code nicht. Die Veröffentlichung eines Links zu deinem Steam-Profil ist freiwillig."
+      "faq_a_18": "Aktiviere unter Einstellungen → Online-Rangliste die Teilnahme und akzeptiere die Bedingungen. Melde dich im geöffneten Fenster bei Steam an und gib den auf der Website angezeigten temporären Code im Tracker ein. Teile diesen Code nicht. Die Veröffentlichung eines Links zu deinem Steam-Profil ist freiwillig.",
+      "leaderboard_report_button": "Inhalt melden",
+      "leaderboard_content_rules": "Die Rangliste wird von der Administration moderiert. Nacktheit und explizite Gewalt sind untersagt.",
+      "leaderboard_report_help": "Eine E-Mail wird geöffnet: Gib den betreffenden Spielernamen an, aber keine vertraulichen Informationen.",
+      "leaderboard_report_subject": "Meldung eines Ranglisteninhalts",
+      "leaderboard_report_body": "Spielername:\nBeschreibung:\n\nBitte keine vertraulichen Informationen angeben.",
+      "leaderboard_content_filter_explain": "Spielernamen und Avatare werden von Spielern bereitgestellt und manuell moderiert. Wähle ihre Anzeige, um die Rangliste anzusehen.",
+      "leaderboard_content_show": "Spielerinhalte anzeigen",
+      "leaderboard_content_hide": "Spielerinhalte ausblenden"
     },
     "html_lang": "de"
   },
@@ -1353,7 +1361,15 @@
       "online_recovery_help": "Ritrova una precedente installazione collegata al tuo account Steam e conserva il punteggio pubblicato. Devi confermare di nuovo Steam; la vecchia installazione perderà l’accesso.",
       "online_steam_waiting_code": "Completa l’accesso nella finestra Steam, poi inserisci qui il codice di 8 cifre mostrato nella pagina.",
       "faq_q_18": "Come collego Steam e partecipo alla classifica?",
-      "faq_a_18": "In Impostazioni → Classifica online, attiva la partecipazione e accetta le condizioni. Accedi a Steam nella finestra aperta, poi inserisci nel tracker il codice temporaneo mostrato dal sito. Non condividere il codice. La pubblicazione di un link al tuo profilo Steam è facoltativa."
+      "faq_a_18": "In Impostazioni → Classifica online, attiva la partecipazione e accetta le condizioni. Accedi a Steam nella finestra aperta, poi inserisci nel tracker il codice temporaneo mostrato dal sito. Non condividere il codice. La pubblicazione di un link al tuo profilo Steam è facoltativa.",
+      "leaderboard_report_button": "Segnala contenuto",
+      "leaderboard_content_rules": "La classifica è moderata dall’amministratore. Nudità e violenza esplicita sono vietate.",
+      "leaderboard_report_help": "Si apre un’e-mail: indica il nome del giocatore interessato, senza includere informazioni sensibili.",
+      "leaderboard_report_subject": "Segnalazione di contenuto della classifica",
+      "leaderboard_report_body": "Nome del giocatore:\nDescrizione:\n\nNon includere informazioni sensibili.",
+      "leaderboard_content_filter_explain": "I nomi e gli avatar sono forniti dai giocatori e moderati manualmente. Scegli di mostrarli per consultare la classifica.",
+      "leaderboard_content_show": "Mostra i contenuti dei giocatori",
+      "leaderboard_content_hide": "Nascondi i contenuti dei giocatori"
     },
     "html_lang": "it"
   },
@@ -2032,7 +2048,15 @@
       "online_recovery_help": "Encontra uma instalação anterior ligada à tua conta Steam e mantém a pontuação publicada. Terás de confirmar novamente o Steam; a instalação anterior perderá o acesso.",
       "online_steam_waiting_code": "Conclui a ligação na janela Steam e introduz aqui o código de 8 dígitos apresentado na página.",
       "faq_q_18": "Como conecto o Steam e participo da classificação?",
-      "faq_a_18": "Em Configuração → Classificação online, ative a participação e aceite as condições. Entre no Steam na janela aberta e digite no tracker o código temporário exibido pelo site. Não compartilhe esse código. Publicar um link para seu perfil Steam é opcional."
+      "faq_a_18": "Em Configuração → Classificação online, ative a participação e aceite as condições. Entre no Steam na janela aberta e digite no tracker o código temporário exibido pelo site. Não compartilhe esse código. Publicar um link para seu perfil Steam é opcional.",
+      "leaderboard_report_button": "Denunciar conteúdo",
+      "leaderboard_content_rules": "A classificação é moderada pelo administrador. Nudez e violência explícita são proibidas.",
+      "leaderboard_report_help": "Um e-mail será aberto: informe o nome do jogador envolvido, sem incluir informações sensíveis.",
+      "leaderboard_report_subject": "Denúncia de conteúdo da classificação",
+      "leaderboard_report_body": "Nome do jogador:\nDescrição:\n\nNão inclua informações sensíveis.",
+      "leaderboard_content_filter_explain": "Os nomes e avatares são fornecidos pelos jogadores e moderados manualmente. Escolha exibi-los para consultar a classificação.",
+      "leaderboard_content_show": "Mostrar conteúdo dos jogadores",
+      "leaderboard_content_hide": "Ocultar conteúdo dos jogadores"
     },
     "html_lang": "pt-BR"
   },
@@ -2711,7 +2735,15 @@
       "online_recovery_help": "Odzyskaj wcześniejszą instalację powiązaną z kontem Steam i zachowaj jej opublikowany wynik. Potwierdź ponownie konto Steam; poprzednia instalacja utraci dostęp.",
       "online_steam_waiting_code": "Dokończ logowanie w oknie Steam, a następnie wpisz tutaj 8-cyfrowy kod wyświetlony na stronie.",
       "faq_q_18": "Jak połączyć Steam i dołączyć do rankingu?",
-      "faq_a_18": "W Ustawieniach → Ranking online włącz udział i zaakceptuj warunki. Zaloguj się do Steam w otwartym oknie, a następnie wpisz w trackerze tymczasowy kod wyświetlony na stronie. Nie udostępniaj tego kodu. Opublikowanie linku do profilu Steam jest opcjonalne."
+      "faq_a_18": "W Ustawieniach → Ranking online włącz udział i zaakceptuj warunki. Zaloguj się do Steam w otwartym oknie, a następnie wpisz w trackerze tymczasowy kod wyświetlony na stronie. Nie udostępniaj tego kodu. Opublikowanie linku do profilu Steam jest opcjonalne.",
+      "leaderboard_report_button": "Zgłoś treść",
+      "leaderboard_content_rules": "Ranking jest moderowany przez administratora. Nagość i drastyczna przemoc są zabronione.",
+      "leaderboard_report_help": "Otworzy się e-mail: podaj nazwę gracza, którego dotyczy zgłoszenie, bez danych wrażliwych.",
+      "leaderboard_report_subject": "Zgłoszenie treści w rankingu",
+      "leaderboard_report_body": "Nazwa gracza:\nOpis:\n\nNie podawaj danych wrażliwych.",
+      "leaderboard_content_filter_explain": "Nazwy i awatary są dostarczane przez graczy i moderowane ręcznie. Wybierz ich wyświetlanie, aby zobaczyć ranking.",
+      "leaderboard_content_show": "Pokaż treści graczy",
+      "leaderboard_content_hide": "Ukryj treści graczy"
     },
     "html_lang": "pl"
   },
@@ -3390,7 +3422,15 @@
       "online_recovery_help": "Найдите прежнюю установку, связанную с вашим аккаунтом Steam, и сохраните её опубликованный результат. Подтвердите Steam повторно; прежняя установка потеряет доступ.",
       "online_steam_waiting_code": "Завершите вход в окне Steam, затем введите здесь восьмизначный код со страницы.",
       "faq_q_18": "Как подключить Steam и участвовать в рейтинге?",
-      "faq_a_18": "В разделе Настройки → Онлайн-рейтинг включите участие и примите условия. Войдите в Steam в открывшемся окне, затем введите в трекере временный код, показанный на сайте. Никому не сообщайте этот код. Публикация ссылки на профиль Steam необязательна."
+      "faq_a_18": "В разделе Настройки → Онлайн-рейтинг включите участие и примите условия. Войдите в Steam в открывшемся окне, затем введите в трекере временный код, показанный на сайте. Никому не сообщайте этот код. Публикация ссылки на профиль Steam необязательна.",
+      "leaderboard_report_button": "Пожаловаться на контент",
+      "leaderboard_content_rules": "Таблица лидеров модерируется администратором. Нагота и откровенные сцены насилия запрещены.",
+      "leaderboard_report_help": "Откроется письмо: укажите имя соответствующего игрока, не добавляя конфиденциальные сведения.",
+      "leaderboard_report_subject": "Жалоба на контент таблицы лидеров",
+      "leaderboard_report_body": "Имя игрока:\nОписание:\n\nНе указывайте конфиденциальные сведения.",
+      "leaderboard_content_filter_explain": "Имена и аватары предоставляются игроками и модерируются вручную. Разрешите их показ, чтобы просмотреть таблицу лидеров.",
+      "leaderboard_content_show": "Показать контент игроков",
+      "leaderboard_content_hide": "Скрыть контент игроков"
     },
     "html_lang": "ru"
   },
@@ -4069,7 +4109,15 @@
       "online_recovery_help": "Steamアカウントに関連付けられた以前のインストールを探し、公開済みスコアを引き継ぎます。Steamでの再確認が必要です。以前のインストールはアクセスできなくなります。",
       "online_steam_waiting_code": "Steamのウィンドウでログインを完了し、ページに表示された8桁のコードをここに入力してください。",
       "faq_q_18": "Steamを連携してランキングに参加するには？",
-      "faq_a_18": "設定 → オンラインランキングで参加を有効にし、条件に同意します。開いたウィンドウでSteamにログインし、サイトに表示された一時コードをトラッカーに入力してください。このコードは他人に教えないでください。Steamプロフィールへのリンクの公開は任意です。"
+      "faq_a_18": "設定 → オンラインランキングで参加を有効にし、条件に同意します。開いたウィンドウでSteamにログインし、サイトに表示された一時コードをトラッカーに入力してください。このコードは他人に教えないでください。Steamプロフィールへのリンクの公開は任意です。",
+      "leaderboard_report_button": "コンテンツを報告",
+      "leaderboard_content_rules": "ランキングは管理者が管理しています。裸体や過激な暴力表現は禁止されています。",
+      "leaderboard_report_help": "メールが開きます。該当するプレイヤー名を記載し、機密情報は含めないでください。",
+      "leaderboard_report_subject": "ランキングのコンテンツに関する報告",
+      "leaderboard_report_body": "プレイヤー名：\n内容：\n\n機密情報は記載しないでください。",
+      "leaderboard_content_filter_explain": "プレイヤー名とアバターはプレイヤーが提供し、管理者が手動で確認します。ランキングを見るには表示を選んでください。",
+      "leaderboard_content_show": "プレイヤーのコンテンツを表示",
+      "leaderboard_content_hide": "プレイヤーのコンテンツを非表示"
     },
     "html_lang": "ja"
   },
@@ -4748,7 +4796,15 @@
       "online_recovery_help": "Steam 계정에 연결된 이전 설치를 찾아 공개 점수를 유지합니다. Steam을 다시 확인해야 하며 이전 설치의 접근 권한은 해제됩니다.",
       "online_steam_waiting_code": "Steam 창에서 로그인을 마친 후 페이지에 표시된 8자리 코드를 여기에 입력하세요.",
       "faq_q_18": "Steam을 연결하고 순위표에 참여하려면 어떻게 하나요?",
-      "faq_a_18": "설정 → 온라인 순위표에서 참여를 활성화하고 약관에 동의하세요. 열린 창에서 Steam에 로그인한 다음 사이트에 표시된 임시 코드를 트래커에 입력하세요. 이 코드를 공유하지 마세요. Steam 프로필 링크 공개는 선택 사항입니다."
+      "faq_a_18": "설정 → 온라인 순위표에서 참여를 활성화하고 약관에 동의하세요. 열린 창에서 Steam에 로그인한 다음 사이트에 표시된 임시 코드를 트래커에 입력하세요. 이 코드를 공유하지 마세요. Steam 프로필 링크 공개는 선택 사항입니다.",
+      "leaderboard_report_button": "콘텐츠 신고",
+      "leaderboard_content_rules": "순위표는 관리자가 관리합니다. 노출 및 노골적인 폭력은 금지됩니다.",
+      "leaderboard_report_help": "이메일이 열리면 해당 플레이어 이름을 적고 민감한 정보는 포함하지 마세요.",
+      "leaderboard_report_subject": "순위표 콘텐츠 신고",
+      "leaderboard_report_body": "플레이어 이름:\n설명:\n\n민감한 정보는 포함하지 마세요.",
+      "leaderboard_content_filter_explain": "플레이어 이름과 아바타는 플레이어가 제공하며 수동으로 관리됩니다. 순위표를 보려면 표시를 선택하세요.",
+      "leaderboard_content_show": "플레이어 콘텐츠 표시",
+      "leaderboard_content_hide": "플레이어 콘텐츠 숨기기"
     },
     "html_lang": "ko"
   },
@@ -5427,7 +5483,15 @@
       "online_recovery_help": "找回与 Steam 账户关联的旧安装并保留其已发布的分数。需要再次确认 Steam；旧安装将失去访问权限。",
       "online_steam_waiting_code": "在 Steam 窗口中完成登录，然后在此输入页面上显示的 8 位代码。",
       "faq_q_18": "如何连接 Steam 并参与排行榜？",
-      "faq_a_18": "在设置 → 在线排行榜中启用参与并接受条款。在打开的窗口中登录 Steam，然后将网站显示的临时代码输入追踪器。不要分享此代码。是否公开 Steam 个人资料链接由你选择。"
+      "faq_a_18": "在设置 → 在线排行榜中启用参与并接受条款。在打开的窗口中登录 Steam，然后将网站显示的临时代码输入追踪器。不要分享此代码。是否公开 Steam 个人资料链接由你选择。",
+      "leaderboard_report_button": "举报内容",
+      "leaderboard_content_rules": "排行榜由管理员管理。禁止裸露及露骨暴力内容。",
+      "leaderboard_report_help": "将打开电子邮件：请注明相关玩家名称，不要包含敏感信息。",
+      "leaderboard_report_subject": "排行榜内容举报",
+      "leaderboard_report_body": "玩家名称：\n说明：\n\n请勿包含敏感信息。",
+      "leaderboard_content_filter_explain": "玩家名称和头像由玩家提供，并由管理员手动审核。选择显示这些内容以查看排行榜。",
+      "leaderboard_content_show": "显示玩家内容",
+      "leaderboard_content_hide": "隐藏玩家内容"
     },
     "html_lang": "zh-Hans"
   },
@@ -6106,7 +6170,15 @@
       "online_recovery_help": "找回與 Steam 帳戶關聯的舊安裝並保留其已發布的分數。需要再次確認 Steam；舊安裝將失去存取權限。",
       "online_steam_waiting_code": "在 Steam 視窗中完成登入，然後在此輸入頁面上顯示的 8 位數代碼。",
       "faq_q_18": "如何連結 Steam 並參與排行榜？",
-      "faq_a_18": "在設定 → 線上排行榜中啟用參與並接受條款。在開啟的視窗中登入 Steam，然後將網站顯示的臨時代碼輸入追蹤器。不要分享此代碼。是否公開 Steam 個人檔案連結由你選擇。"
+      "faq_a_18": "在設定 → 線上排行榜中啟用參與並接受條款。在開啟的視窗中登入 Steam，然後將網站顯示的臨時代碼輸入追蹤器。不要分享此代碼。是否公開 Steam 個人檔案連結由你選擇。",
+      "leaderboard_report_button": "檢舉內容",
+      "leaderboard_content_rules": "排行榜由管理員管理。禁止裸露及露骨暴力內容。",
+      "leaderboard_report_help": "將開啟電子郵件：請註明相關玩家名稱，勿包含敏感資訊。",
+      "leaderboard_report_subject": "排行榜內容檢舉",
+      "leaderboard_report_body": "玩家名稱：\n說明：\n\n請勿包含敏感資訊。",
+      "leaderboard_content_filter_explain": "玩家名稱與頭像由玩家提供，並由管理員手動審核。選擇顯示這些內容以查看排行榜。",
+      "leaderboard_content_show": "顯示玩家內容",
+      "leaderboard_content_hide": "隱藏玩家內容"
     },
     "html_lang": "zh-Hant"
   },
@@ -6785,7 +6857,15 @@
       "online_recovery_help": "ค้นหาการติดตั้งเดิมที่เชื่อมกับบัญชี Steam เพื่อเก็บคะแนนที่เผยแพร่ไว้ คุณต้องยืนยัน Steam อีกครั้ง และการติดตั้งเดิมจะไม่สามารถเข้าถึงได้",
       "online_steam_waiting_code": "เข้าสู่ระบบในหน้าต่าง Steam ให้เสร็จ แล้วป้อนรหัส 8 หลักที่แสดงบนหน้านั้นที่นี่",
       "faq_q_18": "จะเชื่อมต่อ Steam และเข้าร่วมอันดับได้อย่างไร?",
-      "faq_a_18": "ในตั้งค่า → อันดับออนไลน์ ให้เปิดการเข้าร่วมและยอมรับเงื่อนไข เข้าสู่ระบบ Steam ในหน้าต่างที่เปิดขึ้น แล้วป้อนรหัสชั่วคราวที่แสดงบนเว็บไซต์ลงในตัวติดตาม อย่าแชร์รหัสนี้ การเผยแพร่ลิงก์โปรไฟล์ Steam เป็นทางเลือก"
+      "faq_a_18": "ในตั้งค่า → อันดับออนไลน์ ให้เปิดการเข้าร่วมและยอมรับเงื่อนไข เข้าสู่ระบบ Steam ในหน้าต่างที่เปิดขึ้น แล้วป้อนรหัสชั่วคราวที่แสดงบนเว็บไซต์ลงในตัวติดตาม อย่าแชร์รหัสนี้ การเผยแพร่ลิงก์โปรไฟล์ Steam เป็นทางเลือก",
+      "leaderboard_report_button": "รายงานเนื้อหา",
+      "leaderboard_content_rules": "ผู้ดูแลระบบดูแลตารางอันดับ ห้ามเผยแพร่ภาพเปลือยและความรุนแรงอย่างโจ่งแจ้ง",
+      "leaderboard_report_help": "ระบบจะเปิดอีเมล โปรดระบุชื่อผู้เล่นที่เกี่ยวข้องโดยไม่ใส่ข้อมูลอ่อนไหว",
+      "leaderboard_report_subject": "รายงานเนื้อหาในตารางอันดับ",
+      "leaderboard_report_body": "ชื่อผู้เล่น:\nรายละเอียด:\n\nโปรดอย่าใส่ข้อมูลอ่อนไหว",
+      "leaderboard_content_filter_explain": "ผู้เล่นเป็นผู้ให้ชื่อและอวาตาร์ ซึ่งผู้ดูแลจะตรวจสอบด้วยตนเอง เลือกแสดงเนื้อหาเพื่อดูตารางอันดับ",
+      "leaderboard_content_show": "แสดงเนื้อหาของผู้เล่น",
+      "leaderboard_content_hide": "ซ่อนเนื้อหาของผู้เล่น"
     },
     "html_lang": "th"
   },
@@ -7464,7 +7544,15 @@
       "online_recovery_help": "استعد تثبيتًا سابقًا مرتبطًا بحساب Steam للاحتفاظ بنتيجته المنشورة. يجب تأكيد Steam مجددًا، وسيُلغى وصول التثبيت السابق.",
       "online_steam_waiting_code": "أكمل تسجيل الدخول في نافذة Steam، ثم أدخل هنا الرمز المكوّن من 8 أرقام الظاهر في الصفحة.",
       "faq_q_18": "كيف أربط Steam وأشارك في قائمة الترتيب؟",
-      "faq_a_18": "في الإعدادات ← الترتيب عبر الإنترنت، فعّل المشاركة واقبل الشروط. سجّل الدخول إلى Steam في النافذة المفتوحة، ثم أدخل في المتعقب الرمز المؤقت الذي يعرضه الموقع. لا تشارك هذا الرمز. نشر رابط ملفك على Steam اختياري."
+      "faq_a_18": "في الإعدادات ← الترتيب عبر الإنترنت، فعّل المشاركة واقبل الشروط. سجّل الدخول إلى Steam في النافذة المفتوحة، ثم أدخل في المتعقب الرمز المؤقت الذي يعرضه الموقع. لا تشارك هذا الرمز. نشر رابط ملفك على Steam اختياري.",
+      "leaderboard_report_button": "الإبلاغ عن محتوى",
+      "leaderboard_content_rules": "يشرف المسؤول على لوحة الصدارة. يُحظر العري والعنف الصريح.",
+      "leaderboard_report_help": "ستُفتح رسالة بريد إلكتروني؛ اذكر اسم اللاعب المعني دون تضمين معلومات حساسة.",
+      "leaderboard_report_subject": "الإبلاغ عن محتوى في لوحة الصدارة",
+      "leaderboard_report_body": "اسم اللاعب:\nالوصف:\n\nيرجى عدم تضمين معلومات حساسة.",
+      "leaderboard_content_filter_explain": "يقدّم اللاعبون الأسماء والصور الرمزية وتُراجع يدويًا. اختر عرضها للاطلاع على لوحة الصدارة.",
+      "leaderboard_content_show": "إظهار محتوى اللاعبين",
+      "leaderboard_content_hide": "إخفاء محتوى اللاعبين"
     },
     "html_lang": "ar"
   },
@@ -8143,7 +8231,15 @@
       "online_recovery_help": "Find an earlier installation linked to your Steam account and keep its published score. You must confirm Steam again; the previous installation will lose access.",
       "online_steam_waiting_code": "Finish signing in in the Steam window, then enter here the 8-digit code shown on the page.",
       "faq_q_18": "How do I connect Steam and join the leaderboard?",
-      "faq_a_18": "In Settings → Online leaderboard, enable participation and accept the terms. Sign in to Steam in the window that opens, then enter the temporary code shown on the website in the tracker. Do not share this code. Publishing a link to your Steam profile is optional."
+      "faq_a_18": "In Settings → Online leaderboard, enable participation and accept the terms. Sign in to Steam in the window that opens, then enter the temporary code shown on the website in the tracker. Do not share this code. Publishing a link to your Steam profile is optional.",
+      "leaderboard_report_button": "Report content",
+      "leaderboard_content_rules": "The leaderboard is moderated by the administrator. Nudity and graphic violence are prohibited.",
+      "leaderboard_report_help": "An email opens: include the relevant player name, but no sensitive information.",
+      "leaderboard_report_subject": "Leaderboard content report",
+      "leaderboard_report_body": "Player name:\nDescription:\n\nPlease do not include sensitive information.",
+      "leaderboard_content_filter_explain": "Player names and avatars are provided by players and moderated manually. Choose to show them to view the leaderboard.",
+      "leaderboard_content_show": "Show player content",
+      "leaderboard_content_hide": "Hide player content"
     },
     "html_lang": "en"
   },
@@ -8822,7 +8918,15 @@
       "online_recovery_help": "Recupera una instalación anterior vinculada a tu cuenta de Steam y conserva su puntuación publicada. Debes confirmar Steam de nuevo; la instalación anterior perderá el acceso.",
       "online_steam_waiting_code": "Termina de iniciar sesión en la ventana de Steam y escribe aquí el código de 8 dígitos que aparece en la página.",
       "faq_q_18": "¿Cómo conecto Steam y participo en la clasificación?",
-      "faq_a_18": "En Configuración → Clasificación en línea, activa la participación y acepta las condiciones. Inicia sesión en Steam en la ventana que se abre y escribe en el tracker el código temporal que muestra el sitio. No compartas este código. Publicar un enlace a tu perfil de Steam es opcional."
+      "faq_a_18": "En Configuración → Clasificación en línea, activa la participación y acepta las condiciones. Inicia sesión en Steam en la ventana que se abre y escribe en el tracker el código temporal que muestra el sitio. No compartas este código. Publicar un enlace a tu perfil de Steam es opcional.",
+      "leaderboard_report_button": "Denunciar contenido",
+      "leaderboard_content_rules": "La clasificación está moderada por el administrador. Se prohíben los desnudos y la violencia explícita.",
+      "leaderboard_report_help": "Se abre un correo: indica el nombre del jugador afectado, sin incluir información sensible.",
+      "leaderboard_report_subject": "Denuncia de contenido de la clasificación",
+      "leaderboard_report_body": "Nombre del jugador:\nDescripción:\n\nNo incluyas información sensible.",
+      "leaderboard_content_filter_explain": "Los nombres y avatares los proporcionan los jugadores y se moderan manualmente. Elige mostrarlos para consultar la clasificación.",
+      "leaderboard_content_show": "Mostrar contenido de los jugadores",
+      "leaderboard_content_hide": "Ocultar contenido de los jugadores"
     },
     "html_lang": "es-ES"
   },
@@ -9501,7 +9605,15 @@
       "online_recovery_help": "Recupera una instalación anterior vinculada a tu cuenta de Steam y conserva su puntuación publicada. Debes confirmar Steam de nuevo; la instalación anterior perderá el acceso.",
       "online_steam_waiting_code": "Termina de iniciar sesión en la ventana de Steam y escribe aquí el código de 8 dígitos que aparece en la página.",
       "faq_q_18": "¿Cómo conecto Steam y participo en la clasificación?",
-      "faq_a_18": "En Configuración → Clasificación en línea, activa la participación y acepta las condiciones. Inicia sesión en Steam en la ventana que se abre y escribe en el tracker el código temporal que muestra el sitio. No compartas este código. Publicar un enlace a tu perfil de Steam es opcional."
+      "faq_a_18": "En Configuración → Clasificación en línea, activa la participación y acepta las condiciones. Inicia sesión en Steam en la ventana que se abre y escribe en el tracker el código temporal que muestra el sitio. No compartas este código. Publicar un enlace a tu perfil de Steam es opcional.",
+      "leaderboard_report_button": "Reportar contenido",
+      "leaderboard_content_rules": "La clasificación está moderada por el administrador. Se prohíben los desnudos y la violencia explícita.",
+      "leaderboard_report_help": "Se abre un correo: indica el nombre del jugador involucrado, sin incluir información sensible.",
+      "leaderboard_report_subject": "Reporte de contenido de la clasificación",
+      "leaderboard_report_body": "Nombre del jugador:\nDescripción:\n\nNo incluyas información sensible.",
+      "leaderboard_content_filter_explain": "Los nombres y avatares son proporcionados por los jugadores y moderados manualmente. Elige mostrarlos para consultar la clasificación.",
+      "leaderboard_content_show": "Mostrar contenido de los jugadores",
+      "leaderboard_content_hide": "Ocultar contenido de los jugadores"
     },
     "html_lang": "es-419"
   }

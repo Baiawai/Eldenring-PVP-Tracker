@@ -89,6 +89,8 @@ for n in range(72):
                 assert toolbar.evaluate('el => el.scrollWidth <= el.clientWidth + 1')
                 page.screenshot(path=str(root/'build'/f'capture-filter-{width}.png'))
                 page.evaluate("document.getElementById('menu_button_multi').click()")
+                assert not page.locator('.panel_multi_body').is_visible()
+                page.locator('#leaderboard_content_toggle').click()
                 assert page.locator('.panel_multi_body').is_visible()
                 assert not sync_requests, sync_requests
                 page.evaluate("document.body.dataset.storeBuild = 'true'")

@@ -295,8 +295,15 @@
                         <div><p class="leaderboard-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p><h1 data-i18n="leaderboard_title">Classement</h1><p class="leaderboard-intro" data-i18n="leaderboard_intro">Retrouve les résultats des combattants de l’arène.</p></div>
                         <button type="button" id="leaderboard_refresh" data-i18n="leaderboard_refresh">Actualiser</button>
                     </header>
+                    <section class="leaderboard-content-options">
+                        <p data-i18n="leaderboard_content_rules">Le classement est modéré par l’administrateur. La nudité et la violence explicite sont interdites.</p>
+                        <p data-i18n="leaderboard_content_filter_explain">Les pseudonymes et avatars sont fournis par les joueurs et modérés manuellement. Choisis de les afficher pour consulter le classement.</p>
+                        <button type="button" id="leaderboard_content_toggle" aria-pressed="false" aria-controls="leaderboard_content" data-i18n="leaderboard_content_show">Afficher le contenu des joueurs</button>
+                        <p data-i18n="leaderboard_report_help">Un e-mail s’ouvre : indique le pseudo concerné, sans inclure d’informations sensibles.</p>
+                        <a class="leaderboard-report" data-i18n="leaderboard_report_button" href="mailto:gael.pitras@gmail.com?subject=Signalement%20de%20contenu%20du%20classement&amp;body=Pseudo%20concern%C3%A9%20%3A%0ADescription%20%3A%0A%0AN%E2%80%99inclus%20aucune%20information%20sensible.">Signaler un contenu</a>
+                    </section>
                     <p id="leaderboard_status" class="leaderboard-status" role="status" aria-live="polite" hidden></p>
-                    <div class="panel_multi panel_multi_body">
+                    <div id="leaderboard_content" class="panel_multi panel_multi_body" hidden>
 
                      
                         <div class="containuer_multi_cadre leaderboard-table-wrap" cadre="sync_multi" tabindex="0">
@@ -761,6 +768,8 @@
                     <p class="leaderboard-player-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p>
                     <h2 id="leaderboard_player_name"></h2>
                     <div class="leaderboard-player-meta"><span><span data-i18n="leaderboard_rank">Rang</span> <strong id="leaderboard_player_rank"></strong></span><span><span data-i18n="leaderboard_level">Niveau</span> <strong id="leaderboard_player_level"></strong></span></div>
+                    <a class="leaderboard-player-report" data-i18n="leaderboard_report_button" href="mailto:gael.pitras@gmail.com?subject=Signalement%20de%20contenu%20du%20classement&amp;body=Pseudo%20concern%C3%A9%20%3A%0ADescription%20%3A%0A%0AN%E2%80%99inclus%20aucune%20information%20sensible.">Signaler un contenu</a>
+                    <p class="leaderboard-player-report-help" data-i18n="leaderboard_report_help">Un e-mail s’ouvre : indique le pseudo concerné, sans inclure d’informations sensibles.</p>
                 </div>
             </div>
             <section class="leaderboard-player-stats" aria-labelledby="leaderboard_player_stats_title">

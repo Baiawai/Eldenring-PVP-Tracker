@@ -438,11 +438,57 @@
   const rankingHeader = document.querySelector('.leaderboard-shell .leaderboard-header');
   const rankingHeading = rankingHeader && rankingHeader.querySelector('.leaderboard-eyebrow');
   const rankingIntro = rankingHeader && rankingHeader.querySelector('.leaderboard-intro');
+  const rankingContent = document.getElementById('leaderboard_content');
+  const rankingContentToggle = document.getElementById('leaderboard_content_toggle');
   let rankingRequest = 0, rankingPlayers = new Map(), selectedRank = null, rankingStatusKey = '', rankingMode = 'Arena';
+  // Player-provided names and avatars are hidden until the viewer chooses to see them.
+  let rankingContentVisible = false;
+  if (rankingContent) rankingContent.hidden = true;
   let refreshPending = false, rankingFetchPending = false, rankingSyncOperations = 0, openingRetryTimer;
   function updateRefreshButton() {
-    if (rankingRefresh) rankingRefresh.disabled = refreshPending || rankingFetchPending || rankingSyncOperations > 0;
+    if (rankingRefresh) rankingRefresh.disabled = !rankingContentVisible || refreshPending || rankingFetchPending || rankingSyncOperations > 0;
   }
+  function reportHref(name) {
+    const subject = t('leaderboard_report_subject', 'Signalement de contenu du classement');
+    let body = t('leaderboard_report_body', 'Pseudo concerné :\nDescription :\n\nN’inclus aucune information sensible.');
+    if (name) {
+      const safeName = String(name).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').slice(0, 80)
+        .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g, part => part.length === 2 ? part : '\uFFFD');
+      body = body.replace('\n', ' ' + safeName + '\n');
+    }
+    return 'mailto:gael.pitras@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  }
+  function updateReportLinks() {
+    document.querySelectorAll('.leaderboard-report').forEach(link => { link.href = reportHref(); });
+    const link = playerDialog && playerDialog.querySelector('.leaderboard-player-report');
+    const player = rankingPlayers.get(selectedRank);
+    if (link) link.href = reportHref(player && player.name);
+  }
+  function updateContentToggle() {
+    if (!rankingContentToggle) return;
+    const key = rankingContentVisible ? 'leaderboard_content_hide' : 'leaderboard_content_show';
+    const fallback = rankingContentVisible ? 'Masquer le contenu des joueurs' : 'Afficher le contenu des joueurs';
+    rankingContentToggle.dataset.i18n = key; rankingContentToggle.dataset.i18nFr = fallback;
+    rankingContentToggle.textContent = t(key, fallback);
+    rankingContentToggle.setAttribute('aria-pressed', String(rankingContentVisible));
+  }
+  if (rankingContentToggle && rankingContent) rankingContentToggle.addEventListener('click', () => {
+    rankingContentVisible = !rankingContentVisible;
+    rankingContent.hidden = !rankingContentVisible;
+    updateContentToggle(); updateRefreshButton();
+    if (rankingContentVisible) { loadRanking(); return; }
+    ++rankingRequest; rankingFetchPending = false; rankingPlayers.clear(); selectedRank = null;
+    if (playerDialog) {
+      if (playerDialog.open) playerDialog.close();
+      const name = document.getElementById('leaderboard_player_name'); if (name) name.textContent = '';
+      const avatar = document.getElementById('leaderboard_player_avatar'); if (avatar) { avatar.removeAttribute('src'); avatar.hidden = true; }
+      playerDialog.querySelectorAll('[data-player-stat], #leaderboard_player_rank, #leaderboard_player_level').forEach(node => { node.textContent = '—'; });
+      const steamLink = playerDialog.querySelector('.leaderboard-steam-link'); if (steamLink) { steamLink.removeAttribute('href'); steamLink.hidden = true; }
+    }
+    updateReportLinks(); rankingMessage('', '');
+    const table = currentTable(); if (table) table.clear().draw();
+  });
+  updateContentToggle(); updateReportLinks(); updateRefreshButton();
   const rankingModes = document.createElement('div');
   rankingModes.className = 'ranking-mode-tabs';
   rankingModes.setAttribute('role', 'group');
@@ -477,6 +523,7 @@
     return {language: language || {}, serverSide:true, processing:true, pageLength:5, lengthChange:false,
       columnDefs:[{targets:3, orderable:false, searchable:false}], order:[[0,'asc']],
       ajax:async function (query, done) {
+        if (!rankingContentVisible) { done({draw:query.draw, recordsTotal:0, recordsFiltered:0, data:[]}); return; }
         const request = ++rankingRequest, mode = rankingMode;
         const fields = ['rank','language','name',null,'level','score','victory','defeat','egality','ratio','combats'];
         const order = query.order && query.order[0] || {column:0, dir:'asc'};
@@ -484,6 +531,7 @@
         rankingFetchPending = true; updateRefreshButton(); rankingMessage('leaderboard_loading', 'Chargement du classement…');
         try {
           const result = await call('entries?' + params.toString());
+          if (!rankingContentVisible || request !== rankingRequest) { done({draw:query.draw, recordsTotal:0, recordsFiltered:0, data:[]}); return; }
           if (!result || result.mode !== mode || !Array.isArray(result.entries) || result.entries.length > 5 || !Number.isSafeInteger(result.total) || !Number.isSafeInteger(result.filtered_total) || result.total < 0 || result.filtered_total < 0 || result.filtered_total > result.total || result.page !== Number(params.get('page')) || result.per_page !== 5) throw Error('invalid response');
           const players = new Map();
           const rows = result.entries.map(entry => {
@@ -515,6 +563,7 @@
     const entry = rankingPlayers.get(rank);
     if (!entry || !playerDialog) return;
     selectedRank = rank;
+    updateReportLinks();
     const stats = entry.stats || {};
     document.getElementById('leaderboard_player_name').textContent = entry.name;
     let steamLink = playerDialog.querySelector('.leaderboard-steam-link');
@@ -661,7 +710,7 @@
       initialSettings.then(synchronizeOpening).finally(() => { rankingSyncOperations--; updateRefreshButton(); });
     }
   });
-  document.addEventListener('ui-language-change', () => { if (activeState) show(activeState); if (dialog.open && dialog.dataset.action === 'steam') steamStep(dialog.dataset.step); updateRankingModeLabels(); if (rankingStatusKey) rankingMessage(rankingStatusKey, rankingStatusKey === 'leaderboard_loading' ? 'Chargement du classement…' : 'Impossible de charger le classement.', rankingLoading); else renderNotice(); });
+  document.addEventListener('ui-language-change', () => { if (activeState) show(activeState); if (dialog.open && dialog.dataset.action === 'steam') steamStep(dialog.dataset.step); updateRankingModeLabels(); updateContentToggle(); updateReportLinks(); if (rankingStatusKey) rankingMessage(rankingStatusKey, rankingStatusKey === 'leaderboard_loading' ? 'Chargement du classement…' : 'Impossible de charger le classement.', rankingLoading); else renderNotice(); });
   window.addEventListener('focus', () => { if (supportsObservation && enabled && !(dialog.open && dialog.dataset.action === 'steam')) refreshSteamConnection(); });
   const initialSettings = settings(false);
   initialSettings.then(s => {

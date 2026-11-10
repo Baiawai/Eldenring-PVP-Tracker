@@ -43,11 +43,31 @@
             refresh.type = 'button'; refresh.id = 'leaderboard_refresh'; refresh.dataset.i18n = 'leaderboard_refresh';
             refresh.textContent = 'Actualiser'; header.appendChild(refresh);
         }
-        rankingPanel.querySelectorAll('.leaderboard-intro, #leaderboard_refresh, .panel_multi_body').forEach(node => { node.hidden = false; });
+        rankingPanel.querySelectorAll('.leaderboard-intro, #leaderboard_refresh').forEach(node => { node.hidden = false; });
+        const rankingContent = rankingPanel.querySelector('.panel_multi_body');
+        if (rankingContent) { rankingContent.id = 'leaderboard_content'; rankingContent.hidden = true; }
+        if (header && !rankingPanel.querySelector('.leaderboard-content-options')) {
+            const options = document.createElement('section'); options.className = 'leaderboard-content-options';
+            options.innerHTML = '<p data-i18n="leaderboard_content_rules">Le classement est modéré par l’administrateur. La nudité et la violence explicite sont interdites.</p><p data-i18n="leaderboard_content_filter_explain">Les pseudonymes et avatars sont fournis par les joueurs et modérés manuellement. Choisis de les afficher pour consulter le classement.</p><button type="button" id="leaderboard_content_toggle" aria-pressed="false" aria-controls="leaderboard_content" data-i18n="leaderboard_content_show">Afficher le contenu des joueurs</button><p data-i18n="leaderboard_report_help">Un e-mail s’ouvre : indique le pseudo concerné, sans inclure d’informations sensibles.</p><a class="leaderboard-report" data-i18n="leaderboard_report_button" href="mailto:gael.pitras@gmail.com?subject=Signalement%20de%20contenu%20du%20classement&amp;body=Pseudo%20concern%C3%A9%20%3A%0ADescription%20%3A%0A%0AN%E2%80%99inclus%20aucune%20information%20sensible.">Signaler un contenu</a>';
+            header.after(options);
+        }
         const status = rankingPanel.querySelector('#leaderboard_status');
         if (status) {
             status.hidden = true; status.removeAttribute('data-i18n'); status.textContent = '';
         }
+    }
+    // Older cached templates do not contain the report action on the player card.
+    const playerHeading = document.querySelector('#leaderboard_player_dialog .leaderboard-player-heading');
+    if (playerHeading && !playerHeading.querySelector('.leaderboard-player-report')) {
+        const link = document.createElement('a'); link.className = 'leaderboard-player-report';
+        link.dataset.i18n = 'leaderboard_report_button'; link.textContent = 'Signaler un contenu';
+        link.href = 'mailto:gael.pitras@gmail.com?subject=Signalement%20de%20contenu%20du%20classement';
+        playerHeading.appendChild(link);
+    }
+    if (playerHeading && !playerHeading.querySelector('.leaderboard-player-report-help')) {
+        const help = document.createElement('p'); help.className = 'leaderboard-player-report-help';
+        help.dataset.i18n = 'leaderboard_report_help'; help.textContent = 'Un e-mail s’ouvre : indique le pseudo concerné, sans inclure d’informations sensibles.';
+        playerHeading.appendChild(help);
     }
     // Refresh the favicon even when the running server has cached an older template.
     document.querySelectorAll('link[rel~="icon"]').forEach(link => { link.href = '/static/tracker-eye-ornament.ico'; });

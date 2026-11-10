@@ -14,13 +14,13 @@ L’application utilise aussi l’adresse MAC d’une interface réseau et le no
 
 ## Services tiers et anciennes versions
 
-L’ancien classement distant est désactivé. Le nouveau classement utilise par défaut le serveur `https://eldenringpvp.com` ; sa consultation peut contacter ce serveur sans participation. Si vous acceptez de participer et confirmez votre compte Steam, le pseudo, le niveau, l’avatar, la langue du jeu et les événements de combat (type, mode et date) peuvent lui être transmis. L’identifiant Steam vérifié est conservé par le serveur ; la publication d’un lien vers le profil Steam nécessite un choix distinct. La connexion Steam dépend des services de Valve, soumis à sa politique de confidentialité. [Vérifier le contenu du package effectivement publié, l’identité du responsable et des destinataires, les données techniques des requêtes, les durées de conservation et les modalités de retrait avant publication.]
+L’ancien classement distant est désactivé. Le nouveau classement utilise par défaut le serveur `https://eldenringpvp.com`, hébergé par o2switch ; sa consultation peut contacter ce serveur sans participation. Si vous acceptez de participer et confirmez votre compte Steam, le pseudo, le niveau, l’avatar, la langue du jeu et les événements de combat (type, mode et date) peuvent lui être transmis. L’identifiant Steam vérifié est conservé par le serveur ; la publication d’un lien vers le profil Steam nécessite un choix distinct. La connexion Steam dépend des services de Valve, soumis à sa politique de confidentialité. [Vérifier le contenu du package effectivement publié, l’identité du responsable et des destinataires, les données techniques des requêtes et les modalités de retrait avant publication.]
 
 Des versions antérieures ont pu envoyer des données de profil et de statistiques au serveur `anoserveur.com` ; leur conservation et leur suppression restent à vérifier auprès de son exploitant. Le suivi de Steam dépend des services et paramètres de Steam.
 
 ## Finalités et conservation
 
-Les données servent à détecter les événements PvP et à afficher l’historique et les statistiques. Les données locales restent présentes jusqu’à leur suppression par l’utilisateur ou selon le comportement de désinstallation et de sauvegarde du système. [Préciser les autres finalités éventuelles et les modalités applicables aux données d’anciennes versions.]
+Les données servent à détecter les événements PvP et à afficher l’historique, les statistiques et le classement. Les données locales restent présentes jusqu’à leur suppression par l’utilisateur ou selon le comportement de désinstallation et de sauvegarde du système. Aucun délai limite de conservation des données du service n’a encore été défini par le responsable. Les durées effectivement appliquées par l’hébergeur aux journaux et aux sauvegardes restent à vérifier. [Préciser les autres finalités éventuelles et les modalités applicables aux données d’anciennes versions.]
 
 ## Vos choix et vos droits
 
