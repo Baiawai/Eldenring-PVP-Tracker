@@ -17,5 +17,5 @@ with tempfile.TemporaryDirectory(prefix='tracker-smoke-', dir=root / 'build') as
         raise SystemExit(f'No smoke-test result (exit code {completed.returncode}).')
     data = json.loads(result.read_text(encoding='utf-8'))
     print(json.dumps(data))
-    if completed.returncode or not all(data.get(key) for key in ('interface', 'tesseract', 'store_mode', 'legacy_leaderboard_disabled', 'steam_login_route')):
+    if completed.returncode or not all(data.get(key) for key in ('interface', 'tesseract', 'store_mode', 'legacy_leaderboard_disabled', 'steam_login_route', 'production_leaderboard', 'leaderboard_route')):
         raise SystemExit('Smoke test failed.')

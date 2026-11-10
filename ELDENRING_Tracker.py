@@ -157,13 +157,19 @@ def index():
 # Packaging smoke test: no web browser, listening socket, tray or game tracking.
 if getattr(sys, 'frozen', False) and len(sys.argv) == 3 and sys.argv[1] == '--distribution-smoke-test':
     import json
+    from unittest.mock import patch
+    from application import online_leaderboard
     with app.test_client() as client:
         response = client.get('/')
         result = {'status': response.status_code, 'tesseract': os.path.isfile(path_to_tesseract),
                   'interface': b'id="game_language"' in response.data and response.status_code == 200,
                   'store_mode': b'data-store-build="true"' in response.data,
                   'legacy_leaderboard_disabled': client.get('/syncMulti').status_code == 404,
-                  'steam_login_route': client.post('/online-leaderboard/steam-login').status_code == 503}
+                  'steam_login_route': client.post('/online-leaderboard/steam-login').status_code == 503,
+                  'production_leaderboard': online_leaderboard._base_url() == 'https://eldenringpvp.com'}
+        with patch.object(online_leaderboard, '_call', return_value={'entries': []}) as leaderboard_call:
+            leaderboard_response = client.get('/online-leaderboard/entries?mode=Arena')
+        result['leaderboard_route'] = leaderboard_response.status_code == 200 and leaderboard_call.called
     with open(sys.argv[2], 'w', encoding='utf-8') as output:
         json.dump(result, output)
     sys.exit(0 if all(result.values()) else 1)
