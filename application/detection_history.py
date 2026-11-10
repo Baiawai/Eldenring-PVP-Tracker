@@ -9,6 +9,7 @@ from flask import jsonify, request
 from __main__ import app
 from application.init import database_capture
 from application.secur import encrypt_value, decrypt_value
+from application.geoip_country import country_code
 
 
 class _MessageText(HTMLParser):
@@ -58,6 +59,7 @@ def _connect():
     con.commit()
     _consolidate_legacy_steam(con)
     _migrate_system_events(con)
+    _remove_steam_addresses(con)
     return con
 
 
@@ -120,6 +122,42 @@ def _migrate_system_events(con):
     con.commit()
 
 
+def _sanitize_steam_metadata(metadata):
+    if not isinstance(metadata, dict):
+        return metadata
+    data = dict(metadata)
+    address = data.pop('ip', None)
+    data.pop('relay', None)
+    if address and not data.get('country_code'):
+        data['country_code'] = country_code(address)
+    return data
+
+
+def _remove_steam_addresses(con):
+    """Migrate active and archived Steam events without discarding encounters."""
+    name = 'steam_country_without_ip_v1'
+    if con.execute('SELECT 1 FROM detection_history_migrations WHERE name=?', (name,)).fetchone():
+        return
+    con.execute('BEGIN IMMEDIATE')
+    if con.execute('SELECT 1 FROM detection_history_migrations WHERE name=?', (name,)).fetchone():
+        con.commit()
+        return
+    con.execute('PRAGMA secure_delete=ON')
+    tables = [('detection_history', 'id')]
+    if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='history_archive_events'").fetchone():
+        tables.append(('history_archive_events', 'rowid'))
+    for table, key in tables:
+        rows = con.execute(f"SELECT {key},metadata FROM {table} WHERE kind LIKE 'steam_%' AND metadata IS NOT NULL").fetchall()
+        for ident, encrypted in rows:
+            data = json.loads(decrypt_value(encrypted).decode('utf-8'))
+            cleaned = _sanitize_steam_metadata(data)
+            if cleaned != data:
+                con.execute(f'UPDATE {table} SET metadata=? WHERE {key}=?',
+                            (encrypt_value(json.dumps(cleaned, ensure_ascii=False)), ident))
+    con.execute('INSERT INTO detection_history_migrations(name) VALUES (?)', (name,))
+    con.commit()
+
+
 def record_detection(message, mode, kind='detection', metadata=None):
     text = message_text(message)
     if not text:
@@ -127,6 +165,8 @@ def record_detection(message, mode, kind='detection', metadata=None):
     if text.startswith("Let's gooo !"):
         text, kind = 'Suivi démarré', 'monitor_start'
     mode = 'System' if kind in ('monitor_start', 'monitor_stop', 'monitor_error') else (mode if mode in ('Arena', 'Invasion', 'Defense') else 'Unknown')
+    if kind.startswith('steam_'):
+        metadata = _sanitize_steam_metadata(metadata)
     encoded = encrypt_value(json.dumps(metadata, ensure_ascii=False)) if metadata is not None else None
     with closing(_connect()) as con:
         con.execute('BEGIN IMMEDIATE')
@@ -150,6 +190,7 @@ def update_detection(event_id, message, mode=None, metadata=None):
             values.append(mode)
         if metadata is not None:
             fields.append('metadata=?')
+            metadata = _sanitize_steam_metadata(metadata)
             values.append(encrypt_value(json.dumps(metadata, ensure_ascii=False)))
         values.append(event_id)
         cursor = con.execute('UPDATE detection_history SET ' + ','.join(fields) + ' WHERE id=?', values)

@@ -1,11 +1,7 @@
-from flask import Flask, jsonify, request
-import sqlite3
-import re
-import os
 import base64
 import ast
 from cryptography.fernet import Fernet
-from __main__ import app
+from application.data_protection import active_data_key
 
 
 key_str = '_Elden_ring_Pvp_' * 2
@@ -16,16 +12,21 @@ _fernet = Fernet(key)
    
 
 def encryption_key():
-    global key
-    return key
+    return active_data_key() or key
 
 def encrypt_value(donnees_a_chiffrer):
-    donnees_chiffrees = _fernet.encrypt(str(donnees_a_chiffrer).encode('utf-8'))
-    return donnees_chiffrees
+    active = active_data_key()
+    clear = str(donnees_a_chiffrer).encode('utf-8')
+    return b'v2:' + Fernet(active).encrypt(clear) if active else _fernet.encrypt(clear)
 
 def decrypt_value(donnees_chiffrees):
-    donnees_dechiffrees = _fernet.decrypt(donnees_chiffrees)
-    return donnees_dechiffrees
+    raw = donnees_chiffrees.encode('ascii') if isinstance(donnees_chiffrees, str) else donnees_chiffrees
+    if raw.startswith(b'v2:'):
+        active = active_data_key()
+        if not active:
+            raise RuntimeError('La clé des données est absente. Restaure-la depuis ta sauvegarde sécurisée.')
+        return Fernet(active).decrypt(raw[3:])
+    return _fernet.decrypt(raw)
 
 
 def clean_decrypted(decoded):

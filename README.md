@@ -10,7 +10,7 @@ Elden Ring PvP Tracker est une application Windows locale qui suit les combats P
 - Détection des joueurs et informations réseau disponibles via Steam, avec accès aux profils Steam lorsque ceux-ci sont identifiés.
 - Interface et reconnaissance des messages dans les langues prises en charge par le jeu. Au premier lancement, la langue du navigateur est utilisée si elle est disponible ; elle reste modifiable dans Configuration.
 
-La reconnaissance utilise l'OCR et ne peut lire que les notifications visibles. Un texte ou un nom peut être mal reconnu ; un personnage et un compte Steam ne sont pas nécessairement associés. Le classement en ligne est actuellement désactivé et reviendra dans une future mise à jour. Les statistiques locales restent disponibles.
+La reconnaissance utilise l'OCR et ne peut lire que les notifications visibles. Un texte ou un nom peut être mal reconnu ; un personnage et un compte Steam ne sont pas nécessairement associés. Le classement en ligne est facultatif : la participation nécessite une autorisation explicite. Les statistiques locales restent disponibles hors ligne.
 
 ## Installation de la version de développement
 
@@ -57,6 +57,12 @@ Dans **Configuration → Profil**, la capture du profil permet de récupérer le
 
 Dans **Configuration → P2P**, l'activation automatique du journal Steam est proposée par défaut. Lorsque la détection P2P est active, le tracker demande au client Steam d'activer son journal au démarrage ou après un redémarrage de Steam. Désactivez cette option pour utiliser la configuration manuelle ; la commande reste disponible dans la section P2P.
 
+Pour participer au classement, accepte les conditions dans **Configuration → Classement en ligne**, connecte-toi à Steam, puis saisis dans le tracker le code temporaire affiché par le site. Ne partage pas ce code. Le partage du lien vers le profil Steam est facultatif ; son activation ou son retrait est appliqué à la prochaine synchronisation réussie, au démarrage, à l'ouverture du classement ou avec **Actualiser**. Une connexion existante n'est pas automatiquement renouvelée par cette mise à jour.
+
+Après accord, les débuts et résultats détectés, leur mode et leur date sont conservés localement en attente puis transmis au serveur, qui calcule les scores. Les événements sont réessayés sans être comptés deux fois après une interruption. Pour une nouvelle inscription, les anciennes statistiques locales ne sont pas importées ; seuls les combats détectés après l'accord alimentent le classement. Les scores publiés avant ce changement sont conservés et signalés comme historiques non vérifiés. Ces contrôles ne prouvent pas qu'un combat envoyé par un client modifié a réellement eu lieu.
+
+Si l'accès à une ancienne installation est perdu, active la participation puis utilise **Récupérer une installation** dans cette même section. Confirme à nouveau le compte Steam avec le code affiché et choisis l'installation publiée à récupérer. Son ancien jeton sera révoqué, son score sera conservé et les combats en attente seront envoyés à la prochaine synchronisation.
+
 En développement, la mesure avancée du ping peut demander une autorisation administrateur Windows. Le ping Steam est utilisé lorsqu'il est disponible ; certaines connexions ne fournissent aucune mesure. Une adresse affichée peut être celle d'un relais et sa géolocalisation est indicative.
 
 ### Historique et archives
@@ -75,11 +81,21 @@ Les bases SQLite de profil, configuration, captures, historique et statistiques 
 
 Pour sauvegarder vos données, arrêtez le tracker puis copiez le dossier `%APPDATA%\Elden Ring PvP Tracker\`. Les captures et historiques peuvent contenir des pseudos et des adresses réseau : protégez vos sauvegardes avant de les partager.
 
+Une migration de chiffrement peut être préparée sur une **copie distincte**, sans modifier les données originales :
+
+```powershell
+.\.venv\Scripts\python.exe -m application.data_protection prepare "$env:APPDATA\Elden Ring PvP Tracker" "$env:USERPROFILE\Desktop\Tracker-copie-securisee"
+```
+
+Arrête d'abord le tracker. Le programme demande un mot de passe d'au moins 12 caractères et le confirme. Conserve-le séparément : il protège le fichier `data-key-recovery.json` qui accompagne la copie. Pour utiliser cette copie sur un autre PC, il faut y disposer du projet et de son environnement Python, puis exécuter `python -m application.data_protection restore-key "CHEMIN_DE_LA_COPIE"` et saisir le mot de passe. La clé d'accès au classement dépend de l'utilisateur Windows ; une reconnexion Steam ou la récupération d'installation peut être nécessaire.
+
+**Ne remplace pas encore le dossier habituel par cette copie** si tu utilises une version Store ou une ancienne version du tracker : elles ne savent pas lire le nouveau format. La copie préparée nécessite une version reconstruite intégrant cette modification. L'original et les anciennes sauvegardes restent protégés par l'ancien chiffrement. Cette migration concerne les champs déjà chiffrés ; certaines données locales et certains fichiers restent lisibles en clair, donc protège aussi le PC et les sauvegardes.
+
 Les statistiques d'utilisation sont enregistrées localement dans `usage_metrics.db`. Une session mesure la durée de fonctionnement du tracker, y compris en attente, et est mise à jour environ toutes les 30 secondes. Le diagnostic présente aussi des mesures temporaires du processus courant ; les erreurs OCR techniques ne représentent pas un taux de reconnaissance.
 
 ## Version Microsoft Store
 
-La construction et les vérifications du package sont décrites dans [store/README.md](store/README.md). Le classement distant est désactivé dans les deux versions. La version compilée désactive la mesure du ping nécessitant une élévation et affiche le ping Steam lorsqu'il est disponible. Les données et l'installation du package doivent être testées séparément de la version de développement.
+La construction et les vérifications du package sont décrites dans [store/README.md](store/README.md). L'ancien classement distant reste désactivé ; le nouveau classement facultatif nécessite un serveur configuré et une connexion Steam vérifiée. La version compilée désactive la mesure du ping nécessitant une élévation et affiche le ping Steam lorsqu'il est disponible. Les données et l'installation du package doivent être testées séparément de la version de développement.
 
 ## Structure du projet
 
@@ -104,3 +120,13 @@ Depuis la racine :
 Pour un fichier JavaScript modifié, `node --check static/nom-du-fichier.js` vérifie sa syntaxe si Node est installé. Complétez par des essais de l'interface et, pour l'OCR, par une partie adaptée. Les tests qui écrivent doivent utiliser des données et un `APPDATA` isolés.
 
 Les consignes de travail figurent dans [AGENTS.md](AGENTS.md), et les résultats et limites de l'audit dans [AUDIT.md](AUDIT.md).
+
+### Configuration du classement en ligne (développement)
+
+Le classement reste facultatif : aucun profil ni statistique ne sont transmis tant que la participation n’a pas été activée explicitement dans Configuration → Classement en ligne. Le texte de consentement actuel est provisoire et doit être validé avant la mise en production. L’application continue à fonctionner sans connexion.
+
+Pour configurer le serveur, copier `leaderboard-config.example.json` vers `%APPDATA%\Elden Ring PvP Tracker\leaderboard-config.json`, puis choisir `development` ou `production` dans `environment` et renseigner l’URL correspondante dans `urls`. L’adresse de production doit utiliser HTTPS ; HTTP est accepté uniquement pour une adresse locale de test. Ne pas placer la configuration dans `.venv`. Sans fichier ou URL valide, aucun serveur distant n’est contacté.
+
+La synchronisation envoie le pseudo, le niveau, l’avatar et les statistiques PvP de chaque mode au lancement du tracker et à l’ouverture du classement, avec au moins 10 secondes entre deux synchronisations. La langue de jeu sélectionnée est aussi transmise si son partage a été accepté ; elle apparaît avec un drapeau qui représente la langue, pas la nationalité. Les participants existants peuvent refuser son partage sans quitter le classement. Un rechargement de la page ne déclenche pas de nouvelle synchronisation. Une installation est identifiée par un UUID et un jeton protégé par Windows pour l’utilisateur courant. Ce mécanisme ne prouve pas l’authenticité des résultats transmis. La désactivation propose de conserver les données publiées ou de les retirer : si le serveur est indisponible, le retrait reste en attente et est retenté au prochain lancement. Les statistiques locales ne sont pas supprimées.
+
+La participation nécessite de connecter un compte Steam dans le navigateur. Après l'acceptation, la fenêtre de participation guide la connexion et indique son résultat ; l'état du compte apparaît aussi dans Configuration → Classement en ligne sans recharger la page. En cas de fermeture ou de blocage de la fenêtre Steam, la même fenêtre permet de réessayer ou d'annuler. Le site vérifie la réponse auprès de Steam : le tracker ne reçoit pas le mot de passe. L'identifiant Steam vérifié est conservé sur le serveur pour identifier l'installation ; la publication d'un lien vers le profil reste distincte et désactivée par défaut. Ce lien peut être retiré dans Configuration → Classement en ligne ; si le serveur est indisponible, le retrait est réessayé au prochain démarrage. Les anciens profils doivent reconnecter leur compte avant de réapparaître. La connexion Steam vérifie le contrôle du compte, pas l'authenticité des résultats de jeu déclarés par le tracker.

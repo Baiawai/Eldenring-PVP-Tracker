@@ -15,16 +15,37 @@
             if (node) { node.textContent = faqFrench[key]; node.dataset.i18nFr = faqFrench[key]; }
         });
     }
+    // Keep the community link available when an existing server has cached its template.
+    const informationShell = document.querySelector('#information_panel .information-shell');
+    if (informationShell && !informationShell.querySelector('.information-discord-panel')) {
+        informationShell.querySelectorAll('.information-discord').forEach(node => node.remove());
+        const panel = document.createElement('section');
+        panel.className = 'information-discord-panel';
+        panel.setAttribute('aria-labelledby', 'information_discord_title');
+        panel.innerHTML = '<img class="information-discord-icon" src="/static/icon-discord-bronze.png" alt=""><div class="information-discord-content"><h2 id="information_discord_title" data-i18n="information_discord_title">Aide et assistance</h2><p data-i18n="information_discord_help">Pour toute aide ou demande de support, rejoins notre serveur Discord.</p><a class="information-discord" href="https://discord.gg/y79z83D2Ua" target="_blank" rel="noopener noreferrer" data-i18n="information_discord">Rejoindre le serveur Discord</a></div>';
+        informationShell.prepend(panel);
+    }
     const rankingFaq = document.querySelector('[data-i18n="faq_a_11"]');
     if (rankingFaq) rankingFaq.textContent = 'Le classement est actuellement désactivé. Il reviendra dans une future mise à jour.';
     const rankingPanel = document.querySelector('.cadre_multi');
     if (rankingPanel) {
-        rankingPanel.querySelectorAll('.leaderboard-intro, #leaderboard_refresh, .panel_multi_body').forEach(node => { node.hidden = true; });
+        // Restore the original layout even when Flask has cached the disabled-page template.
+        const header = rankingPanel.querySelector('.leaderboard-header');
+        if (header && !header.querySelector('.leaderboard-intro')) {
+            const intro = document.createElement('p');
+            intro.className = 'leaderboard-intro'; intro.dataset.i18n = 'leaderboard_intro';
+            intro.textContent = 'Retrouve les résultats des combattants de l’arène.';
+            header.querySelector('div').appendChild(intro);
+        }
+        if (header && !header.querySelector('#leaderboard_refresh')) {
+            const refresh = document.createElement('button');
+            refresh.type = 'button'; refresh.id = 'leaderboard_refresh'; refresh.dataset.i18n = 'leaderboard_refresh';
+            refresh.textContent = 'Actualiser'; header.appendChild(refresh);
+        }
+        rankingPanel.querySelectorAll('.leaderboard-intro, #leaderboard_refresh, .panel_multi_body').forEach(node => { node.hidden = false; });
         const status = rankingPanel.querySelector('#leaderboard_status');
         if (status) {
-            status.hidden = false;
-            status.dataset.i18n = 'leaderboard_disabled_future';
-            status.textContent = 'Le classement est actuellement désactivé. Il reviendra dans une future mise à jour.';
+            status.hidden = true; status.removeAttribute('data-i18n'); status.textContent = '';
         }
     }
     // Refresh the favicon even when the running server has cached an older template.

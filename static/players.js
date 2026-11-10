@@ -114,12 +114,10 @@
             browserLink.rel = 'noopener noreferrer';
             history.appendChild(browserLink);
         }
-        if (player.steam) {
-            const address = player.steam.ip || '—';
-            const label = player.steam.relay ? tr('steam_ip_relay', 'Relais') : tr('steam_ip_label', 'IP réseau');
-            const addressLine = element('div', 'player-steam-address', label + ' : ' + address);
-            if (player.steam.ip) window.appendIpCountry(addressLine, player.steam.country_code);
-            history.appendChild(addressLine);
+        if (player.steam && player.steam.country_code) {
+            const country = element('div', 'player-steam-country');
+            window.appendIpCountry(country, player.steam.country_code);
+            history.appendChild(country);
         }
         history.appendChild(element('h3', '', player.total + player.sightings > 20 ? tr('recent_twenty', '20 dernières activités') : tr('recent_activity', 'Historique des rencontres')));
         player.history.forEach(function(match) {

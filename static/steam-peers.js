@@ -51,7 +51,7 @@
             const row = document.createElement('div');
             const name = document.createElement('button');
             const ping = document.createElement('span');
-            const ip = document.createElement('div');
+            const country = document.createElement('div');
             row.className = 'steam-peer-row';
             name.type = 'button';
             name.className = 'steam-peer-name';
@@ -67,11 +67,9 @@
             });
             ping.className = 'steam-peer-ping';
             ping.textContent = typeof peer.ping === 'number' && peer.ping >= 0 ? Math.round(peer.ping) + ' ms' : '—';
-            ip.className = 'steam-peer-ip';
-            const label = peer.relay ? tr('steam_ip_relay', 'Relais') : 'IP';
-            ip.textContent = label + ' : ' + (peer.ip || '—');
-            if (peer.ip) window.appendIpCountry(ip, peer.country_code);
-            row.append(name, ping); item.append(row, ip); list.append(item);
+            country.className = 'steam-peer-country';
+            window.appendIpCountry(country, peer.country_code);
+            row.append(name, ping); item.append(row, country); list.append(item);
         });
     }
     async function refresh() {

@@ -10,5 +10,5 @@ window.appendIpCountry = function(container, code) {
     flag.alt = '';
     flag.addEventListener('error', function() { flag.hidden = true; });
     span.append(flag, document.createTextNode(name));
-    container.append(document.createTextNode(' · '), span);
+    container.append(span);
 };

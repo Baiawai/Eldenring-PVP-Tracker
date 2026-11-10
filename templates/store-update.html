@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="{{ language }}"{% if language == 'ar' %} dir="rtl"{% endif %}>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }} — Elden Ring PvP Tracker</title>
+    <link rel="icon" href="{{ url_for('static', filename='tracker-eye-ornament.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='app-typography.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='store-update.css') }}">
+</head>
+<body>
+    <main class="update-panel">
+        <img class="update-logo" src="{{ url_for('static', filename='home-logo-classic-eye.png') }}" alt="Elden Ring PvP Tracker">
+        <div class="update-divider" aria-hidden="true"><span>✦</span></div>
+        <h1>{{ title }}</h1>
+        <p>{{ message }}</p>
+        <a class="update-button" href="{{ store_url }}">{{ action }}</a>
+        <p class="update-instruction">{{ instruction }}</p>
+    </main>
+</body>
+</html>

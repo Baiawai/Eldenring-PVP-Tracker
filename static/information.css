@@ -4,6 +4,14 @@
 .information-header { padding-bottom:22px; border-bottom:1px solid #544a35; }
 .information-eyebrow { margin:0 0 10px; color:#a38a5d; font-size:18px; letter-spacing:.18em; }
 .information-header h1 { margin:0; color:#f0e2c7; font-size:42px; line-height:1.1; font-weight:normal; }
+.information-discord-panel { display:flex; align-items:center; gap:28px; padding:24px 30px; margin-bottom:32px; border:1px solid #716044; background:linear-gradient(105deg, rgba(38,34,26,.8), rgba(19,18,15,.93)), url("faq-surface-bronze.png") center / cover; box-shadow:inset 0 1px rgba(227,204,158,.12), 0 8px 22px rgba(0,0,0,.2); }
+.information-discord-icon { flex:none; width:128px; height:128px; object-fit:contain; }
+.information-discord-content { min-width:0; text-align:left; }
+.information-discord-content h2 { margin:0 0 8px; color:#e8d6b5; font-size:26px; line-height:1.2; font-weight:normal; text-align:left; }
+.information-discord-content p { margin:0; color:#cfc1a9; font-size:18px; line-height:1.5; text-align:left; }
+.information-discord { display:inline-block; margin-top:15px; padding:9px 20px; border:1px solid #9b855e; color:#f1dfba; background:linear-gradient(180deg, rgba(155,133,94,.23), rgba(65,56,41,.28)); font-size:19px; line-height:1.35; text-align:center; text-decoration:none; overflow-wrap:anywhere; transition:background .2s, border-color .2s; }
+.information-discord:hover { color:#fff0d0; border-color:#d7c398; background:rgba(201,174,119,.2); }
+.information-discord:focus-visible { outline:2px solid #e1c487; outline-offset:3px; }
 .faq-list { display:grid; gap:10px; margin-top:26px; }
 .faq-item {
     box-sizing:border-box; border:1px solid #806b45;
@@ -36,4 +44,4 @@
 .environment-status:empty, #storage_status:empty { display:none; }
 @media (max-width:480px) { .environment-row { flex-direction:column; gap:3px; } .environment-row strong { max-width:100%; text-align:left; } }
 
-@media(max-width:600px) { .faq-item summary { padding:18px 48px 18px 24px; } .faq-item p { padding:16px 24px 22px; } }
+@media(max-width:600px) { .information-discord-panel { gap:14px; padding:18px 16px; } .information-discord-icon { width:72px; height:72px; } .information-discord-content h2 { font-size:22px; } .faq-item summary { padding:18px 48px 18px 24px; } .faq-item p { padding:16px 24px 22px; } }

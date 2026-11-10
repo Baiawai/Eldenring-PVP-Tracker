@@ -10,7 +10,6 @@ from application.init import database_capture
 from application.secur import decrypt_rows
 from application.player_sightings import read_sightings
 from application.detection_history import read_steam_history
-from application.geoip_country import country_code
 
 
 @app.route('/players', methods={'GET'})
@@ -137,13 +136,11 @@ def players():
                 'defeats': 0, 'draws': 0, 'sightings': 0, 'roles': ['steam'],
                 'relations': [], 'last_seen': '', 'history': [],
                 'steam': {'id': sid, 'name': steam.get('name') or sid,
-                          'ip': steam.get('ip'), 'relay': bool(steam.get('relay')), 'country_code': country_code(steam.get('ip')), 'mode': observed['mode']},
+                          'country_code': steam.get('country_code'), 'mode': observed['mode']},
             }
         player = players_by_name[key]
-        if not player['steam']['ip'] and steam.get('ip'):
-            player['steam']['ip'] = steam['ip']
-            player['steam']['relay'] = bool(steam.get('relay'))
-            player['steam']['country_code'] = country_code(steam.get('ip'))
+        if not player['steam']['country_code'] and steam.get('country_code'):
+            player['steam']['country_code'] = steam['country_code']
         player['last_seen'] = max(player['last_seen'], observed['date'])
         match = inferred.get(observed['id'])
         outcome = steam.get('outcome') if steam.get('outcome') in ('victory','defeat','draw') else (match['outcome'] if match else None)
@@ -154,8 +151,7 @@ def players():
             add_unique(player['roles'], 'opponent')
             add_unique(player['relations'], 'opponent')
         player['history'].append({'kind':'steam', 'date':match_date, 'mode':observed['mode'],
-                                  'event':observed['event'], 'outcome':outcome,
-                                  'ip':steam.get('ip'), 'relay':bool(steam.get('relay'))})
+                                  'event':observed['event'], 'outcome':outcome})
 
     result = list(players_by_name.values())
     for player in result:

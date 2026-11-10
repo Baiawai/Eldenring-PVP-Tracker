@@ -143,7 +143,6 @@
         '#steam_show_name':['help_steam_name', 'Affiche ou masque les noms des profils Steam détectés dans la liste des joueurs.'],
         '#steam_show_country':['help_steam_country', 'Affiche ou masque le pays associé à une adresse réseau lorsqu’il peut être déterminé.'],
         '#steam_show_ping':['help_steam_ping_display', 'Affiche ou masque le ping disponible dans la liste des joueurs Steam, sans modifier sa mesure.'],
-        '#steam_hide_ip':['help_steam_hide_ip', 'Masque les adresses réseau dans les pages du tracker, notamment les joueurs et l’historique. Elles peuvent rester enregistrées localement.'],
         '#notification_top':['help_notification_top', 'Déplace la limite haute de la zone analysée en mode manuel. Place-la juste au-dessus du bandeau de notification.'],
         '#notification_bottom':['help_notification_bottom', 'Déplace la limite basse de la zone analysée en mode manuel. Laisse assez de place pour un bandeau de deux lignes.'],
         '#profile_capture_start':['help_profile_capture', 'Lit le pseudo, le niveau et l’image du personnage depuis l’écran « Quitter la partie » du jeu. Vérifie l’aperçu avant d’enregistrer.'],

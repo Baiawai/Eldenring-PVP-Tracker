@@ -898,7 +898,7 @@ def _run_monitor():
         monitor_lock.release()
 
 
-@app.route("/start", methods={"GET"})
+@app.route("/start", methods={"POST"})
 def start():
     global run_monitor, monitor_ready, monitor_error, capture, capture_revision, game_running
     global active_capture_display, width_screen, height_screen
@@ -930,7 +930,7 @@ def start():
     return jsonify({"request": "success"})
 
 
-@app.route("/stop", methods={"GET"})
+@app.route("/stop", methods={"POST"})
 def stop():
 
     global run_monitor

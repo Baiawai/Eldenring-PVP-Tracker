@@ -2,7 +2,7 @@
 import os
 import sqlite3
 from contextlib import closing
-from application.init import database_user
+from application.init import database_user, database_setting
 
 DATABASE = database_user
 MODES = ('Arena', 'Invasion', 'Defense')
@@ -56,6 +56,12 @@ def add_mode_score(mode, victory, defeat, egality, combats, no_result, fight_exi
                             s['fight_exit'] * .5 - s['abandon'] * 4 - s['noResult'] - s['gameExit']) / 30, 2)
         con.execute('UPDATE mode_stats SET ' + ', '.join(name + '=?' for name in FIELDS) + ' WHERE mode=?',
                     [s[name] for name in FIELDS] + [mode])
+        try:
+            from application.leaderboard_events import record_delta
+            record_delta(con, mode, (victory, defeat, egality, combats, no_result, fight_exit, abandon, connexion_error, game_exit), database_setting)
+        except Exception:
+            from __main__ import app
+            app.logger.exception('Unable to queue leaderboard event')
         con.commit()
 
 
@@ -79,5 +85,11 @@ def correct_invasion_no_result(event_id, expected_text, replacement_text):
                     (no_result, connection_error, score, 'Invasion'))
         con.execute('UPDATE capture_db.detection_history SET message=? WHERE id=?',
                     (encrypt_value(replacement_text), event_id))
+        try:
+            from application.leaderboard_events import record_correction
+            record_correction(con, 'Invasion', database_setting)
+        except Exception:
+            from __main__ import app
+            app.logger.exception('Unable to queue leaderboard correction')
         con.commit()
         return True

@@ -239,7 +239,7 @@ def _worker():
                     peers = data.get('peers', [])
                     if not isinstance(peers, list):
                         peers = []
-                    safe = [{'id':str(p.get('id', '')), 'name':str(p.get('name', '')), 'ping':p.get('ping'), 'ip':p.get('ip'), 'relay':bool(p.get('relay')), 'country_code':country_code(p.get('ip'))}
+                    safe = [{'id':str(p.get('id', '')), 'name':str(p.get('name', '')), 'ping':p.get('ping'), 'country_code':country_code(p.get('ip'))}
                             for p in peers if isinstance(p, dict)][:16]
                     _publish(str(data.get('status', 'helper_error')), safe, str(data.get('ping_mode', 'admin_required')))
                 except (ValueError, TypeError):

@@ -37,9 +37,10 @@ class InterfaceTranslationTests(unittest.TestCase):
             if file.name in ('jquery.js', 'ui-packs.js') or file.name.endswith('.min.js'):
                 continue
             source = file.read_text(encoding='utf-8')
-            keys.update(re.findall(r"\b(?:tr|appT|uiT)\(\s*['\"]([\w-]+)['\"]", source))
+            keys.update(re.findall(r"\b(?:t|tr|appT|uiT)\(\s*['\"]([\w-]+)['\"]", source))
+            keys.update(re.findall(r'data-online=["\']([\w-]+)["\']', source))
         html = (ROOT / 'templates/index.html').read_text(encoding='utf-8')
-        keys.update(re.findall(r'data-i18n(?:-aria|-placeholder)?="([\w-]+)"', html))
+        keys.update(re.findall(r'data-i18n(?:-aria|-placeholder|-title)?="([\w-]+)"', html))
         self.assertEqual(len(packs), 14)
         for language, pack in packs.items():
             with self.subTest(language=language):
@@ -47,6 +48,27 @@ class InterfaceTranslationTests(unittest.TestCase):
                 self.assertTrue(all(pack['modern'][key] for key in keys))
                 self.assertGreaterEqual(len(pack['legacy']), 89)
                 self.assertGreaterEqual(len(pack['counter']), 14)
+
+    def test_every_catalog_contains_all_modern_keys(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        english_keys = set(packs['eng']['modern'])
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertEqual(set(pack['modern']), english_keys)
+                self.assertTrue(all(pack['modern'].values()))
+
+    def test_modern_translation_placeholders_match_english(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        placeholders = lambda text: sorted(re.findall(r'\{\w+\}|%[sd]', text))
+        for language, pack in packs.items():
+            for key, english in packs['eng']['modern'].items():
+                if key in pack['modern']:
+                    with self.subTest(language=language, key=key):
+                        self.assertEqual(placeholders(pack['modern'][key]), placeholders(english))
+
+    def test_arabic_consent_preserves_pvp_acronym(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        self.assertIn('PvP', packs['ara']['modern']['online_consent_text'])
 
     def test_browser_and_backend_use_identical_packs(self):
         backend = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))

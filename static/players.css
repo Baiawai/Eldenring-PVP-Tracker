@@ -68,7 +68,7 @@
     .players-overview { grid-template-columns:1fr; }
     .player-history { padding-left:10%; }
 }
-.player-steam-address { padding: 8px 0; color: #d4bd8f; font: 18px/1.4 Arial, sans-serif; overflow-wrap: anywhere; }
+.player-steam-country { padding: 8px 0; color: #d4bd8f; font: 18px/1.4 Arial, sans-serif; overflow-wrap: anywhere; }
 .player-card .player-profile-button { display:block; width:auto; max-width:100%; padding:0; border:0; border-radius:0; background:none !important; color:#fff0d2; text-align:left; font:inherit; font-size:20px; overflow-wrap:anywhere; }
 .player-card .player-profile-button:hover { color:#ffdda0; text-decoration:underline; }
 .player-profile-button:focus-visible, .player-profile-web:focus-visible { outline:2px solid #e1c487; outline-offset:3px; }

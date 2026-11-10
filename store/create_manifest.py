@@ -37,11 +37,11 @@ manifest = '''<?xml version="1.0" encoding="utf-8"?>
  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
  IgnorableNamespaces="uap rescap">
  <Identity Name={identity} Publisher={publisher} Version={version} ProcessorArchitecture="x64" />
- <Properties><DisplayName>Elden Ring PvP Tracker</DisplayName><PublisherDisplayName>{display}</PublisherDisplayName><Logo>Assets\\StoreLogo.png</Logo></Properties>
+ <Properties><DisplayName>ER PVP Tracker</DisplayName><PublisherDisplayName>{display}</PublisherDisplayName><Logo>Assets\\StoreLogo.png</Logo></Properties>
  <Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" /></Dependencies>
  <Resources>{resources}</Resources>
  <Applications><Application Id="Tracker" Executable="EldenRingTracker.exe" EntryPoint="Windows.FullTrustApplication">
- <uap:VisualElements DisplayName="Elden Ring PvP Tracker" Description="Elden Ring PvP Tracker" BackgroundColor="transparent" Square150x150Logo="Assets\\Square150x150Logo.png" Square44x44Logo="Assets\\Square44x44Logo.png" />
+ <uap:VisualElements DisplayName="ER PVP Tracker" Description="ER PVP Tracker" BackgroundColor="transparent" Square150x150Logo="Assets\\Square150x150Logo.png" Square44x44Logo="Assets\\Square44x44Logo.png" />
  </Application></Applications>
  <Capabilities><rescap:Capability Name="runFullTrust" /><Capability Name="internetClient" /></Capabilities>
 </Package>

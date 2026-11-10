@@ -97,6 +97,14 @@
 
         <section id="information_panel" class="information-page" aria-labelledby="information_title" hidden>
             <div class="information-shell">
+                <section class="information-discord-panel" aria-labelledby="information_discord_title">
+                    <img class="information-discord-icon" src="{{ url_for('static', filename='icon-discord-bronze.png') }}" alt="">
+                    <div class="information-discord-content">
+                        <h2 id="information_discord_title" data-i18n="information_discord_title">Aide et assistance</h2>
+                        <p data-i18n="information_discord_help">Pour toute aide ou demande de support, rejoins notre serveur Discord.</p>
+                        <a class="information-discord" href="https://discord.gg/y79z83D2Ua" target="_blank" rel="noopener noreferrer" data-i18n="information_discord">Rejoindre le serveur Discord</a>
+                    </div>
+                </section>
                 <header class="information-header"><p class="information-eyebrow">FAQ</p><h1 id="information_title" data-i18n="information_title">Informations</h1></header>
                 <div class="faq-list">
                     <details class="faq-item"><summary data-i18n="faq_q_01">Comment démarrer le suivi ?</summary><p data-i18n="faq_a_01">Lance le tracker et Elden Ring, puis sélectionne dans Configuration la langue utilisée en jeu. Clique sur Start pour commencer et sur Stop pour arrêter le suivi. Un nouveau suivi remet la session en mémoire à zéro.</p></details>
@@ -283,10 +291,11 @@
                 <div class="panel_status panel_user">
                     <div class="leaderboard-shell">
                     <header class="leaderboard-header">
-                        <div><p class="leaderboard-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p><h1 data-i18n="leaderboard_title">Classement</h1></div>
+                        <div><p class="leaderboard-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p><h1 data-i18n="leaderboard_title">Classement</h1><p class="leaderboard-intro" data-i18n="leaderboard_intro">Retrouve les résultats des combattants de l’arène.</p></div>
+                        <button type="button" id="leaderboard_refresh" data-i18n="leaderboard_refresh">Actualiser</button>
                     </header>
-                    <p id="leaderboard_status" class="leaderboard-status" role="status" data-i18n="leaderboard_disabled_future">Le classement est actuellement désactivé. Il reviendra dans une future mise à jour.</p>
-                    <div class="panel_multi panel_multi_body" hidden>
+                    <p id="leaderboard_status" class="leaderboard-status" role="status" aria-live="polite" hidden></p>
+                    <div class="panel_multi panel_multi_body">
 
                      
                         <div class="containuer_multi_cadre leaderboard-table-wrap" cadre="sync_multi" tabindex="0">
@@ -549,7 +558,6 @@
                         <div class="form_single"><label class="form_single_left" for="steam_show_name" data-i18n="steam_show_name">Afficher les noms Steam</label><div class="form_single_right"><input type="checkbox" id="steam_show_name" checked></div></div>
                         <div class="form_single"><label class="form_single_left" for="steam_show_country" data-i18n="steam_show_country">Afficher le pays</label><div class="form_single_right"><input type="checkbox" id="steam_show_country" checked></div></div>
                         <div class="form_single"><label class="form_single_left" for="steam_show_ping" data-i18n="steam_show_ping">Afficher le ping</label><div class="form_single_right"><input type="checkbox" id="steam_show_ping" checked></div></div>
-                        <div class="form_single"><label class="form_single_left" for="steam_hide_ip" data-i18n="steam_hide_ip">Masquer les adresses réseau</label><div class="form_single_right"><input type="checkbox" id="steam_hide_ip"></div></div>
                         <div class="form_single"><label class="form_single_left" for="retention_steam" data-i18n="retention_steam">Conservation de l’historique Steam</label><div class="form_single_right"><select id="retention_steam" disabled><option value="0" data-i18n="retention_forever">Tout conserver</option><option value="30">30 j</option><option value="90">90 j</option><option value="365">365 j</option></select><p data-i18n="retention_steam_help">Les anciennes rencontres Steam sont supprimées au démarrage. Les événements de suivi et les autres historiques sont conservés.</p><span id="retention_steam_status" role="status" aria-live="polite"></span></div></div>
                         <p data-i18n="steam_settings_help">Lance le jeu puis laisse Steam ouvert. Les noms affichés sont les profils Steam ; les personnages et les rôles peuvent être différents. Le ping peut être indisponible.</p>
                         <details id="steam_manual_setup">

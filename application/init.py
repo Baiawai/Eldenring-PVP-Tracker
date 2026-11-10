@@ -282,7 +282,13 @@ def apply_score(victory, defeat, egality, combats, noResult, fight_exit, abandon
     con = sqlite3.connect(database_user)
     cur = con.cursor()
     cur.execute(sql, val)
+    try:
+        from application.leaderboard_events import record_delta
+        record_delta(con, 'Arena', (victory, defeat, egality, combats, noResult, fight_exit, abandon, connexionError, gameExit), database_setting)
+    except Exception:
+        app.logger.exception('Unable to queue leaderboard event')
     con.commit()
+    con.close()
     
 def _load_captures(selected_mode, include_images):
     """Filter encrypted modes before decrypting the potentially large images."""

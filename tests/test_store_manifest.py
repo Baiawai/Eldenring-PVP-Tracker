@@ -18,8 +18,12 @@ class StoreManifestTests(unittest.TestCase):
                             '--version', '1.0.0.0', '--icon', str(ROOT / 'baia.ico')],
                            check=True)
             root = ET.parse(Path(directory) / 'AppxManifest.xml').getroot()
-            ns = {'f': 'http://schemas.microsoft.com/appx/manifest/foundation/windows10'}
+            ns = {'f': 'http://schemas.microsoft.com/appx/manifest/foundation/windows10',
+                  'uap': 'http://schemas.microsoft.com/appx/manifest/uap/windows10'}
             self.assertEqual(root.findtext('f:Properties/f:PublisherDisplayName', namespaces=ns), 'A & B')
+            self.assertEqual(root.findtext('f:Properties/f:DisplayName', namespaces=ns), 'ER PVP Tracker')
+            visual = root.find('f:Applications/f:Application/uap:VisualElements', ns)
+            self.assertEqual(visual.attrib['DisplayName'], 'ER PVP Tracker')
             declared = {r.attrib['Language'] for r in root.findall('f:Resources/f:Resource', ns)}
             packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
             self.assertEqual(declared, {'fr', *(pack['html_lang'] for pack in packs.values())})

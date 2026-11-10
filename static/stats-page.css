@@ -12,6 +12,9 @@ body :is(button, input, select, textarea):disabled { cursor:not-allowed !importa
 .cadre { overflow-x:hidden; overflow-y:auto; }
 .live { max-height:none; }
 .presentation { cursor:pointer; }
+.presentation .img_eldenring > img { opacity:0; }
+.presentation .img_eldenring.logo-ready > img { animation:home-logo-fade-in 2.5s ease-in-out forwards; }
+@keyframes home-logo-fade-in { from { opacity:0; } to { opacity:1; } }
 body .app-content .presentation .img_eldenring button.home-start-prompt {
     position:absolute; bottom:7%; left:50%; transform:translateX(-50%);
     width:max-content; max-width:90%; margin:0; padding:5px 12px; border:0;
@@ -310,11 +313,11 @@ body select {
     background-size:5px 5px,5px 5px,1px 20px,cover;
     background-repeat:no-repeat; border-color:#806b45; color:#f0e1c4;
 }
-body :is(.app-content button:not(.diagnostics-tab):not(.player-profile-button), .modal_chart button, .leaderboard-player-dialog button, .capture-viewer-overlay button, .dataTables_paginate .paginate_button) {
+body :is(.app-content button:not(.diagnostics-tab):not(.player-profile-button), .modal_chart button, .dataTables_paginate .paginate_button) {
     background-image:linear-gradient(rgba(0,0,0,.42),rgba(0,0,0,.42)),url("settings-button-texture.png") !important;
     background-size:cover; background-position:center; border-color:#967d50; color:#f2e4c5;
 }
-body :is(.app-content button:not(.diagnostics-tab):not(.player-profile-button), .modal_chart button, .leaderboard-player-dialog button, .capture-viewer-overlay button, .dataTables_paginate .paginate_button):hover:not(:disabled) {
+body :is(.app-content button:not(.diagnostics-tab):not(.player-profile-button), .modal_chart button, .dataTables_paginate .paginate_button):hover:not(:disabled) {
     border-color:#e1c487; filter:brightness(1.12);
 }
 body :is(.app-content button, .modal_chart button, .leaderboard-player-dialog button, .capture-viewer-overlay button, .sidebar-toggle, select):focus-visible {

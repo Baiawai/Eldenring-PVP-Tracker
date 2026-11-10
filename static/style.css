@@ -475,6 +475,7 @@ height:auto;
     max-width:94vw;
     max-height:92vh;
     pointer-events:auto;
+    outline:none;
 }
 .capture-viewer-content .capture-viewer-card {
     display:block;
@@ -520,7 +521,7 @@ height:auto;
     width:34px;
     height:34px;
     border:0;
-    background:#111;
+    background:transparent;
     color:#fff;
     font-size:24px;
     line-height:1;
@@ -2265,7 +2266,7 @@ font-family: optimus princeps;
 #steam_peer_list .steam-peer-name { appearance:none; display:block; flex:1; min-width:0; border:0; border-radius:0; padding:0; margin:0; background:none; box-shadow:none; color:#d4bd8f; font:18px/1.3 Arial,sans-serif; text-align:left; white-space:normal; overflow-wrap:anywhere; cursor:pointer; }
 #steam_peer_list .steam-peer-name:hover { color: #fff1c8; text-decoration: underline; }
 #steam_peer_list .steam-peer-name:focus-visible { outline:2px solid #d4bd8f; outline-offset:3px; }
-.steam-peer-ip, #steam_profile_status { margin: 3px 0 7px; color: #b7ab96; font: 18px/1.35 Arial,sans-serif; overflow-wrap: anywhere; }
+.steam-peer-country, #steam_profile_status { margin: 3px 0 7px; color: #b7ab96; font: 18px/1.35 Arial,sans-serif; overflow-wrap: anywhere; }
 #steam_profile_status { text-align: center; }
 .live-preview { position: relative; }
 .live-preview-loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -2307,7 +2308,6 @@ font-family: optimus princeps;
 
 #notification_ocr_result { white-space:pre-wrap; overflow-wrap:anywhere; text-align:left; }
 body.hide-sidebar-legend .sidebar-legend { display:none; }
-body.hide-steam-address :is(.steam-peer-ip, .player-steam-address, .history-steam-address) { display:none !important; }
 body.hide-steam-name .steam-peer-name { visibility:hidden; }
 body.hide-steam-country .ip-country { display:none !important; }
 body.hide-steam-ping .steam-peer-ping { display:none !important; }

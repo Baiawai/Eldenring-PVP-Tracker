@@ -35,3 +35,5 @@ urllib3==2.8.0
 waitress==3.0.2
 Werkzeug==3.1.9
 WMI==1.5.1
+winrt-Windows.ApplicationModel==4!10.0.28000.2957; sys_platform == "win32"
+winrt-Windows.Services.Store==4!10.0.28000.2957; sys_platform == "win32"

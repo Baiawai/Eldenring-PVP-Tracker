@@ -21,11 +21,13 @@
 .cadre_multi table.dataTable { min-width:1000px; height:auto; border-collapse:collapse !important; margin:8px 0 18px !important; }
 .cadre_multi table.dataTable thead th { padding:13px 26px 13px 10px; color:#d9c49d; background-color:#1d1a14; border-bottom:1px solid #665538; font-size:18px; white-space:nowrap; }
 .cadre_multi table.dataTable tbody td { padding:12px 10px; color:#eee1c9; background:#11100d; border-bottom:1px solid rgba(212,189,143,.12); box-shadow:none; font-size:18px; text-align:center; }
+.cadre_multi #table_multi, .cadre_multi #table_multi tr { border:0 !important; }
 .cadre_multi table.dataTable tbody tr:nth-child(even) td { background:#181610; }
 .cadre_multi table.dataTable tbody tr:hover td { background:#282318 !important; }
 .cadre_multi table.dataTable tbody td:nth-child(3) { text-align:left; overflow-wrap:anywhere; }
 .cadre_multi table.dataTable tbody td:first-child { color:#e5c990; }
 .cadre_multi table.dataTable tbody img { display:block; width:48px; max-width:48px; max-height:48px; object-fit:contain; margin:0 auto; }
+.cadre_multi table.dataTable tbody td:nth-child(2) img { width:auto; max-height:20px; }
 .cadre_multi table.dataTable tbody td:nth-child(4) img { width:54px; max-width:54px; height:54px; object-fit:cover; border:1px solid #665538; }
 .cadre_multi table.dataTable .fakeImageuser { box-sizing:border-box; width:54px; min-height:54px; margin:0 auto; padding:14px; color:#c2aa7d; border:1px solid #665538; }
 .cadre_multi .dataTables_paginate .paginate_button { color:#d8cdbb !important; }
@@ -33,6 +35,8 @@
 @media (max-width:760px) { .leaderboard-header h1 { font-size:36px; } }
 
 /* A player card shares the capture viewer's dark backdrop. */
+#table_multi_processing > div:last-child > div { background:#c6a367; }
+
 .cadre_multi table.dataTable tbody tr[tabindex] { cursor:pointer; }
 .cadre_multi table.dataTable tbody tr[tabindex]:focus-visible { outline:2px solid #e1c487; outline-offset:-2px; }
 .leaderboard-player-dialog { box-sizing:border-box; width:min(1020px, calc(100vw - 16px)); max-width:none; max-height:calc(100vh - 32px); padding:0; overflow:visible; color:#e8dfcd; border:0; background:transparent; box-shadow:none; }

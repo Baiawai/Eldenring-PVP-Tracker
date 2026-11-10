@@ -1,6 +1,20 @@
 // Keep graph labels as readable as the rest of the interface.
 Chart.defaults.font.size = 18;
 
+// TRACKER_ACTION_START
+// A server already running before this update still exposes these actions via GET.
+function sendTrackerAction(jquery, options) {
+    const originalError = options.error;
+    return jquery.ajax(Object.assign({}, options, {type:'POST', error:function (xhr, status, error) {
+        if (xhr && xhr.status === 405) {
+            jquery.ajax(Object.assign({}, options, {type:'GET'}));
+        } else if (originalError) {
+            originalError(xhr, status, error);
+        }
+    }}));
+}
+// TRACKER_ACTION_END
+
 // Garde l’ordre du menu à jour même avec un modèle HTML déjà en cache.
 $('#menu_button_info').insertAfter('#menu_button_multi');
 
@@ -47,7 +61,6 @@ $( document ).ready(function() {
         // $(".sprit div").fadeOut();
         $(".sprit .main").fadeOut();
         containeur_size = $(".sprit").parent().width();
-        $(".img_eldenring").css("display","flex");
         val = 100;
         max_val =16352; // LARGEUR DE L'IMAGE
 
@@ -56,12 +69,24 @@ $( document ).ready(function() {
         new_width = Math.ceil((containeur_size - one_frame) * diviseur) + max_val + (one_frame * 2);
       
        
+        let logoStarted = false;
+        function startLogoFade() {
+            if (logoStarted) return;
+            logoStarted = true;
+            $(".img_eldenring").css("display", "flex");
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    document.querySelector('.presentation .img_eldenring')?.classList.add('logo-ready');
+                });
+            });
+        }
         const myloader = setInterval(loader, 60);
             function loader() {
                 
                 if(val >= -1){
                 $(".sprit").css("background-position", val+"% 50%").css("background-size", new_width+"px 100% ");
                 val -= 4.54;
+                    if (val <= 9) startLogoFade();
                     if(val > 50 && $(".app-header").css("opacity") != "1" && $(".app-header").css("opacity") != 1){
                     $(".app-header").css("opacity","1");
                   
@@ -71,6 +96,7 @@ $( document ).ready(function() {
             
                 clearInterval(myloader);
                 $(".sprit").remove();
+                startLogoFade();
                 setTimeout(function () {
                     const prompt = document.querySelector('.home-start-prompt');
                     if (prompt && !document.getElementById('start').classList.contains('active')) {
@@ -268,7 +294,10 @@ function createTableLanguageSetter(jquery) {
     function apply(data) {
         const table = jquery('#table_multi');
         table.DataTable().destroy();
-        table.DataTable(data ? {language:data} : undefined);
+        if (typeof window !== 'undefined') window.currentLeaderboardLanguage = data;
+        const options = typeof window !== 'undefined' && window.createLeaderboardTableOptions
+            ? window.createLeaderboardTableOptions(data) : (data ? {language:data} : undefined);
+        table.DataTable(options);
     }
     return function setTableLanguage(language) {
         const current = ++generation;
@@ -402,6 +431,7 @@ function launchLanguages(language){
     $(".serie_defeat").text(interface_active[87]);
     $(".avatr_save").text(interface_active[88]);
     if (window.uiApplyLanguage) window.uiApplyLanguage(language);
+    setLeaderboardLanguage(language);
     renderGameDetection();
 }
 
@@ -453,9 +483,9 @@ $("#start").click(function(){
         }
         clearInterval(runApp);
         stopPreviewPolling();
-            $.ajax({
+            sendTrackerAction($, {
                 url: "/stop",
-                type :"GET",
+                type :"POST",
                 contentType: "application/json"
                 , success: function(response){
                     $(".preview_img_profil").css("display","none");
@@ -493,9 +523,9 @@ $("#start").click(function(){
         }
     }, 200);
     runApp = setInterval(intervall, 3000);
-    $.ajax({
+    sendTrackerAction($, {
         url: "/start",
-        type :"GET",
+        type :"POST",
         contentType: "application/json"
         , success: function(response){
             start_ready = true;
@@ -1240,7 +1270,7 @@ $(document).on('click', '.captures-panel .para_capture', function() {
     closeCaptureViewer();
     showCaptureViewer(index);
     $('#capture_viewer_overlay').prop('hidden', false);
-    $('.capture-viewer-close').trigger('focus');
+    $('#capture_viewer_overlay .capture-viewer-content').attr('tabindex', '-1').trigger('focus');
 });
 
 document.addEventListener('pointerdown', function(event) {
@@ -1970,9 +2000,9 @@ $('.full_screen').on('click', function(){
   $("#close_app").click(function(){
 
   
-    $.ajax({
+    sendTrackerAction($, {
         url: "/exit",
-        type :"GET"
+        type :"POST"
         , success: function(response){
             window.close();
         }, error:function(response){
@@ -2018,4 +2048,10 @@ $(window).on('load', function() {
     }
     new MutationObserver(update).observe(nav, {subtree:true, attributes:true, attributeFilter:['class']});
     update();
+})();
+// Load the online section even when the running server has cached an older template.
+(function () {
+    if (document.querySelector('script[data-online-leaderboard]')) return;
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/static/online-leaderboard.css'; document.head.appendChild(css);
+    const script = document.createElement('script'); script.src = '/static/online-leaderboard.js'; script.dataset.onlineLeaderboard = '1'; document.body.appendChild(script);
 })();

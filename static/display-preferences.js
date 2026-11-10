@@ -26,8 +26,9 @@
     scale.addEventListener('change', apply);
     ornament.addEventListener('input', apply);
     apply();
+    // Remove the obsolete setting from cached HTML as well.
+    document.getElementById('steam_hide_ip')?.closest('.form_single')?.remove();
     const network = {
-        hideIp: document.getElementById('steam_hide_ip'),
         showName: document.getElementById('steam_show_name'),
         showCountry: document.getElementById('steam_show_country'),
         showPing: document.getElementById('steam_show_ping')
@@ -36,12 +37,10 @@
     const networkKey = 'trackerSteamDisplayPreferences';
     let savedNetwork = {};
     try { savedNetwork = JSON.parse(localStorage.getItem(networkKey) || '{}') || {}; } catch (_) {}
-    network.hideIp.checked = savedNetwork.hideIp === true;
     network.showName.checked = savedNetwork.showName !== false;
     network.showCountry.checked = savedNetwork.showCountry !== false;
     network.showPing.checked = savedNetwork.showPing !== false;
     function applyNetwork() {
-        document.body.classList.toggle('hide-steam-address', network.hideIp.checked);
         document.body.classList.toggle('hide-steam-name', !network.showName.checked);
         document.body.classList.toggle('hide-steam-country', !network.showCountry.checked);
         document.body.classList.toggle('hide-steam-ping', !network.showPing.checked);

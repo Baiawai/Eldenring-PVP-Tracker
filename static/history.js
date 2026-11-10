@@ -177,9 +177,10 @@
                 const translatedWarnings = Object.values(window.ELDEN_UI_PACKS || {}).map(pack => pack.modern.inventory_warning);
                 message.appendChild(element('span', line.startsWith('Pensez à retirer') || translatedWarnings.includes(line) ? 'history-warning' : '', line));
             });
-            if (entry.kind === 'steam_encounter' && entry.metadata && entry.metadata.ip) {
-                const address = element('div', 'history-steam-address', (entry.metadata.relay ? tr('steam_ip_relay','Relais') : tr('steam_ip_label','IP réseau')) + ' : ' + entry.metadata.ip);
-                message.appendChild(address);
+            if (entry.kind === 'steam_encounter' && entry.metadata && entry.metadata.country_code) {
+                const country = element('div', 'history-steam-country');
+                window.appendIpCountry(country, entry.metadata.country_code);
+                message.appendChild(country);
             }
             card.append(time, message, element('span', 'history-mode', modeLabel(entry.mode)));
             fragment.appendChild(card);

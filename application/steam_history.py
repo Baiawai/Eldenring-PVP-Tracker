@@ -1,5 +1,4 @@
 """Persist Steam connection observations without guessing character identity."""
-import ipaddress
 import threading
 from application.detection_history import record_detection, update_detection
 
@@ -23,12 +22,7 @@ def _clean(peer):
     if len(sid) != 17 or not sid.isascii() or not sid.isdigit():
         return None
     name = str(peer.get('name') or sid).strip()[:128] or sid
-    raw_ip = peer.get('ip')
-    try:
-        ip = str(ipaddress.ip_address(str(raw_ip))) if raw_ip else None
-    except ValueError:
-        ip = None
-    return {'id':sid, 'name':name, 'ip':ip, 'relay':bool(peer.get('relay')) if ip else False}
+    return {'id':sid, 'name':name, 'country_code':peer.get('country_code')}
 
 def observe(status, peers, mode='Unknown'):
     if status not in ('active', 'game_closed', 'disabled', 'steam_unavailable'):
@@ -50,8 +44,8 @@ def observe(status, peers, mode='Unknown'):
                 for field in ('outcome', 'match_date'):
                     if field in previous:
                         item[field] = previous[field]
-            if previous and not item['ip']:
-                item['ip'], item['relay'] = previous['ip'], previous['relay']
+            if previous and not item['country_code']:
+                item['country_code'] = previous.get('country_code')
             if previous and item['name'] == sid and previous['name'] != sid:
                 item['name'] = previous['name']
             known_mode = mode if mode in ('Arena', 'Invasion', 'Defense') else 'Unknown'

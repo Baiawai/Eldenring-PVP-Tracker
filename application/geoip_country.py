@@ -19,7 +19,6 @@ def _reader():
     except (OSError, ValueError):
         return None
 
-@lru_cache(maxsize=8192)
 def country_code(ip):
     if not isinstance(ip, str):
         return None

@@ -44,6 +44,22 @@ assert client.get('/', headers={'Host':'127.0.0.1:5000', 'Origin':'http://127.0.
 assert client.get('/exit', headers={'Origin':'https://example.com', 'Sec-Fetch-Site':'cross-site'}).status_code == 403
 assert client.get('/start', headers={'Referer':'http://localhost:1234/'}).status_code == 403
 assert client.get('/', headers={'Host':'attacker.example:5000'}).status_code == 403
+anonymous = module.app.test_client(use_cookies=False)
+assert anonymous.get('/modeStats').status_code == 403
+assert anonymous.post('/history-purge').status_code == 403
+assert anonymous.get('/monitor-status').status_code == 200
+cookie_response = anonymous.get('/')
+assert 'HttpOnly' in cookie_response.headers['Set-Cookie'] and 'SameSite=Strict' in cookie_response.headers['Set-Cookie']
+for path in ('/start', '/stop', '/exit', '/interval', '/capture', '/nextCaptures'):
+    assert client.head(path).status_code == 405
+for path in ('/start', '/stop', '/exit'):
+    assert client.get(path).status_code == 405
+assert client.get('/monitor-status').get_json()['running'] is False
+security_response = client.get('/monitor-status')
+assert security_response.headers['Cache-Control'] == 'no-store'
+assert security_response.headers['X-Frame-Options'] == 'DENY'
+assert security_response.headers['X-Content-Type-Options'] == 'nosniff'
+assert client.post('/profile-legend', data=b'x' * (2 * 1024 * 1024 + 1), content_type='application/json').status_code == 413
 assert client.get('/init').status_code == 200
 state = client.get('/interval').get_json()
 assert state['fight'] is False and state['monitor_running'] is False
@@ -445,10 +461,27 @@ with closing(detection_history._connect()) as db:
 assert detection_history.read_steam_history() == []
 new_id = detection_history.record_detection('Nouvel événement', 'Invasion')
 assert new_id > steam_id
+# Simulate an old archive containing an IP, then run the one-time privacy migration.
+from application.secur import encrypt_value, decrypt_value
+import json
+with closing(detection_history._connect()) as db:
+    legacy = {'id':'76561198000000000', 'name':'Test', 'ip':'8.8.8.8', 'relay':False}
+    db.execute('UPDATE history_archive_events SET metadata=? WHERE archive_id=? AND original_id=?',
+               (encrypt_value(json.dumps(legacy)), archive_id, steam_id))
+    db.execute("UPDATE detection_history SET kind='steam_encounter',metadata=? WHERE id=?", (encrypt_value(json.dumps(legacy)), new_id))
+    db.execute("DELETE FROM detection_history_migrations WHERE name='steam_country_without_ip_v1'")
+    db.commit()
+with patch.object(detection_history, 'country_code', return_value='US'):
+    with closing(detection_history._connect()) as db:
+        encrypted = db.execute('SELECT metadata FROM history_archive_events WHERE archive_id=? AND original_id=?', (archive_id, steam_id)).fetchone()[0]
+        migrated = json.loads(decrypt_value(encrypted).decode('utf-8'))
+        active = json.loads(decrypt_value(db.execute('SELECT metadata FROM detection_history WHERE id=?', (new_id,)).fetchone()[0]).decode('utf-8'))
+assert active['country_code'] == 'US' and 'ip' not in active
+assert migrated['country_code'] == 'US' and 'ip' not in migrated and 'relay' not in migrated
 restored = client.post(f'/history-archives/{archive_id}/restore').get_json()
 assert restored['restored'] == initial['history']['events']
 assert client.post(f'/history-archives/{archive_id}/restore').get_json()['restored'] == 0
-assert detection_history.read_steam_history()[0]['steam']['ip'] == '192.0.2.1'
+assert all(item['steam']['country_code'] == 'US' and 'ip' not in item['steam'] for item in detection_history.read_steam_history())
 assert client.post('/history-archives/999999/restore').status_code == 404
 assert client.post('/history-purge').get_json()['removed'] == initial['history']['events'] + 1
 assert client.get('/history-storage').get_json()['history']['events'] == 0
