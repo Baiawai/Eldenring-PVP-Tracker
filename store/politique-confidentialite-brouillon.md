@@ -14,7 +14,9 @@ L’application utilise aussi l’adresse MAC d’une interface réseau et le no
 
 ## Services tiers et anciennes versions
 
-La version Microsoft Store ne comporte pas de classement en ligne et ne contacte pas l’ancien serveur de classement. Des versions antérieures ont pu envoyer des données de profil et de statistiques au serveur `anoserveur.com` ; leur conservation et leur suppression restent à vérifier auprès de son exploitant. Le suivi de Steam dépend des services et paramètres de Steam, soumis à la politique de confidentialité de Valve.
+L’ancien classement distant est désactivé. Le code actuel comprend un nouveau classement facultatif, sans serveur configuré par défaut. Si un serveur compatible est configuré, la consultation du classement peut le contacter sans participation ; si vous acceptez de participer et confirmez votre compte Steam, le pseudo, le niveau, l’avatar et les événements de combat (type, mode et date) peuvent lui être transmis. La langue du jeu et le lien vers le profil Steam ne sont partagés qu’avec un accord distinct. La connexion Steam dépend des services de Valve, soumis à sa politique de confidentialité. [Vérifier le contenu du package effectivement publié, l’identité du responsable et des destinataires, les données techniques des requêtes, les durées de conservation et les modalités de retrait avant publication.]
+
+Des versions antérieures ont pu envoyer des données de profil et de statistiques au serveur `anoserveur.com` ; leur conservation et leur suppression restent à vérifier auprès de son exploitant. Le suivi de Steam dépend des services et paramètres de Steam.
 
 ## Finalités et conservation
 

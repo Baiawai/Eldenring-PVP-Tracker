@@ -47,6 +47,24 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 page.wait_for_timeout(1500)
                 for code in ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
                     page.evaluate('(code) => launchLanguages(code)', code)
+                    if code != 'fra':
+                        mismatches = page.evaluate('''(code) => {
+                            const modern = window.ELDEN_UI_PACKS[code].modern;
+                            return Array.from(document.querySelectorAll('[data-i18n]'))
+                                // The leaderboard replaces its eyebrow with the current mode.
+                                .filter(node => node.dataset.i18n !== 'leaderboard_eyebrow')
+                                .filter(node => node.textContent !== modern[node.dataset.i18n])
+                                .map(node => [node.dataset.i18n, node.textContent, modern[node.dataset.i18n]])
+                                .concat(['title', 'placeholder', 'aria'].flatMap(kind =>
+                                    Array.from(document.querySelectorAll('[data-i18n-' + kind + ']'))
+                                        .map(node => {
+                                            const key = node.dataset['i18n' + kind[0].toUpperCase() + kind.slice(1)];
+                                            const actual = node.getAttribute(kind === 'aria' ? 'aria-label' : kind);
+                                            return [key, actual, modern[key]];
+                                        }).filter(entry => entry[1] !== entry[2])));
+                        }''', code)
+                        if mismatches:
+                            raise AssertionError(('Incorrect translated interface text', width, code, mismatches))
                     expected = page.evaluate('(code) => code === "fra" ? window.interface_fr[0] : window.ELDEN_UI_PACKS[code].legacy[0]', code)
                     for selector in ('#retention_captures', '#retention_steam'):
                         actual_period = page.locator(selector + ' option[value="30"]').text_content()

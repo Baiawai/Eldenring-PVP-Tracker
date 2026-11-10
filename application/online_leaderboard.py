@@ -1,4 +1,4 @@
-"""Optional leaderboard synchronization. No network requests without consent."""
+"""Optional leaderboard: participation requires consent; public reads do not."""
 import base64
 import io
 import json
