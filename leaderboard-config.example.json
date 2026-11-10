@@ -2,6 +2,6 @@
   "environment": "development",
   "urls": {
     "development": "http://127.0.0.1:8000",
-    "production": ""
+    "production": "https://eldenringpvp.com"
   }
 }

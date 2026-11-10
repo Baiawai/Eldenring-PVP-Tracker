@@ -18,8 +18,11 @@ module.__dict__['__name__'] = 'isolated_browser_test'
 sys.modules['__main__'] = module
 exec(compile(Path(module.__file__).read_bytes(), module.__file__, 'exec'), module.__dict__)
 
-from application import functions, multi, peer_tracking
+from application import functions, multi, online_leaderboard, peer_tracking
 peer_tracking.snapshot = lambda: {'status':'game_closed', 'ping_mode':'admin_required', 'peers':[], 'enabled':False}
+def no_leaderboard_network(*args, **kwargs):
+    raise RuntimeError('Leaderboard network is disabled in browser tests')
+online_leaderboard._call = no_leaderboard_network
 # The test server uses a separate ephemeral port; production remains restricted.
 module.is_allowed_request = lambda *args, **kwargs: True
 from waitress import serve

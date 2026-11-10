@@ -1,5 +1,6 @@
 """Optional browser test using Playwright and installed Chrome, with isolated data."""
 import os
+import re
 from pathlib import Path
 import socket
 import subprocess
@@ -47,6 +48,9 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 page.wait_for_timeout(1500)
                 for code in ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
                     page.evaluate('(code) => launchLanguages(code)', code)
+                    ranking_faq = page.locator('[data-i18n="faq_a_11"]').text_content()
+                    if 'eldenringpvp.com' not in ranking_faq or 'Steam' not in ranking_faq:
+                        raise AssertionError(('Leaderboard FAQ missing server or Steam', width, code, ranking_faq))
                     if code != 'fra':
                         mismatches = page.evaluate('''(code) => {
                             const modern = window.ELDEN_UI_PACKS[code].modern;
@@ -213,7 +217,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 page.locator('#menu_button_settings').click()
                 information = page.locator('#information_panel')
                 page.locator('#menu_button_information').click()
-                if not information.is_visible() or information.locator('.faq-item').count() != 17:
+                if not information.is_visible() or information.locator('.faq-item').count() != 18:
                     raise AssertionError(('Information FAQ unavailable', width))
                 discord = information.locator('.information-discord')
                 if discord.count() != 1 or not discord.is_visible() or discord.get_attribute('href') != 'https://discord.gg/y79z83D2Ua':
@@ -271,6 +275,21 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 page.screenshot(path=str(ROOT / 'build' / ('audit-ui-' + str(width) + '.png')), full_page=True)
                 print('UI OK', width, height, '15 languages', flush=True)
                 page.close()
+            # A running backend may still serve its older cached HTML template.
+            context = browser.new_context()
+            page = context.new_page()
+            def serve_cached_template(route):
+                response = route.fetch()
+                cached = re.sub(r'<details class="faq-item"><summary data-i18n="faq_q_18">.*?</details>', '', response.text(), count=1)
+                route.fulfill(response=response, body=cached)
+            page.route(url + '/', serve_cached_template)
+            page.goto(url, wait_until='load')
+            page.evaluate("() => launchLanguages('fra')")
+            assert page.locator('[data-i18n="faq_q_18"]').count() == 1
+            assert 'code temporaire' in page.locator('[data-i18n="faq_a_18"]').text_content()
+            page.evaluate("() => launchLanguages('eng')")
+            assert 'temporary code' in page.locator('[data-i18n="faq_a_18"]').text_content()
+            context.close()
             # Reproduce a running server without its newer limiter: the UI must
             # still suppress repeat uploads and notices across tabs and reloads.
             context = browser.new_context()
@@ -417,6 +436,10 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
             page.locator('#online_enabled').evaluate('(element) => element.click()')
             if not page.locator('#online_dialog_text').is_visible():
                 raise AssertionError('Leaderboard consent dialog did not open')
+            consent_text = page.locator('#online_dialog_text').text_content()
+            for detail in ('pseudo', 'langue', 'Steam', 'résultats des combats', 'statistiques locales ne sont pas importées'):
+                if detail not in consent_text:
+                    raise AssertionError(('Incomplete leaderboard consent dialog', detail, consent_text))
             with page.expect_popup() as popup_event:
                 page.locator('#online_accept').click()
             popup = popup_event.value

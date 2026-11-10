@@ -1,9 +1,28 @@
 """Exercise consent, synchronization, and retry using private APPDATA only."""
 from unittest.mock import patch
+import json
+import tempfile
+from pathlib import Path
 from flask import Flask
 app = Flask(__name__)
 from application import online_leaderboard as online
 client = app.test_client()
+
+# Production is the default only when there is no explicit configuration.
+# Existing overrides, including an intentionally empty URL, never fall back.
+with tempfile.TemporaryDirectory(prefix='leaderboard-config-test-') as directory:
+    config_path = Path(directory) / 'leaderboard-config.json'
+    with patch.object(online, 'data_dir', return_value=Path(directory)):
+        assert online._base_url() == 'https://eldenringpvp.com'
+        config_path.write_text(json.dumps({'environment':'development', 'urls':{'development':'http://127.0.0.1:8000'}}), encoding='utf-8')
+        assert online._base_url() == 'http://127.0.0.1:8000'
+        config_path.write_text(json.dumps({'environment':'production', 'urls':{'production':''}}), encoding='utf-8')
+        assert online._base_url() is None
+        config_path.write_text('{invalid json', encoding='utf-8')
+        assert online._base_url() is None
+        config_path.write_text(json.dumps({'environment':'production', 'urls':{'production':'http://example.com'}}), encoding='utf-8')
+        assert online._base_url() is None
+
 # These tests focus on synchronization and consent; verification itself is
 # covered separately with explicit mocked Steam-status responses below.
 verified_steam = online._verified_steam

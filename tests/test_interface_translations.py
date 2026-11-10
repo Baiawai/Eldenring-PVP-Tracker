@@ -70,6 +70,17 @@ class InterfaceTranslationTests(unittest.TestCase):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         self.assertIn('PvP', packs['ara']['modern']['online_consent_text'])
 
+    def test_leaderboard_faq_identifies_server_and_steam_in_every_language(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                faq = pack['modern']['faq_a_11']
+                self.assertIn('eldenringpvp.com', faq)
+                self.assertIn('Steam', faq)
+                self.assertIn('PvP', pack['modern']['online_consent_text'])
+                self.assertIn('Steam', pack['modern']['faq_q_18'])
+                self.assertIn('Steam', pack['modern']['faq_a_18'])
+
     def test_browser_and_backend_use_identical_packs(self):
         backend = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         source = (ROOT / 'static/ui-packs.js').read_text(encoding='utf-8').strip()

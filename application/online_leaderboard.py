@@ -33,6 +33,7 @@ _RUNNING = False
 _LAST_SYNC_START = None
 _SYNC_INTERVAL_SECONDS = 10
 _STATUS = {'state': 'idle'}
+_DEFAULT_BASE_URL = 'https://eldenringpvp.com'
 _LANGUAGE_SYNC_REQUIRED = False
 _RECOVERY_GRANT = None
 _LANGUAGES = frozenset(('fra', 'eng', 'deu', 'ita', 'spaes', 'spaar', 'por', 'pol', 'rus', 'jap', 'kor', 'chi', 'zht', 'tha', 'ara'))
@@ -135,7 +136,7 @@ def _base_url():
     # A separate configuration file allows changing environments without touching the venv.
     path = data_dir() / 'leaderboard-config.json'
     if not path.is_file():
-        return None
+        return _DEFAULT_BASE_URL
     try:
         config = json.loads(path.read_text(encoding='utf-8'))
         environment = config.get('environment', 'production')

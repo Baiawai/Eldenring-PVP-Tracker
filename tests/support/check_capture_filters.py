@@ -1,4 +1,4 @@
-"""Browser checks for capture result filters and the disabled leaderboard.
+"""Browser checks for capture result filters and leaderboard navigation.
 
 Uses a temporary APPDATA and an isolated image directory; no live tracker data.
 Run with Playwright installed: python tests/support/check_capture_filters.py
@@ -89,14 +89,12 @@ for n in range(72):
                 assert toolbar.evaluate('el => el.scrollWidth <= el.clientWidth + 1')
                 page.screenshot(path=str(root/'build'/f'capture-filter-{width}.png'))
                 page.evaluate("document.getElementById('menu_button_multi').click()")
-                assert page.locator('#leaderboard_status').is_visible()
-                assert page.locator('#leaderboard_status').text_content() == page.evaluate('ELDEN_UI_PACKS.chi.modern.leaderboard_disabled_future')
-                assert not page.locator('.panel_multi_body').is_visible()
+                assert page.locator('.panel_multi_body').is_visible()
                 assert not sync_requests, sync_requests
                 page.evaluate("document.body.dataset.storeBuild = 'true'")
                 assert page.locator('#menu_button_multi').is_visible()
                 assert not errors, errors
-                print('Capture filters and disabled leaderboard OK:',width,flush=True)
+                print('Capture filters and leaderboard navigation OK:',width,flush=True)
                 page.close()
             browser.close()
     finally:
