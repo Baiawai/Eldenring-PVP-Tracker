@@ -71,10 +71,10 @@
     event_conflict:['online_event_conflict','Des événements ne peuvent pas être synchronisés. Les données restent locales ; contacte le support.'],
     event_consent_required:['online_event_consent_required','Accepte les nouvelles conditions pour reprendre la synchronisation du classement.'],
     server_update_required:['online_server_update_required','Le serveur du classement doit être mis à jour pour recevoir les combats.'],
-    delete_pending:['online_delete_pending','Retrait en attente : une nouvelle tentative sera effectuée au prochain démarrage.'],
-    language_remove_pending:['online_delete_pending','Retrait en attente : une nouvelle tentative sera effectuée au prochain démarrage.'],
-    steam_cancel_pending:['online_delete_pending','Retrait en attente : une nouvelle tentative sera effectuée au prochain démarrage.'],
-    steam_remove_pending:['online_steam_remove_pending','Retrait du profil Steam en attente de la prochaine synchronisation réussie.'],
+    delete_pending:['online_delete_pending','Demande en attente : une nouvelle tentative sera effectuée au prochain démarrage.'],
+    language_remove_pending:['online_delete_pending','Demande en attente : une nouvelle tentative sera effectuée au prochain démarrage.'],
+    steam_cancel_pending:['online_delete_pending','Demande en attente : une nouvelle tentative sera effectuée au prochain démarrage.'],
+    steam_remove_pending:['online_steam_remove_pending','Retrait du lien vers le profil Steam en attente de la prochaine synchronisation réussie.'],
     steam_login_required:['online_steam_login_required','Connecte ton compte Steam pour participer au classement.'],
     restart_required:['online_restart_required','Redémarre le tracker pour activer ce réglage.'],
     deleted:['online_deleted','Données retirées du classement.'], disabled:['online_disabled','Participation désactivée.']
@@ -309,7 +309,7 @@
     document.getElementById('online_steam_code').value = '';
     document.getElementById('online_recovery_select').hidden = true;
     document.getElementById('online_dialog_title').textContent = disabling ? t('online_disable_title','Désactiver la participation') : t('online_consent_title','Participer au classement');
-    document.getElementById('online_dialog_text').textContent = disabling ? t('online_disable_text','Veux-tu conserver tes données déjà publiées dans le classement ou demander leur retrait ? Le retrait sera réessayé si le serveur est indisponible.') : t('online_consent_text','La participation au classement PvP est facultative. Si tu acceptes, ton pseudo, ton niveau, ton avatar et la langue de jeu sélectionnée sont envoyés au serveur et peuvent être publiés. Un drapeau représente la langue, pas la nationalité. Tu peux arrêter de participer à tout moment.');
+    document.getElementById('online_dialog_text').textContent = disabling ? t('online_disable_text','Veux-tu conserver tes données déjà publiées dans le classement ou demander leur suppression ? La suppression sera réessayée si le serveur est indisponible.') : t('online_consent_text','La participation au classement PvP est facultative. Si tu acceptes, ton pseudo, ton niveau, ton avatar et la langue de jeu sélectionnée sont envoyés au serveur et peuvent être publiés. Un drapeau représente la langue, pas la nationalité. Tu peux arrêter de participer à tout moment.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_steam_login_required', 'Connecte ton compte Steam pour participer au classement.') + ' ' + t('online_steam_identity_consent', 'Le serveur conserve ton identifiant Steam vérifié. La publication du lien vers ton profil Steam est facultative.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_notice', 'Les débuts et résultats des combats, leur mode et leur date sont envoyés au serveur pour calculer le classement. Les anciens scores déjà publiés ne sont pas vérifiés. Les événements sont conservés jusqu’au retrait du profil.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_new_only', 'Pour une nouvelle inscription, seuls les combats détectés après accord comptent ; les anciennes statistiques locales ne sont pas importées.');

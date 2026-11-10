@@ -70,6 +70,20 @@ class InterfaceTranslationTests(unittest.TestCase):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         self.assertIn('PvP', packs['ara']['modern']['online_consent_text'])
 
+    def test_removal_messages_do_not_describe_money_withdrawals(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        money_terms = {
+            'deu': ('auszahlung',), 'ita': ('prelievo',), 'pol': ('wypłat',),
+            'rus': ('вывод средств',), 'jap': ('出金', '引き出し'), 'kor': ('출금',),
+            'chi': ('提现', '提款'), 'zht': ('提現', '提款'), 'eng': ('withdrawal',),
+        }
+        for language, terms in money_terms.items():
+            for key in ('online_disable_text', 'online_delete_pending'):
+                with self.subTest(language=language, key=key):
+                    message = packs[language]['modern'][key].casefold()
+                    for term in terms:
+                        self.assertNotIn(term, message)
+
     def test_leaderboard_faq_identifies_server_and_steam_in_every_language(self):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         for language, pack in packs.items():
