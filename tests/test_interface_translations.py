@@ -30,6 +30,13 @@ class InterfaceTranslationTests(unittest.TestCase):
         self.assertEqual([korean['counter'][i] for i in (0, 2, 4)],
                          ['시작', '중지', '불러오는 중...'])
 
+    def test_italian_help_does_not_fall_back_to_english(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        italian = packs['ita']['modern']
+        self.assertIn('intervallo più lungo', italian['help_capture_interval'])
+        self.assertIn('risoluzione rilevata', italian['help_resolution'])
+        self.assertIn('lingua dell’interfaccia', italian['help_language_specific'])
+
     def test_all_interface_keys_exist_for_every_non_french_language(self):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         keys = set()
@@ -101,6 +108,25 @@ class InterfaceTranslationTests(unittest.TestCase):
         prefix = 'window.ELDEN_UI_PACKS = '
         self.assertTrue(source.startswith(prefix) and source.endswith(';'))
         self.assertEqual(backend, json.loads(source[len(prefix):-1]))
+
+    def test_match_results_and_settings_are_readable_in_asian_languages(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        expected = {
+            'jap': ('勝利', '敗北', '引き分け'),
+            'kor': ('승리', '패배', '무승부'),
+            'chi': ('胜利', '失败', '平局'),
+            'zht': ('勝利', '失敗', '平手'),
+            'tha': ('ชัยชนะ', 'พ่ายแพ้', 'เสมอ'),
+        }
+        for language, terms in expected.items():
+            with self.subTest(language=language):
+                modern = packs[language]['modern']
+                self.assertEqual(tuple(modern[key] for key in ('victory', 'defeat', 'draw')), terms)
+                self.assertEqual(tuple(packs[language]['legacy'][:3]), terms)
+        self.assertEqual(packs['jap']['legacy'][44:46], ['いいえ', 'はい'])
+        self.assertEqual(packs['chi']['legacy'][25:30], ['24小时', '48小时', '7天', '30天', '全部'])
+        self.assertEqual(packs['jap']['modern']['all'], 'すべて')
+        self.assertEqual(packs['tha']['modern']['fights'], 'การต่อสู้')
 
 if __name__ == '__main__':
     unittest.main()

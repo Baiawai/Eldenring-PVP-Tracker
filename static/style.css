@@ -2276,6 +2276,15 @@ font-family: optimus princeps;
 .live .live-preview img { display: none; position: relative; z-index: 1; }
 .live-preview.has-image img { display: block; }
 .live-preview.has-image .live-preview-loader { display: none; }
+.live-preview-notification {
+    position: absolute;
+    z-index: 3;
+    box-sizing: border-box;
+    border: .5px solid #f4d286;
+    border-radius: 2px;
+    pointer-events: none;
+}
+.live-preview-notification[hidden] { display: none; }
 
 .ip-country { display:inline-flex; align-items:center; gap:5px; vertical-align:middle; }
 .ip-country img { display:inline-block; width:18px; height:14px; object-fit:cover; border-radius:2px; }

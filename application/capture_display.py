@@ -1,8 +1,21 @@
 """Detect the game display and capture in virtual-desktop coordinates."""
+from io import BytesIO
+
 import win32api
 import win32con
 import win32gui
-from PIL import ImageGrab
+from PIL import Image, ImageGrab
+
+
+def tracker_crop(screenshot):
+    """Preserve the original JPEG and crop transformations without a disk round trip."""
+    with BytesIO() as buffer:
+        screenshot.save(buffer, format='JPEG')
+        buffer.seek(0)
+        with Image.open(buffer) as image:
+            width, height = image.size
+            return image.crop((int(width / 3.2), int(height / 5),
+                               int(width - width / 3.2), int(height - height / 20)))
 
 
 def game_display():

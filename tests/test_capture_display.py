@@ -1,11 +1,33 @@
 """Monitor detection and capture geometry without reading the real screen."""
 from unittest import TestCase
 from unittest.mock import patch
+from io import BytesIO
+from tempfile import TemporaryDirectory
+from pathlib import Path
+import numpy as np
 from PIL import Image
 from application import capture_display
 
 
 class CaptureDisplayTests(TestCase):
+    def test_tracker_crop_matches_the_previous_disk_jpeg_pipeline(self):
+        rng = np.random.default_rng(17)
+        for width, height in ((333, 201), (1920, 1080)):
+            with self.subTest(size=(width, height)), TemporaryDirectory() as directory:
+                screenshot = Image.fromarray(rng.integers(0, 256, (height, width, 3), dtype=np.uint8))
+                path = Path(directory) / 'frame.jpg'
+                screenshot.save(path)
+                with Image.open(path) as original:
+                    expected = original.crop((int(width / 3.2), int(height / 5),
+                                              int(width - width / 3.2), int(height - height / 20)))
+                actual = capture_display.tracker_crop(screenshot)
+                self.assertEqual(actual.size, expected.size)
+                self.assertEqual(actual.tobytes(), expected.tobytes())
+                old_bytes, new_bytes = BytesIO(), BytesIO()
+                expected.save(old_bytes, 'JPEG', optimize=True, quality=95)
+                actual.save(new_bytes, 'JPEG', optimize=True, quality=95)
+                self.assertEqual(old_bytes.getvalue(), new_bytes.getvalue())
+
     def test_detects_game_monitor_in_virtual_desktop_coordinates(self):
         with patch.object(capture_display.win32gui, 'FindWindow', return_value=42), \
              patch.object(capture_display.win32gui, 'IsIconic', return_value=False), \

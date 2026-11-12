@@ -102,6 +102,31 @@ with patch.dict(functions.array_stats, {'text':'pending-event'}):
     assert functions.array_stats['text'] == 'pending-event'
 assert client.post('/capture-speed', data={'interval': '2'}).get_json()['interval'] == 2.0
 assert client.post('/capture-speed', data={'interval': '999'}).status_code == 400
+# Preview boxes are tied to the current frame and never consume tracking events.
+with patch.object(functions, 'run_monitor', True), patch.object(functions, 'game_detected', True), \
+     patch.object(functions, 'capture_revision', 90), patch.object(functions, 'capture', 'fake-frame'), \
+     patch.object(functions, 'preview_notification_box', None), patch.object(functions, 'preview_notification_version', 3):
+    assert not functions._publish_preview_notification(89, (.1, .2, .8, .4))
+    assert functions._publish_preview_notification(90, (.1, .2, .8, .4))
+    before = dict(functions.array_stats)
+    preview = client.get('/live-preview?after=90&boxAfter=3&wait=1').get_json()
+    assert preview['capture'] is None and preview['boxVersion'] == 4
+    assert preview['notification'] == {'frame':90, 'box':[.1, .2, .8, .4]}
+    assert functions.array_stats == before
+    with patch.object(functions, 'game_detected', False):
+        assert not functions._publish_preview_notification(90, (.1, .2, .8, .4))
+        assert client.get('/live-preview?after=90').get_json()['notification'] is None
+    with patch.object(functions, 'run_monitor', False):
+        assert not functions._publish_preview_notification(90, (.1, .2, .8, .4))
+        assert client.get('/live-preview?after=90').get_json()['notification'] is None
+assert client.get('/live-preview?boxAfter=invalid').status_code == 400
+synthetic_frame = np.zeros((100, 200), dtype=np.uint8)
+synthetic_box = (.2, .3, .6, .5)
+sampled_pixels = functions._preview_box_pixels(synthetic_frame, synthetic_box)
+synthetic_frame[0, 0] = 255
+assert np.array_equal(sampled_pixels, functions._preview_box_pixels(synthetic_frame, synthetic_box))
+synthetic_frame[35, 50] = 255
+assert not np.array_equal(sampled_pixels, functions._preview_box_pixels(synthetic_frame, synthetic_box))
 assert client.get('/notification-region').get_json()['manual'] is False
 assert client.post('/notification-region', data={'locked':'true', 'preview_id':'0'}).get_json()['reason'] == 'no_lockable_preview'
 assert client.post('/notification-region', data={'top': '.3', 'bottom': '.8'}).status_code == 409
@@ -128,6 +153,16 @@ with patch.object(functions, 'capture', 'live-non-event'), \
     assert not functions._remember_notification_event(sample_image, event_text, 'frafr', lines=1)
     assert functions._remember_notification_event(sample_image, event_text, 'frafr', bounds=(.2,.7), lines=2)
     assert not functions._remember_notification_event(sample_image, event_text, 'frafr', bounds=(.2,.7), lines=2)
+    events = functions.classify(event_text, 'frafr')
+    assert not functions._notification_localization_needed([], 'frafr', False, None)
+    assert functions._notification_localization_needed(events, 'frafr', False, None)
+    assert not functions._notification_localization_needed(events, 'frafr', True, None)
+    assert not functions._notification_localization_needed(events, 'frafr', False, (.2, .7))
+    changed_events = functions.classify(messages()['frafr']['2341413'].replace('<?matchRemainingCount?>', '2'), 'frafr')
+    assert functions._notification_localization_needed(changed_events, 'frafr', False, (.2, .7))
+    assert functions._notification_localization_needed(events, 'engus', False, (.2, .7))
+    with patch.object(functions, 'notification_event_sample', {'identity':None}):
+        assert functions._notification_localization_needed(events, 'frafr', False, (.2, .7))
     assert not functions._remember_notification_event(sample_image, messages()['frafr']['2301200'], 'frafr', bounds=(.2,.9), lines=1)
     assert client.get('/notification-region').get_json()['preview_id'] == 1
     assert functions.flush_notification_sample(timeout=5)
@@ -186,6 +221,13 @@ for locale, catalog in messages().items():
     detected = functions.notification_region.analyze_notification(positioned, 1000, locale)
     assert detected and detected['lines'] == 2, (locale, detected)
     assert detected['bounds'][0] <= .52 and detected['bounds'][1] >= .585, locale
+    positioned['left'] = [100 + 12 * i for i in range(len(positioned['text']))]
+    positioned['width'] = [10] * len(positioned['text'])
+    detected_box = functions.notification_region.analyze_notification(positioned, 1000, locale, image_width=1500)
+    assert detected_box and len(detected_box['box']) == 4, locale
+    left, top, right, bottom = detected_box['box']
+    assert 0 <= left < right <= 1 and 0 <= top < bottom <= 1, locale
+    assert left <= 100 / 1500 and top < .52 and bottom > .585, locale
 # A dark two-line strip is detected close to its edges; a one-line strip
 # still receives enough height to fit a two-line message.
 two_line_text = messages()['frafr']['2341413'].replace('<?matchRemainingCount?>', '1').splitlines()
@@ -230,9 +272,9 @@ with patch.object(usage_metrics.threading.Thread, 'start'):
     usage_metrics.start()
 assert client.get('/usage-metrics').get_json()['usage']['sessions'] == 2
 assert str(usage_metrics.DB).startswith(os.environ['APPDATA'])
-with patch.object(functions.pytesseract, 'image_to_string', return_value='ok'):
+with patch.object(functions.ocr_runner, 'image_to_string', return_value='ok'):
     assert functions.measured_game_ocr(None) == 'ok'
-with patch.object(functions.pytesseract, 'image_to_string', side_effect=RuntimeError('ocr')):
+with patch.object(functions.ocr_runner, 'image_to_string', side_effect=RuntimeError('ocr')):
     try:
         functions.measured_game_ocr(None)
         assert False
@@ -245,6 +287,62 @@ assert system['ocr_count'] == 2 and system['ocr_errors'] == 1
 assert system['sync_ok'] == 0 and system['sync_failed'] == 0
 assert system['steam_ping_ms'] is None
 assert client.post('/usage-visit', data={'feature':'statistics'}, headers={'Origin':'https://example.com'}).status_code == 403
+
+# Both OCR views must overlap without swapping the full-frame and notification results.
+from threading import Barrier
+both_started = Barrier(2, timeout=5)
+def parallel_ocr(image, *, lang, config):
+    both_started.wait()
+    assert lang == 'fra'
+    return image + ':' + config
+with patch.object(functions, 'measured_game_ocr', side_effect=parallel_ocr):
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        full, notification = functions.recognize_game_frame(executor, 'full', 'notification', 'fra', '')
+assert full == 'full:--psm 12 --oem 1'
+assert notification == 'notification:--psm 6 --oem 1'
+
+# Preserve errors from either OCR task; the monitor must not process a partial frame.
+def failing_ocr(image, **kwargs):
+    if image == 'full':
+        raise RuntimeError('full OCR failed')
+    return 'ok'
+with patch.object(functions, 'measured_game_ocr', side_effect=failing_ocr):
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        try:
+            functions.recognize_game_frame(executor, 'full', 'notification', 'fra', '')
+            assert False, 'full-frame OCR error was lost'
+        except RuntimeError as error:
+            assert str(error) == 'full OCR failed'
+def failing_notification_ocr(image, **kwargs):
+    if image == 'notification':
+        raise RuntimeError('notification OCR failed')
+    return 'ok'
+with patch.object(functions, 'measured_game_ocr', side_effect=failing_notification_ocr):
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        try:
+            functions.recognize_game_frame(executor, 'full', 'notification', 'fra', '')
+            assert False, 'notification OCR error was lost'
+        except RuntimeError as error:
+            assert str(error) == 'notification OCR failed'
+
+# Tesseract must return the same texts for the same synthetic frame in both modes.
+from PIL import ImageDraw, ImageFont
+font_path = Path(os.environ.get('WINDIR', r'C:\Windows')) / 'Fonts' / 'arial.ttf'
+if Path(runtime_paths.tesseract_path()).is_file() and font_path.is_file():
+    for locale, model in [('frafr', 'fra'), ('engus', 'eng')]:
+        if not (root / 'application' / 'locales' / 'tessdata' / (model + '.traineddata')).is_file():
+            continue
+        picture = Image.new('RGB', (1000, 240), 'white')
+        ImageDraw.Draw(picture).text((20, 80), messages()[locale]['arena:88050'],
+                                     fill='black', font=ImageFont.truetype(str(font_path), 48))
+        gray = functions.cv2.cvtColor(np.array(picture), functions.cv2.COLOR_RGB2GRAY)
+        notification_gray = gray[60:180]
+        serial = (functions.pytesseract.image_to_string(gray, lang=model, config='--psm 12 --oem 1'),
+                  functions.pytesseract.image_to_string(notification_gray, lang=model, config='--psm 6 --oem 1'))
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            parallel = functions.recognize_game_frame(executor, gray, notification_gray, model, '')
+        assert parallel == serial
+        assert any(event['event'] == 'arena_victory' for event in functions.classify(parallel[1], locale))
 
 # System details are read from the isolated APPDATA and do not require Tesseract.
 with patch('application.system_details.tesseract_version', return_value=None):

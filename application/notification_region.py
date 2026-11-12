@@ -106,7 +106,7 @@ def _banner_edges(image, first_top, last_bottom, line_height):
     return top, bottom
 
 
-def analyze_notification(data, image_height, language, image=None):
+def analyze_notification(data, image_height, language, image=None, image_width=None):
     """Locate complete catalog messages and count their OCR text lines.
 
     Return None if the message or its position is uncertain.  The minimum
@@ -116,6 +116,8 @@ def analyze_notification(data, image_height, language, image=None):
     from application.locale_catalog import recognize, _normalize_with_offsets, _EVENT_BY_ID
     if image_height <= 0:
         return None
+    if image_width is not None and image_width <= 0:
+        image_width = None
     groups = {}
     try:
         for i, word in enumerate(data['text']):
@@ -130,6 +132,15 @@ def analyze_notification(data, image_height, language, image=None):
             group['words'].append(word)
             group['top'] = min(group['top'], top)
             group['bottom'] = max(group['bottom'], top + height)
+            if image_width:
+                try:
+                    left, width = int(data['left'][i]), int(data['width'][i])
+                    if left < 0 or width <= 0 or left + width > image_width:
+                        raise ValueError('Invalid horizontal position')
+                    group['left'] = min(group.get('left', left), left)
+                    group['right'] = max(group.get('right', left + width), left + width)
+                except (KeyError, IndexError, TypeError, ValueError):
+                    group['horizontal_invalid'] = True
     except (KeyError, IndexError, TypeError, ValueError):
         return None
     lines = sorted(groups.values(), key=lambda item: item['top'])
@@ -182,7 +193,14 @@ def analyze_notification(data, image_height, language, image=None):
         top = max(0, round(center - minimum / 2))
         bottom = min(image_height, top + minimum)
         top = max(0, bottom - minimum)
-    return {'bounds':(top / image_height, bottom / image_height), 'lines':max_lines}
+    result = {'bounds':(top / image_height, bottom / image_height), 'lines':max_lines}
+    if image_width and all('left' in line and 'right' in line and not line.get('horizontal_invalid') for line in chosen):
+        padding = max(3, round(line_height * .25))
+        result['box'] = (max(0, min(line['left'] for line in chosen) - padding) / image_width,
+                         max(0, first_top - padding) / image_height,
+                         min(image_width, max(line['right'] for line in chosen) + padding) / image_width,
+                         min(image_height, last_bottom + padding) / image_height)
+    return result
 
 
 def detected_bounds(data, image_height, language, image=None):

@@ -1,5 +1,6 @@
 from flask import Flask, session, jsonify, request
 from datetime import date, datetime
+from concurrent.futures import ThreadPoolExecutor
 from screeninfo import get_monitors
 from PIL import Image
 from pytesseract import pytesseract
@@ -31,7 +32,7 @@ from application.mode_stats import mode_user, add_mode_score, correct_invasion_n
 from application.player_sightings import SightingTracker, record_sighting
 from application.detection_history import record_detection, update_detection, message_text, read_steam_history
 from application.locale_catalog import tracker_notifications, classify
-from application import game_language, capture_speed, notification_region, peer_tracking, steam_history, steam_overlay, profile_legend
+from application import game_language, capture_speed, notification_region, peer_tracking, steam_history, steam_overlay, profile_legend, ocr_runner
 from application.session_summary import SessionSummary
 from application.browser_language import browser_language
 from application.ui_localization import packs as ui_packs, localize_counter
@@ -129,6 +130,8 @@ time_result = time_end - time_start
 tampo_text = ""
 capture = ""
 capture_revision = 0
+preview_notification_box = None
+preview_notification_version = 0
 notification_event_sample = None
 notification_sample_revision = 0
 preview_condition = threading.Condition()
@@ -561,7 +564,7 @@ def _remember_notification_event(image_b64, text, language, bounds=None, lines=0
     events = classify(text, language)
     if not events:
         return False
-    identity = (language, bounds is not None, tuple(sorted({(item['event'], tuple(sorted(item['values'].items()))) for item in events})))
+    identity = _notification_event_identity(language, bounds is not None, events)
     with preview_condition:
         if notification_event_sample and notification_event_sample['identity'] == identity:
             return False
@@ -576,9 +579,49 @@ def _remember_notification_event(image_b64, text, language, bounds=None, lines=0
     return True
 
 
+def _notification_event_identity(language, has_bounds, events):
+    return (language, has_bounds, tuple(sorted({(item['event'], tuple(sorted(item['values'].items()))) for item in events})))
+
+
+def _notification_localization_needed(events, language, manual, locked_bounds):
+    if not events:
+        return False
+    # Unlocked automatic detection also uses localization to refine OCR, so it
+    # must keep running even for a previously observed event.
+    if not manual and locked_bounds is None:
+        return True
+    identity = _notification_event_identity(language, True, events)
+    with preview_condition:
+        return not notification_event_sample or notification_event_sample.get('identity') != identity
+
+
 def _notification_preview():
     with preview_condition:
         return dict(notification_event_sample) if notification_event_sample else None
+
+
+def _publish_preview_notification(frame_revision, box):
+    """Publish coordinates only for the still-current, visible capture."""
+    global preview_notification_box, preview_notification_version
+    if not box:
+        return False
+    with preview_condition:
+        if not run_monitor or not game_detected or capture_revision != frame_revision:
+            return False
+        preview_notification_box = {'frame':frame_revision, 'box':box}
+        preview_notification_version += 1
+        preview_condition.notify_all()
+    return True
+
+
+def _preview_box_pixels(frame, box):
+    """Copy the detected pixels so a cached box is never reused after they move."""
+    height, width = frame.shape[:2]
+    left = max(0, min(width - 1, math.floor(box[0] * width)))
+    top = max(0, min(height - 1, math.floor(box[1] * height)))
+    right = max(left + 1, min(width, math.ceil(box[2] * width)))
+    bottom = max(top + 1, min(height, math.ceil(box[3] * height)))
+    return frame[top:bottom, left:right].copy()
 
 
 def _usable_sample_bounds(sample):
@@ -867,7 +910,8 @@ def update_game_display():
 def _run_monitor():
     global run_monitor, monitor_ready, monitor_error, steam_overlay_open
     try:
-        monitor()
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix='tracker-ocr') as ocr_executor:
+            monitor(ocr_executor)
     except _CaptureStopped:
         pass
     except Exception:
@@ -901,6 +945,7 @@ def _run_monitor():
 @app.route("/start", methods={"POST"})
 def start():
     global run_monitor, monitor_ready, monitor_error, capture, capture_revision, game_running
+    global preview_notification_box, preview_notification_version
     global active_capture_display, width_screen, height_screen
     if not monitor_lock.acquire(blocking=False):
         if run_monitor:
@@ -917,6 +962,8 @@ def start():
         with preview_condition:
             capture = ""
             capture_revision += 1
+            preview_notification_box = None
+            preview_notification_version += 1
             preview_condition.notify_all()
         try:
             peer_tracking.request_auto_ping()
@@ -975,6 +1022,7 @@ def capture_select():
 def live_preview():
     try:
         last_revision = int(request.args.get('after', '-1'))
+        previous_box_version = int(request.args['boxAfter']) if 'boxAfter' in request.args else None
     except ValueError:
         return jsonify({'request':'error'}), 400
     previous_detected = request.args.get('detected')
@@ -985,11 +1033,14 @@ def live_preview():
             if acquired:
                 preview_condition.wait_for(
                     lambda: capture_revision != last_revision or
+                    (previous_box_version is not None and preview_notification_version != previous_box_version) or
                     (previous_detected in ('0', '1') and game_detected != (previous_detected == '1')),
                     timeout=1.0)
             revision = capture_revision
             return jsonify({'revision': revision, 'gameDetected': game_detected,
                             'capture': capture if revision != last_revision else None,
+                            'notification': preview_notification_box if game_detected and run_monitor else None,
+                            'boxVersion': preview_notification_version,
                             'retryAfter': 250 if wants_wait and not acquired else 0})
     finally:
         if acquired:
@@ -1211,12 +1262,21 @@ def measured_game_ocr(*args, **kwargs):
     started = time.monotonic()
     failed = False
     try:
-        return pytesseract.image_to_string(*args, **kwargs)
+        return ocr_runner.image_to_string(*args, **kwargs)
     except Exception:
         failed = True
         raise
     finally:
         usage_metrics.record_ocr(time.monotonic() - started, failed)
+
+
+def recognize_game_frame(ocr_executor, original_grey, notification_grey, game_model, ocr_data):
+    """Read both views of the same frame concurrently, then process them in order."""
+    full_frame = ocr_executor.submit(measured_game_ocr, original_grey,
+                                     lang=game_model, config='--psm 12 --oem 1' + ocr_data)
+    notification_text = measured_game_ocr(notification_grey, lang=game_model,
+                                           config='--psm 6 --oem 1' + ocr_data)
+    return full_frame.result(), notification_text
 
 
 def game_ocr_data_config():
@@ -1777,7 +1837,7 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
 
 
 
-def monitor():
+def monitor(ocr_executor):
    
 
     now = datetime.now()
@@ -1789,6 +1849,7 @@ def monitor():
     global newpath_folder
     global run_monitor, monitor_ready
     global capture, capture_revision
+    global preview_notification_box, preview_notification_version
     global game_detected, game_running, steam_overlay_open
     global langue_select
     global mod_launch
@@ -1813,6 +1874,9 @@ def monitor():
     last_capture_cycle = None
     ever_game_visible = False
     overlay_detector = steam_overlay.OverlayDetector()
+    last_preview_key = None
+    last_preview_box = None
+    last_preview_pixels = None
     while(True):
         if count < count_limit and run_monitor == True:
             # Limit the start rate, including processing time; check the setting
@@ -1857,7 +1921,7 @@ def monitor():
                         apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
                         emit_tracking_event(correspondly_active[13])
             
-            text_steam = pytesseract.image_to_string(img_steam)
+            text_steam = ocr_runner.image_to_string(img_steam)
             try:
                 image_steam = cv2.imread(path_steam, cv2.IMREAD_GRAYSCALE)
                 result_steam = cv2.matchTemplate(image_steam, logo, cv2.TM_CCOEFF_NORMED)
@@ -1880,7 +1944,8 @@ def monitor():
                                   steam_overlay.is_steam_overlay_window(foreground_hwnd, game_hwnd))
             steam_overlay_open = overlay_detector.update(foreground_hwnd if game_in_foreground else None,
                                                          overlay_window=overlay_window)
-            if game_in_foreground and not steam_overlay_open and text_steam.find("STEAM") == -1 and max_val < 0.8: 
+            # Pause immediately on a candidate overlay, before confirmation.
+            if game_in_foreground and not overlay_detector.capture_blocked and text_steam.find("STEAM") == -1 and max_val < 0.8:
                 ever_game_visible = True
         
                 if game_detected == False:
@@ -1900,23 +1965,7 @@ def monitor():
                     path_video_simple = os.path.join(base_dir, 'simple_'+str(count)+'.jpg') 
                     path_notif_simple = os.path.join(base_dir, 'simple_notif_'+str(count)+'.jpg')       
                   
-                    width_crop_left = 3.2
-                    width_crop_right = 3.2
-                    height_crop_top = 5
-                    height_crop_bottom = 20
-                   
-                   
-                    screenshot_with_retry(path_video_simple)
-                    # NORMAL SCREEN
-                    img = Image.open(path_video_simple)
-                    # Work in actual captured pixels; the notification region is
-                    # stored as proportions of this central image, independent of DPI.
-                    image_width, image_height = img.size
-                    left_capt = int(image_width / width_crop_left)
-                    top_capt = int(image_height / height_crop_top)
-                    right_capt = int(image_width - (image_width / width_crop_right))
-                    bottom_capt = int(image_height - (image_height / height_crop_bottom))
-                    img_simple = img.crop((left_capt, top_capt, right_capt, bottom_capt))
+                    img_simple = capture_display.tracker_crop(screenshot_with_retry())
                     img_simple.save(path_video_simple, 'JPEG', optimize=True, quality=95)
                     original_grey = cv2.imread(path_video_simple, cv2.IMREAD_GRAYSCALE)
                     with open(path_video_simple, "rb") as f:
@@ -1925,6 +1974,10 @@ def monitor():
                         with preview_condition:
                             capture = image_b64
                             capture_revision += 1
+                            frame_revision = capture_revision
+                            if preview_notification_box is not None:
+                                preview_notification_box = None
+                                preview_notification_version += 1
                             preview_condition.notify_all()
                 
 
@@ -1932,14 +1985,14 @@ def monitor():
                     #Extract text from image
                     game_model = game_language.LANGUAGES[game_locale][1]
                     ocr_data = game_ocr_data_config()
-                    text_simple = measured_game_ocr(original_grey, lang=game_model, config="--psm 12 --oem 1" + ocr_data)
                     frame_manual = notification_manual_mode
                     frame_locked = None if frame_manual else notification_locked_bounds
                     # If unlocked, full-image OCR remains the safe fallback.
                     frame_bounds = notification_bounds if frame_manual else (frame_locked or (0.0, 1.0))
                     notification_image = img_simple.crop(notification_region.crop_box(*img_simple.size, frame_bounds))
                     notification_grey = cv2.cvtColor(np.array(notification_image.convert('RGB')), cv2.COLOR_RGB2GRAY)
-                    notification_text = measured_game_ocr(notification_grey, lang=game_model, config="--psm 6 --oem 1" + ocr_data)
+                    text_simple, notification_text = recognize_game_frame(
+                        ocr_executor, original_grey, notification_grey, game_model, ocr_data)
                     if fight and mode_select == 'Defense':
                         frame = cv2.imread(path_video_simple)
                         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -1949,11 +2002,18 @@ def monitor():
                             text_simple += '\n' + death_text
                     try:
                         combined = text_simple + '\n' + notification_text
-                        if classify(combined, game_locale):
-                            positioned = pytesseract.image_to_data(original_grey, lang=game_model,
-                                config="--psm 6 --oem 1" + ocr_data, output_type=pytesseract.Output.DICT)
-                            located = notification_region.analyze_notification(positioned, img_simple.height, game_locale, original_grey)
+                        events = classify(combined, game_locale)
+                        preview_key = (_notification_event_identity(game_locale, True, events), img_simple.size, frame_bounds) if events else None
+                        same_pixels = bool(events and preview_key == last_preview_key and last_preview_box and
+                                           last_preview_pixels is not None and
+                                           np.array_equal(_preview_box_pixels(original_grey, last_preview_box), last_preview_pixels))
+                        if _notification_localization_needed(events, game_locale, frame_manual, frame_locked) or (events and not same_pixels):
+                            positioned = ocr_runner.image_to_data(original_grey, lang=game_model,
+                                config="--psm 6 --oem 1" + ocr_data)
+                            located = notification_region.analyze_notification(positioned, img_simple.height, game_locale, original_grey, img_simple.width)
                             if located:
+                                last_preview_key, last_preview_box = preview_key, located.get('box')
+                                last_preview_pixels = _preview_box_pixels(original_grey, last_preview_box) if last_preview_box else None
                                 if not frame_manual and frame_locked is None:
                                     crop = img_simple.crop(notification_region.crop_box(*img_simple.size, located['bounds'])).convert('RGB')
                                     crop_grey = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
@@ -1963,6 +2023,12 @@ def monitor():
                                     if classify(crop_text, game_locale):
                                         notification_text = crop_text
                                 _remember_notification_event(image_b64, combined, game_locale, located['bounds'], located['lines'])
+                            else:
+                                last_preview_key, last_preview_box, last_preview_pixels = None, None, None
+                        elif not events:
+                            last_preview_key, last_preview_box, last_preview_pixels = None, None, None
+                        if events and preview_key == last_preview_key and last_preview_box:
+                            _publish_preview_notification(frame_revision, last_preview_box)
                     except Exception:
                         # The optional automatic zone and preview must not interrupt tracking.
                         app.logger.exception('Unable to prepare notification event preview')
@@ -1987,11 +2053,15 @@ def monitor():
                     break
             else:
                 notify_hidden = False
+                last_preview_key, last_preview_box, last_preview_pixels = None, None, None
                 with preview_condition:
                     if game_detected:
                         game_detected = False
+                        if preview_notification_box is not None:
+                            preview_notification_box = None
+                            preview_notification_version += 1
                         preview_condition.notify_all()
-                        notify_hidden = bool(ever_game_visible and game_running and not steam_overlay_open)
+                        notify_hidden = bool(ever_game_visible and game_running and not overlay_detector.capture_blocked)
                 if notify_hidden:
                     tracker_notifications.notify('game_hidden')
                 

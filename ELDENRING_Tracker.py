@@ -160,7 +160,8 @@ if getattr(sys, 'frozen', False) and len(sys.argv) == 3 and sys.argv[1] == '--di
     import tempfile
     from pathlib import Path
     from unittest.mock import patch
-    from application import online_leaderboard
+    from PIL import ImageDraw, ImageFont
+    from application import online_leaderboard, ocr_runner
     with app.test_client() as client:
         response = client.get('/')
         result = {'status': response.status_code, 'tesseract': os.path.isfile(path_to_tesseract),
@@ -169,6 +170,16 @@ if getattr(sys, 'frozen', False) and len(sys.argv) == 3 and sys.argv[1] == '--di
                   'legacy_leaderboard_disabled': client.get('/syncMulti').status_code == 404,
                   'steam_login_route': client.post('/online-leaderboard/steam-login').status_code == 503,
                   'production_leaderboard': online_leaderboard._base_url() == 'https://eldenringpvp.com'}
+        # Exercise the bundled OCR subprocess and its positioned-text output on
+        # a synthetic image, without capturing the screen or using game data.
+        try:
+            sample = Image.new('RGB', (300, 90), 'white')
+            ImageDraw.Draw(sample).text((15, 15), 'TEST', fill='black', font=ImageFont.load_default(size=42))
+            text = ocr_runner.image_to_string(sample, lang='eng', config='--psm 6 --oem 1')
+            positions = ocr_runner.image_to_data(sample, lang='eng', config='--psm 6 --oem 1')
+            result['optimized_ocr'] = 'TEST' in text and 'TEST' in positions.get('text', [])
+        except Exception:
+            result['optimized_ocr'] = False
         with patch.object(online_leaderboard, '_call', return_value={'entries': []}) as leaderboard_call:
             leaderboard_response = client.get('/online-leaderboard/entries?mode=Arena')
         result['leaderboard_route'] = leaderboard_response.status_code == 200 and leaderboard_call.called

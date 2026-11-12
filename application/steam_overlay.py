@@ -1,14 +1,16 @@
 """Non-invasive heuristic for Steam's in-game overlay on Windows.
 
-Steam and Elden Ring keep the same foreground HWND. On the observed setup the
-Steam UI captures the game window, uses the Windows arrow, and releases cursor
-clipping to the virtual desktop. None of these signals alone identifies Steam.
+Steam and Elden Ring can keep the same foreground HWND. On the observed setup,
+Steam uses standard Windows cursors and releases cursor clipping to the virtual desktop.
+The overlay home captures the game window, but its browser can release capture.
+None of these signals alone identifies Steam.
 """
 import ctypes
 import os
 import time
 import winreg
 from ctypes import wintypes
+from functools import lru_cache
 
 import win32api
 import win32con
@@ -26,12 +28,31 @@ class _GuiThreadInfo(ctypes.Structure):
     ]
 
 
-def overlay_indicators_match(game_hwnd, captured_hwnd, cursor_visible, cursor, arrow, clip, desktop):
+def overlay_indicators_match(game_hwnd, captured_hwnd, cursor_visible, cursor, system_cursors, clip, desktop):
     """Match all observed indicators; missing Windows data fails open."""
-    return bool(game_hwnd and captured_hwnd == game_hwnd and cursor_visible and cursor and
-                cursor == arrow and clip and desktop and
+    return bool(game_hwnd and captured_hwnd in (None, 0, game_hwnd) and cursor_visible and cursor and
+                cursor in system_cursors and clip and desktop and
                 clip[0] <= desktop[0] and clip[1] <= desktop[1] and
                 clip[2] >= desktop[2] and clip[3] >= desktop[3])
+
+
+@lru_cache(maxsize=1)
+def standard_cursor_handles():
+    """Steam changes the shared cursor when hovering text, links or window edges."""
+    names = ('IDC_ARROW', 'IDC_IBEAM', 'IDC_HAND', 'IDC_WAIT', 'IDC_APPSTARTING',
+             'IDC_CROSS', 'IDC_SIZEALL', 'IDC_SIZENS', 'IDC_SIZEWE',
+             'IDC_SIZENWSE', 'IDC_SIZENESW', 'IDC_NO', 'IDC_HELP', 'IDC_UPARROW')
+    handles = set()
+    for name in names:
+        identifier = getattr(win32con, name, None)
+        if identifier is not None:
+            try:
+                handle = win32gui.LoadCursor(0, identifier)
+                if handle:
+                    handles.add(handle)
+            except win32gui.error:
+                continue
+    return frozenset(handles)
 
 
 def has_overlay_indicators(game_hwnd):
@@ -44,13 +65,13 @@ def has_overlay_indicators(game_hwnd):
         if not ctypes.windll.user32.GetGUIThreadInfo(tid, ctypes.byref(info)):
             return False
         flags, cursor, _ = win32gui.GetCursorInfo()
-        arrow = win32gui.LoadCursor(0, win32con.IDC_ARROW)
+        system_cursors = standard_cursor_handles()
         rect = wintypes.RECT()
         if not ctypes.windll.user32.GetClipCursor(ctypes.byref(rect)):
             return False
         x, y = win32api.GetSystemMetrics(76), win32api.GetSystemMetrics(77)
         desktop = (x, y, x + win32api.GetSystemMetrics(78), y + win32api.GetSystemMetrics(79))
-        return overlay_indicators_match(game_hwnd, info.hwndCapture, bool(flags & 1), cursor, arrow,
+        return overlay_indicators_match(game_hwnd, info.hwndCapture, bool(flags & 1), cursor, system_cursors,
                                         (rect.left, rect.top, rect.right, rect.bottom), desktop)
     except (OSError, ValueError, TypeError, win32gui.error):
         return False
@@ -106,10 +127,12 @@ class OverlayDetector:
     def __init__(self, confirmation_seconds=0.4):
         self.confirmation_seconds = confirmation_seconds
         self._since = None
+        self.capture_blocked = False
 
     def update(self, game_hwnd, now=None, overlay_window=False):
         now = time.monotonic() if now is None else now
-        if not overlay_window and not has_overlay_indicators(game_hwnd):
+        self.capture_blocked = bool(overlay_window or has_overlay_indicators(game_hwnd))
+        if not self.capture_blocked:
             self._since = None
             return False
         if self._since is None:

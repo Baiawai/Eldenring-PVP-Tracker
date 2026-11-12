@@ -124,36 +124,82 @@ var notify_top = 0;
 let previewImageRequest = 0;
 let previewPollGeneration = 0;
 let previewPollTimer = null;
+let previewStatusVersion = 0;
+let previewNotification = null;
+const livePreviewBox = document.querySelector('.live-preview');
+let previewNotificationOutline = livePreviewBox && livePreviewBox.querySelector('.live-preview-notification');
+if (livePreviewBox && !previewNotificationOutline) {
+    previewNotificationOutline = document.createElement('span');
+    previewNotificationOutline.className = 'live-preview-notification';
+    previewNotificationOutline.setAttribute('aria-hidden', 'true');
+    previewNotificationOutline.hidden = true;
+    livePreviewBox.appendChild(previewNotificationOutline);
+}
 
-function updateLivePreview(capture, detected) {
+function positionPreviewNotification() {
+    const image = livePreviewBox && livePreviewBox.querySelector('img');
+    const marker = previewNotificationOutline;
+    if (!marker) return;
+    const box = previewNotification && previewNotification.box;
+    if (!image || !livePreviewBox.classList.contains('has-image') || !previewNotification ||
+        String(previewNotification.frame) !== image.dataset.previewRevision ||
+        !Array.isArray(box) || box.length !== 4 || !box.every(value => Number.isFinite(value) && value >= 0 && value <= 1) ||
+        box[0] >= box[2] || box[1] >= box[3] || !image.naturalWidth || !image.naturalHeight) {
+        marker.hidden = true;
+        return;
+    }
+    const frame = image.getBoundingClientRect();
+    const container = livePreviewBox.getBoundingClientRect();
+    const scale = Math.min(frame.width / image.naturalWidth, frame.height / image.naturalHeight);
+    const width = image.naturalWidth * scale, height = image.naturalHeight * scale;
+    marker.style.left = (frame.left - container.left + (frame.width - width) / 2 + box[0] * width) + 'px';
+    marker.style.top = (frame.top - container.top + (frame.height - height) / 2 + box[1] * height) + 'px';
+    marker.style.width = ((box[2] - box[0]) * width) + 'px';
+    marker.style.height = ((box[3] - box[1]) * height) + 'px';
+    marker.hidden = false;
+}
+if (livePreviewBox && window.ResizeObserver) new ResizeObserver(positionPreviewNotification).observe(livePreviewBox);
+window.addEventListener('resize', positionPreviewNotification);
+
+function updateLivePreview(capture, detected, revision, notification) {
     const box = document.querySelector('.live-preview');
     const image = box && box.querySelector('img');
     if (!image) return;
+    previewNotification = detected ? notification : null;
+    positionPreviewNotification();
     image.dataset.detected = detected ? '1' : '0';
     if (!image.dataset.previewBound) {
         image.dataset.previewBound = '1';
         image.addEventListener('load', function() {
+            image.dataset.previewRevision = image.dataset.pendingPreviewRevision;
             box.classList.toggle('has-image', image.dataset.detected === '1' && image.naturalWidth > 0);
+            positionPreviewNotification();
         });
-        image.addEventListener('error', function() { box.classList.remove('has-image'); });
+        image.addEventListener('error', function() { box.classList.remove('has-image'); positionPreviewNotification(); });
     }
     if (!detected || !capture) {
         previewImageRequest++;
         box.classList.remove('has-image');
+        positionPreviewNotification();
         return;
     }
     const source = 'data:image/jpg;base64,' + capture;
     if (image.getAttribute('src') === source && image.complete && image.naturalWidth > 0) {
         box.classList.add('has-image');
+        image.dataset.previewRevision = String(revision);
+        positionPreviewNotification();
         return;
     }
     const request = ++previewImageRequest;
     const next = new Image();
     next.onload = function() {
-        if (request === previewImageRequest && image.dataset.detected === '1') image.src = source;
+        if (request === previewImageRequest && image.dataset.detected === '1') {
+            image.dataset.pendingPreviewRevision = String(revision);
+            image.src = source;
+        }
     };
     next.onerror = function() {
-        if (request === previewImageRequest) box.classList.remove('has-image');
+        if (request === previewImageRequest) { box.classList.remove('has-image'); positionPreviewNotification(); }
     };
     next.src = source;
 }
@@ -161,6 +207,8 @@ function updateLivePreview(capture, detected) {
 function stopPreviewPolling() {
     previewPollGeneration++;
     clearTimeout(previewPollTimer);
+    previewNotification = null;
+    positionPreviewNotification();
 }
 
 function startPreviewPolling() {
@@ -169,21 +217,34 @@ function startPreviewPolling() {
     let revision = -1;
     let latestCapture = '';
     let lastDetected = null;
+    let lastBoxVersion = null;
     async function poll() {
         let delay = 0;
         try {
             const params = new URLSearchParams({after:String(revision), wait:'1'});
             if (lastDetected !== null) params.set('detected', lastDetected ? '1' : '0');
+            if (lastBoxVersion !== null) params.set('boxAfter', String(lastBoxVersion));
             const response = await fetch('/live-preview?' + params.toString(), {cache:'no-store'});
             if (!response.ok) throw new Error('request');
             const data = await response.json();
             if (generation !== previewPollGeneration) return;
             const detected = data.gameDetected === true;
-            const changed = data.revision !== revision || detected !== lastDetected;
+            const changed = data.revision !== revision || detected !== lastDetected ||
+                (typeof data.boxVersion === 'number' && data.boxVersion !== lastBoxVersion);
             revision = data.revision;
             if (data.capture !== null) latestCapture = data.capture;
-            if (changed) updateLivePreview(latestCapture, detected);
+            if (changed) {
+                updateLivePreview(latestCapture, detected, revision, data.notification || null);
+                if (lastDetected !== detected) previewStatusVersion++;
+                if (game_detection_state !== detected || (detected && steam_overlay_state)) {
+                    game_detection_state = detected;
+                    if (detected) steam_overlay_state = false;
+                    renderGameDetection();
+                }
+                trackingFavicon.setDetection(detected, steam_overlay_state);
+            }
             lastDetected = detected;
+            lastBoxVersion = typeof data.boxVersion === 'number' ? data.boxVersion : null;
             delay = Number(data.retryAfter) || 0;
         } catch (_) { delay = 500; /* Keep the last frame during a brief connection failure. */ }
         if (generation === previewPollGeneration) previewPollTimer = setTimeout(poll, delay);
@@ -444,6 +505,80 @@ list_lang = ["eng", "fra", "deu", "ita", "spaes", "spaar", "por", "pol", "rus", 
 
 
 let start_ready = true;
+// Frames are prepared once so background tabs only swap small cached data URLs.
+const trackingFavicon = (function () {
+    const links = Array.from(document.querySelectorAll('link[rel~="icon"]'));
+    if (!links.length) return {setRunning: function () {}, setDetection: function () {}};
+    const originals = links.map(link => link.href);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const icon = new Image();
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const context = canvas.getContext('2d');
+    let frames = {};
+    let running = false;
+    let detectionActive = false;
+    let timer = null;
+    let frame = 0;
+
+    function show(urls) {
+        links.forEach((link, index) => { link.href = urls[index] || urls[0]; });
+    }
+    function refreshAnimation() {
+        clearInterval(timer);
+        timer = null;
+        const selectedFrames = frames[detectionActive ? 'active' : 'paused'];
+        if (!running || !selectedFrames) {
+            show(originals);
+            return;
+        }
+        frame = 0;
+        show([selectedFrames[frame]]);
+        if (!reducedMotion.matches) {
+            timer = setInterval(function () {
+                frame = (frame + 1) % selectedFrames.length;
+                show([selectedFrames[frame]]);
+            }, 400);
+        }
+    }
+    icon.onload = function () {
+        if (!context) return;
+        function makeFrames(color) { return [0.55, 0.75, 1, 0.75].map(function (intensity) {
+            context.clearRect(0, 0, 64, 64);
+            context.save();
+            context.shadowColor = 'rgba(' + color + ', ' + intensity + ')';
+            context.shadowBlur = 10 + 7 * intensity;
+            context.drawImage(icon, 5, 5, 54, 54);
+            context.restore();
+            context.save();
+            context.shadowColor = 'rgba(' + color + ', ' + intensity + ')';
+            context.shadowBlur = 6 + 7 * intensity;
+            context.fillStyle = 'rgb(' + color + ')';
+            context.beginPath();
+            context.arc(51, 51, 5 + intensity, 0, Math.PI * 2);
+            context.fill();
+            context.restore();
+            return canvas.toDataURL('image/png');
+        }); }
+        frames = {active: makeFrames('0, 255, 0'), paused: makeFrames('255, 0, 0')};
+        refreshAnimation();
+    };
+    icon.src = originals[0];
+    if (reducedMotion.addEventListener) reducedMotion.addEventListener('change', refreshAnimation);
+    return {setRunning: function (value) {
+        if (running === value) return;
+        running = value;
+        detectionActive = false;
+        refreshAnimation();
+    }, setDetection: function (detected, overlay) {
+        if (!running) return;
+        const next = detected === true && overlay !== true;
+        if (detectionActive === next) return;
+        detectionActive = next;
+        refreshAnimation();
+    }};
+})();
+let monitorStatusGeneration = 0;
 // A monitor started in the background (or in another tab) must be reflected
 // without calling /start again or consuming the pending event queue here.
 function attachRunningMonitor() {
@@ -463,18 +598,24 @@ function attachRunningMonitor() {
     loadProfileLegend();
     startPreviewPolling();
 }
-setInterval(function () {
-    if ($('#start').hasClass('active') || !start_ready) return;
+function refreshMonitorStatus() {
+    if (!start_ready) return;
+    const generation = monitorStatusGeneration;
     $.get('/monitor-status', function (data) {
-        if (data && data.running) attachRunningMonitor();
+        if (!start_ready || generation !== monitorStatusGeneration || !data || typeof data.running !== 'boolean') return;
+        trackingFavicon.setRunning(data.running);
+        if (data.running) attachRunningMonitor();
     });
-}, 3000);
+}
+refreshMonitorStatus();
+setInterval(refreshMonitorStatus, 3000);
 $("#start").click(function(){
     if(start_ready == true){
     if (!$(this).hasClass("active") && $(".settings-panel").is(":visible")) {
         $("#menu_button_settings").click();
     }
     start_ready = false;
+    monitorStatusGeneration++;
 
     if($(this).hasClass("active")){
         $(this).removeClass("active").text(text_active[0]);
@@ -488,6 +629,7 @@ $("#start").click(function(){
                 type :"POST",
                 contentType: "application/json"
                 , success: function(response){
+                    trackingFavicon.setRunning(false);
                     $(".preview_img_profil").css("display","none");
                     $("#capture_img_profil").show();
                     runUser = setInterval(intervall_user, 3000);
@@ -528,6 +670,7 @@ $("#start").click(function(){
         type :"POST",
         contentType: "application/json"
         , success: function(response){
+            trackingFavicon.setRunning(true);
             start_ready = true;
             sidebarTracking = true;
             sidebarGameRunning = null;
@@ -536,6 +679,7 @@ $("#start").click(function(){
             loadProfileLegend();
             startPreviewPolling();
         }, error:function(response){
+            trackingFavicon.setRunning(false);
             clearInterval(runApp);
             $('#start').removeClass('active').text(text_active[0]);
             start_ready = true;
@@ -620,13 +764,17 @@ $('#stats_mode_choice').on('change', function() {
 });
 
 function intervall(){
-   
+    const requestedPreviewStatusVersion = previewStatusVersion;
     $.ajax({
         url: "/interval",
         type :"GET",
         contentType: "application/json"
         , success: function(response){
+            if (requestedPreviewStatusVersion === previewStatusVersion && response.monitor_running === true && typeof response.gameDetected === 'boolean') {
+                trackingFavicon.setDetection(response.gameDetected, response.steamOverlay);
+            }
             if (response.monitor_error || response.monitor_running === false) {
+                trackingFavicon.setRunning(false);
                 $('.monitor-status').remove();
             }
             if (response.monitor_error && $('#start').hasClass('active')) {
@@ -693,9 +841,11 @@ function intervall(){
                 
             }
           
-            game_detection_state = response["gameDetected"] === true;
-            steam_overlay_state = response["steamOverlay"] === true;
-            renderGameDetection();
+            if (requestedPreviewStatusVersion === previewStatusVersion) {
+                game_detection_state = response["gameDetected"] === true;
+                steam_overlay_state = response["steamOverlay"] === true;
+                renderGameDetection();
+            }
             let text_list = ""
             if(response["datas"]["text"] != ""){
                  text_list = text.split(",").map(function(entry) { return entry.replace(/Time:/g, appT('time', 'Temps') + ':'); })
