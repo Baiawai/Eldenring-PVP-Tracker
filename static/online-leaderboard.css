@@ -69,3 +69,7 @@ body .app-content .cadre_multi .ranking-mode-tabs button[aria-pressed="true"] {
 .leaderboard-steam-link[hidden], .leaderboard-steam-unavailable[hidden] { display:none; }
 .leaderboard-history-notice { margin:10px 0 0; color:#c9b99a; font-size:18px; line-height:1.4; }
 .leaderboard-history-notice[hidden] { display:none; }
+.sidebar-guidance .carde_info[info="online-leaderboard"] .carde_banner_info img {
+  left: 22px;
+  top: -22px;
+}

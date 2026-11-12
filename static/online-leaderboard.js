@@ -54,8 +54,31 @@
   if (window.initSettingsYesNo) window.initSettingsYesNo(section);
   const mainStatus = document.createElement('p'); mainStatus.className = 'online-main-status'; mainStatus.setAttribute('role', 'status');
   const content = document.querySelector('.app-content'); if (content) content.prepend(mainStatus);
-  let enabled = false, pending = false, busy = false, timer, steamConnection = 'disconnected', steamCheckGeneration = 0, lastSteamCheckAt = 0, loginGeneration = 0, loginPopup = null, startedParticipation = false, languageAllowed = false, supportsObservation = false, recoveryMode = false, transitionNonce = '';
-  const fallbacks = {online_title:'Classement en ligne', online_participate:'Participer au classement', online_steam_status_label:'Compte Steam', online_steam_login:'Connecter mon compte Steam', online_steam_share:'Partager mon profil Steam', online_explain:'La participation est facultative. Le tracker reste utilisable hors ligne.', online_mode:'Mode', online_refresh:'Actualiser', online_name:'Pseudo', online_level:'Niveau', online_wins:'Victoires', online_losses:'Défaites', arena:'Arène 1v1', invasion:'Invasion', defense:'Monde envahi', online_previous:'Précédent', online_next:'Suivant'};
+  let enabled = false, pending = false, busy = false, timer, steamConnection = 'disconnected', steamCheckGeneration = 0, lastSteamCheckAt = 0, loginGeneration = 0, loginPopup = null, startedParticipation = false, languageAllowed = false, supportsObservation = false, recoveryMode = false, transitionNonce = '', settingsGeneration = 0;
+  const fallbacks = {online_title:'Classement en ligne', online_participate:'Participer au classement', online_invitation_action:'Rejoins le classement en ligne et compare tes résultats avec les autres joueurs.', sidebar_guidance_hint:'Clique dans le cadre pour accéder à cette option.', online_steam_status_label:'Compte Steam', online_steam_login:'Connecter mon compte Steam', online_steam_share:'Partager mon profil Steam', online_explain:'La participation est facultative. Le tracker reste utilisable hors ligne.', online_mode:'Mode', online_refresh:'Actualiser', online_name:'Pseudo', online_level:'Niveau', online_wins:'Victoires', online_losses:'Défaites', arena:'Arène 1v1', invasion:'Invasion', defense:'Monde envahi', online_previous:'Précédent', online_next:'Suivant'};
+  // Build this card in JavaScript too, so it works with an already cached template.
+  const guidanceContainer = document.querySelector('.sidebar-guidance');
+  const participationNotice = document.createElement('div');
+  participationNotice.className = 'carde_info'; participationNotice.setAttribute('info', 'online-leaderboard');
+  participationNotice.setAttribute('role', 'button'); participationNotice.tabIndex = 0; participationNotice.hidden = true;
+  participationNotice.innerHTML = '<div class="header_carde_info"><h5 data-online="online_title"></h5><div class="carde_banner_info"><img src="/static/page-icon-ranking.png" alt=""></div></div><p data-online="online_invitation_action"></p><p class="sidebar-guidance-action" data-online="sidebar_guidance_hint"></p>';
+  if (guidanceContainer) guidanceContainer.appendChild(participationNotice);
+  function updateParticipationNotice(s) {
+    const blocked = !s || s.configured === false || s.migration_available === true || s.partial_identity === true || s.transition_blocked === true || s.server_consent_required === true || ['syncing', 'delete_pending', 'language_remove_pending', 'steam_cancel_pending', 'steam_remove_pending', 'server_changed', 'server_move_required', 'partial_identity', 'server_transition_blocked', 'fresh_consent_required'].includes(s.state);
+    participationNotice.hidden = !s || s.enabled !== false || blocked;
+  }
+  async function openParticipationNotice() {
+    const menu = document.getElementById('menu_button_settings');
+    if (!menu || document.querySelector('dialog[open]')) return;
+    if (window.jQuery && window.jQuery('.settings-panel').is(':hidden')) menu.click();
+    tab.click();
+    const current = await settings();
+    if (current && !participationNotice.hidden && !document.querySelector('dialog[open]')) showDialog(false);
+  }
+  participationNotice.addEventListener('click', openParticipationNotice);
+  participationNotice.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openParticipationNotice(); }
+  });
   function renderSteamConnection() {
     const words = {connected:['online_steam_connected','Connecté'], disconnected:['online_steam_disconnected','Connexion requise'], checking:['online_steam_checking','Vérification…'], unavailable:['online_steam_status_unavailable','Indisponible']};
     const entry = words[steamConnection] || words.disconnected;
@@ -257,7 +280,8 @@
     }
   }
   async function settings(showCompleted = true) {
-    try { const s = await call('settings'); updateServerCooldown(s); transitionNonce = typeof s.transition_nonce === 'string' ? s.transition_nonce : ''; serverMove.hidden = s.migration_available !== true; serverConsentReview.hidden = s.server_consent_required !== true || s.transition_blocked === true; enabled = s.enabled; eventReview.hidden = s.server_consent_required === true || !(enabled && s.event_consent_pending); supportsObservation = s.steam_status_observe === true; if (typeof s.language_shared === 'boolean') languageAllowed = s.language_shared; pending = s.state === 'delete_pending'; steamCheck.checked = s.steam_consent === true; check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render')); if (enabled && s.configured !== false && supportsObservation && s.server_consent_required !== true) refreshSteamConnection(); else { ++steamCheckGeneration; if (!enabled) steamConnection = 'disconnected'; else if (s.configured === false || s.server_consent_required === true) steamConnection = 'unavailable'; else if (s.state === 'success') steamConnection = 'connected'; else if (steamConnection === 'checking') steamConnection = 'unavailable'; renderSteamConnection(); } show(s.partial_identity === true ? 'partial_identity' : (s.transition_blocked === true ? 'server_transition_blocked' : (s.migration_available === true ? 'server_move_required' : (s.server_consent_required === true ? 'fresh_consent_required' : (enabled && s.configured === false ? 'not_configured' : (s.steam_remove_pending && s.state !== 'syncing' ? 'steam_remove_pending' : (!showCompleted && s.state === 'success' ? '' : s.state))))))); return s; } catch (_) { return null; }
+    const generation = ++settingsGeneration;
+    try { const s = await call('settings'); if (generation !== settingsGeneration) return null; updateParticipationNotice(s); updateServerCooldown(s); transitionNonce = typeof s.transition_nonce === 'string' ? s.transition_nonce : ''; serverMove.hidden = s.migration_available !== true; serverConsentReview.hidden = s.server_consent_required !== true || s.transition_blocked === true; enabled = s.enabled; setRankingParticipation(enabled === true && s.server_consent_required !== true && s.event_consent_pending !== true); eventReview.hidden = s.server_consent_required === true || !(enabled && s.event_consent_pending); supportsObservation = s.steam_status_observe === true; if (typeof s.language_shared === 'boolean') languageAllowed = s.language_shared; pending = s.state === 'delete_pending'; steamCheck.checked = s.steam_consent === true; check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render')); if (enabled && s.configured !== false && supportsObservation && s.server_consent_required !== true) refreshSteamConnection(); else { ++steamCheckGeneration; if (!enabled) steamConnection = 'disconnected'; else if (s.configured === false || s.server_consent_required === true) steamConnection = 'unavailable'; else if (s.state === 'success') steamConnection = 'connected'; else if (steamConnection === 'checking') steamConnection = 'unavailable'; renderSteamConnection(); } show(s.partial_identity === true ? 'partial_identity' : (s.transition_blocked === true ? 'server_transition_blocked' : (s.migration_available === true ? 'server_move_required' : (s.server_consent_required === true ? 'fresh_consent_required' : (enabled && s.configured === false ? 'not_configured' : (s.steam_remove_pending && s.state !== 'syncing' ? 'steam_remove_pending' : (!showCompleted && s.state === 'success' ? '' : s.state))))))); return s; } catch (_) { return null; }
   }
   async function watchSync(s) {
     show(s.state);
@@ -325,6 +349,7 @@
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_steam_login_required', 'Connecte ton compte Steam pour participer au classement.') + ' ' + t('online_steam_identity_consent', 'Le serveur conserve ton identifiant Steam vérifié. La publication du lien vers ton profil Steam est facultative.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_notice', 'Les débuts et résultats des combats, leur mode et leur date sont envoyés au serveur pour calculer le classement. Les anciens scores déjà publiés ne sont pas vérifiés. Les événements sont conservés jusqu’au retrait du profil.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_new_only', 'Pour une nouvelle inscription, seuls les combats détectés après accord comptent ; les anciennes statistiques locales ne sont pas importées.');
+    if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_player_content_risk', 'Les pseudonymes et avatars sont fournis par les joueurs. Malgré une modération manuelle, des contenus choquants ou inappropriés peuvent apparaître. La nudité et la violence explicite sont interdites ; signale tout contenu sur Discord.');
     const cancel = document.getElementById('online_cancel'); cancel.hidden = false; cancel.textContent = t('online_cancel','Annuler');
     const keep = document.getElementById('online_keep'); keep.hidden = !disabling; keep.textContent = t('online_keep','Conserver les données');
     const accept = document.getElementById('online_accept'); accept.hidden = false; accept.disabled = false; accept.textContent = disabling ? t('online_remove','Retirer les données') : t('online_accept','J’accepte');
@@ -382,9 +407,11 @@
     dialog.close();
     if (!shouldDisable) { if (dialog.dataset.action === 'steam') await call('steam-cancel', {method:'POST'}).catch(() => {}); return; }
     startedParticipation = false;
+    ++settingsGeneration;
     try {
       const s = await call('settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:false, remove:false})});
-      enabled = s.enabled; ++steamCheckGeneration; steamConnection = 'disconnected'; renderSteamConnection();
+      updateParticipationNotice(s);
+      enabled = s.enabled; setRankingParticipation(enabled === true && s.server_consent_required !== true && s.event_consent_pending !== true); ++steamCheckGeneration; steamConnection = 'disconnected'; renderSteamConnection();
       check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render')); show(s.state);
     } catch (_) { show('offline'); }
   }
@@ -395,6 +422,7 @@
     if (turnOn) { startedParticipation = true; loginPopup = popup; steamStep('waiting'); } else dialog.close();
     noticeAllowed = true;
     const generation = ++loginGeneration;
+    ++settingsGeneration;
     try {
       const s = await call('settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({enabled:turnOn, consent:turnOn, language_consent:turnOn, event_consent:turnOn, remove:remove, transition_nonce:dialog.dataset.transitionNonce || ''})});
       if (turnOn && generation !== loginGeneration) {
@@ -403,13 +431,13 @@
         await settings();
         return;
       }
-      transitionNonce = typeof s.transition_nonce === 'string' ? s.transition_nonce : ''; serverConsentReview.hidden = s.server_consent_required !== true; enabled = s.enabled; eventReview.hidden = s.server_consent_required === true || !(enabled && s.event_consent_pending); if (turnOn) languageAllowed = true; else if (typeof s.language_shared === 'boolean') languageAllowed = s.language_shared; pending = s.state === 'delete_pending'; steamCheck.checked = s.steam_consent === true; renderSteamConnection(); check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render')); show(s.state);
+      updateParticipationNotice(s); transitionNonce = typeof s.transition_nonce === 'string' ? s.transition_nonce : ''; serverConsentReview.hidden = s.server_consent_required !== true; enabled = s.enabled; setRankingParticipation(enabled === true && s.server_consent_required !== true && s.event_consent_pending !== true); eventReview.hidden = s.server_consent_required === true || !(enabled && s.event_consent_pending); if (turnOn) languageAllowed = true; else if (typeof s.language_shared === 'boolean') languageAllowed = s.language_shared; pending = s.state === 'delete_pending'; steamCheck.checked = s.steam_consent === true; renderSteamConnection(); check.checked = enabled; check.dispatchEvent(new Event('tracker-setting-render')); show(s.state);
       if (turnOn) connectSteam(popup); else if (remove) sync();
     } catch (error) { if (popup) popup.close(); if (['pending_events', 'active_match', 'pending_operations', 'invalid_data', 'tracking_running'].includes(error.message)) { dialog.close(); noticeAllowed = true; show('server_transition_blocked'); } else if (error.message === 'fresh_consent_required') { dialog.close(); await settings(); } else if (turnOn && generation === loginGeneration) steamStep(error.message === 'not_configured' ? 'not_configured' : 'offline'); else show(pending ? 'delete_pending' : 'offline'); }
   }
   async function confirmExistingConsent() {
     dialog.close();
-    try { await call('event-consent', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({consent:true})}); eventReview.hidden = true; await call('language-consent', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({consent:true})}); languageAllowed = true; sync(); }
+    try { await call('event-consent', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({consent:true})}); eventReview.hidden = true; await call('language-consent', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({consent:true})}); languageAllowed = true; await settings(); sync(); }
     catch (_) { eventReview.hidden = false; show('offline'); }
   }
   document.getElementById('online_keep').onclick = () => { if (dialog.dataset.action === 'steam') { dialog.close(); showDialog(true); } else choose(false); };
@@ -467,56 +495,35 @@
   const rankingHeading = rankingHeader && rankingHeader.querySelector('.leaderboard-eyebrow');
   const rankingIntro = rankingHeader && rankingHeader.querySelector('.leaderboard-intro');
   const rankingContent = document.getElementById('leaderboard_content');
-  const rankingContentToggle = document.getElementById('leaderboard_content_toggle');
   let rankingRequest = 0, rankingPlayers = new Map(), selectedRank = null, rankingStatusKey = '', rankingMode = 'Arena';
-  // Player-provided names and avatars are hidden until the viewer chooses to see them.
+  // Player-provided content is available only while participation is accepted.
   let rankingContentVisible = false;
-  if (rankingContent) rankingContent.hidden = true;
+  if (rankingContent) rankingContent.hidden = false;
   let refreshPending = false, rankingFetchPending = false, rankingSyncOperations = 0, openingRetryTimer;
   function updateRefreshButton() {
     if (rankingRefresh) rankingRefresh.disabled = !rankingContentVisible || refreshPending || rankingFetchPending || rankingSyncOperations > 0;
   }
-  function reportHref(name) {
-    const subject = t('leaderboard_report_subject', 'Signalement de contenu du classement');
-    let body = t('leaderboard_report_body', 'Pseudo concerné :\nDescription :\n\nN’inclus aucune information sensible.');
-    if (name) {
-      const safeName = String(name).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').slice(0, 80)
-        .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g, part => part.length === 2 ? part : '\uFFFD');
-      body = body.replace('\n', ' ' + safeName + '\n');
+  function setRankingParticipation(allowed) {
+    const changed = rankingContentVisible !== allowed;
+    rankingContentVisible = allowed;
+    updateRefreshButton();
+    if (!allowed) {
+      ++rankingRequest; rankingFetchPending = false; rankingPlayers.clear(); selectedRank = null;
+      if (playerDialog) {
+        if (playerDialog.open) playerDialog.close();
+        const name = document.getElementById('leaderboard_player_name'); if (name) name.textContent = '';
+        const avatar = document.getElementById('leaderboard_player_avatar'); if (avatar) { avatar.removeAttribute('src'); avatar.hidden = true; }
+        playerDialog.querySelectorAll('[data-player-stat], #leaderboard_player_rank, #leaderboard_player_level').forEach(node => { node.textContent = '—'; });
+        const steamLink = playerDialog.querySelector('.leaderboard-steam-link'); if (steamLink) { steamLink.removeAttribute('href'); steamLink.hidden = true; }
+      }
+      if (changed) { const table = currentTable(); if (table) table.clear().draw(); }
+      rankingMessage('leaderboard_participation_required', 'Pour voir les joueurs, active la participation dans Configuration → Classement en ligne et accepte les conditions.');
+    } else {
+      rankingMessage('', '');
+      if (changed && document.getElementById('menu_button_multi').classList.contains('active')) loadRanking();
     }
-    return 'mailto:gael.pitras@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
   }
-  function updateReportLinks() {
-    document.querySelectorAll('.leaderboard-report').forEach(link => { link.href = reportHref(); });
-    const link = playerDialog && playerDialog.querySelector('.leaderboard-player-report');
-    const player = rankingPlayers.get(selectedRank);
-    if (link) link.href = reportHref(player && player.name);
-  }
-  function updateContentToggle() {
-    if (!rankingContentToggle) return;
-    const key = rankingContentVisible ? 'leaderboard_content_hide' : 'leaderboard_content_show';
-    const fallback = rankingContentVisible ? 'Masquer le contenu des joueurs' : 'Afficher le contenu des joueurs';
-    rankingContentToggle.dataset.i18n = key; rankingContentToggle.dataset.i18nFr = fallback;
-    rankingContentToggle.textContent = t(key, fallback);
-    rankingContentToggle.setAttribute('aria-pressed', String(rankingContentVisible));
-  }
-  if (rankingContentToggle && rankingContent) rankingContentToggle.addEventListener('click', () => {
-    rankingContentVisible = !rankingContentVisible;
-    rankingContent.hidden = !rankingContentVisible;
-    updateContentToggle(); updateRefreshButton();
-    if (rankingContentVisible) { loadRanking(); return; }
-    ++rankingRequest; rankingFetchPending = false; rankingPlayers.clear(); selectedRank = null;
-    if (playerDialog) {
-      if (playerDialog.open) playerDialog.close();
-      const name = document.getElementById('leaderboard_player_name'); if (name) name.textContent = '';
-      const avatar = document.getElementById('leaderboard_player_avatar'); if (avatar) { avatar.removeAttribute('src'); avatar.hidden = true; }
-      playerDialog.querySelectorAll('[data-player-stat], #leaderboard_player_rank, #leaderboard_player_level').forEach(node => { node.textContent = '—'; });
-      const steamLink = playerDialog.querySelector('.leaderboard-steam-link'); if (steamLink) { steamLink.removeAttribute('href'); steamLink.hidden = true; }
-    }
-    updateReportLinks(); rankingMessage('', '');
-    const table = currentTable(); if (table) table.clear().draw();
-  });
-  updateContentToggle(); updateReportLinks(); updateRefreshButton();
+  updateRefreshButton();
   const rankingModes = document.createElement('div');
   rankingModes.className = 'ranking-mode-tabs';
   rankingModes.setAttribute('role', 'group');
@@ -579,6 +586,7 @@
       }};
   };
   if (rankingTable) { const table = currentTable(); if (table) table.destroy(); $(rankingTable).DataTable(window.createLeaderboardTableOptions(window.currentLeaderboardLanguage)); }
+  setRankingParticipation(false);
   async function loadRanking() {
     const table = currentTable();
     if (table && table.ajax) table.ajax.reload(null, true);
@@ -591,7 +599,6 @@
     const entry = rankingPlayers.get(rank);
     if (!entry || !playerDialog) return;
     selectedRank = rank;
-    updateReportLinks();
     const stats = entry.stats || {};
     document.getElementById('leaderboard_player_name').textContent = entry.name;
     let steamLink = playerDialog.querySelector('.leaderboard-steam-link');
@@ -738,7 +745,7 @@
       initialSettings.then(synchronizeOpening).finally(() => { rankingSyncOperations--; updateRefreshButton(); });
     }
   });
-  document.addEventListener('ui-language-change', () => { if (activeState) show(activeState); if (dialog.open && dialog.dataset.action === 'steam') steamStep(dialog.dataset.step); updateRankingModeLabels(); updateContentToggle(); updateReportLinks(); if (rankingStatusKey) rankingMessage(rankingStatusKey, rankingStatusKey === 'leaderboard_loading' ? 'Chargement du classement…' : 'Impossible de charger le classement.', rankingLoading); else renderNotice(); });
+  document.addEventListener('ui-language-change', () => { if (activeState) show(activeState); if (dialog.open && dialog.dataset.action === 'steam') steamStep(dialog.dataset.step); updateRankingModeLabels(); if (rankingStatusKey) rankingMessage(rankingStatusKey, rankingStatusKey === 'leaderboard_loading' ? 'Chargement du classement…' : rankingStatusKey === 'leaderboard_participation_required' ? 'Pour voir les joueurs, active la participation dans Configuration → Classement en ligne et accepte les conditions.' : 'Impossible de charger le classement.', rankingLoading); else renderNotice(); });
   window.addEventListener('focus', () => { if (supportsObservation && enabled && !(dialog.open && dialog.dataset.action === 'steam')) refreshSteamConnection(); });
   const initialSettings = settings(false);
   initialSettings.then(s => {

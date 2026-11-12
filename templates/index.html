@@ -117,7 +117,7 @@
                     <details class="faq-item"><summary data-i18n="faq_q_08">Que montre la page Joueurs ?</summary><p data-i18n="faq_a_08">Elle regroupe les noms reconnus et les profils Steam observés. Un nom de personnage et un profil Steam ne sont pas automatiquement associés.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_09">Comment fonctionne le ping ?</summary><p data-i18n="faq_a_09">Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. En développement, la mesure avancée du ping peut demander une autorisation administrateur ; la version Store utilise le ping Steam disponible sans élévation.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_10">Où sont mes données ?</summary><p data-i18n="faq_a_10">Les statistiques, réglages, captures et historiques sont stockés sur ton PC. Sauvegarde le dossier %APPDATA%\Elden Ring PvP Tracker lorsque le tracker est arrêté.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_11">Le classement est-il disponible ?</summary><p data-i18n="faq_a_11">La consultation du classement contacte le serveur configuré, par défaut eldenringpvp.com. La participation est facultative et nécessite de connecter un compte Steam.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_11">Le classement est-il disponible ?</summary><p data-i18n="faq_a_11">Pour afficher les joueurs dans l’application, active la participation et accepte les conditions. Le classement utilise le serveur configuré, par défaut eldenringpvp.com. La participation est facultative et nécessite un compte Steam.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_12">Faut-il installer Python ou Tesseract ?</summary><p data-i18n="faq_a_12">La version Store comprend les composants nécessaires. Pour lancer le projet depuis ses sources, installe Python et prépare la distribution locale de Tesseract ou utilise une installation existante ; consulte le README du projet.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_13">Fermer l’onglet arrête-t-il le suivi ?</summary><p data-i18n="faq_a_13">Fermer l’onglet laisse le tracker actif. Stop arrête le suivi ; Configuration → Quitter ferme le programme. Redémarrer le suivi remet la session en mémoire à zéro, mais conserve les statistiques enregistrées.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_14">Comment protéger mes informations ?</summary><p data-i18n="faq_a_14">Les captures et historiques peuvent contenir des noms ou adresses réseau. Protège tes sauvegardes avant de les partager.</p></details>
@@ -295,13 +295,6 @@
                         <div><p class="leaderboard-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p><h1 data-i18n="leaderboard_title">Classement</h1><p class="leaderboard-intro" data-i18n="leaderboard_intro">Retrouve les résultats des combattants de l’arène.</p></div>
                         <button type="button" id="leaderboard_refresh" data-i18n="leaderboard_refresh">Actualiser</button>
                     </header>
-                    <section class="leaderboard-content-options">
-                        <p data-i18n="leaderboard_content_rules">Le classement est modéré par l’administrateur. La nudité et la violence explicite sont interdites.</p>
-                        <p data-i18n="leaderboard_content_filter_explain">Les pseudonymes et avatars sont fournis par les joueurs et modérés manuellement. Choisis de les afficher pour consulter le classement.</p>
-                        <button type="button" id="leaderboard_content_toggle" aria-pressed="false" aria-controls="leaderboard_content" data-i18n="leaderboard_content_show">Afficher le contenu des joueurs</button>
-                        <p data-i18n="leaderboard_report_help">Un e-mail s’ouvre : indique le pseudo concerné, sans inclure d’informations sensibles.</p>
-                        <a class="leaderboard-report" data-i18n="leaderboard_report_button" href="mailto:gael.pitras@gmail.com?subject=Signalement%20de%20contenu%20du%20classement&amp;body=Pseudo%20concern%C3%A9%20%3A%0ADescription%20%3A%0A%0AN%E2%80%99inclus%20aucune%20information%20sensible.">Signaler un contenu</a>
-                    </section>
                     <p id="leaderboard_status" class="leaderboard-status" role="status" aria-live="polite" hidden></p>
                     <div id="leaderboard_content" class="panel_multi panel_multi_body" hidden>
 
@@ -330,6 +323,9 @@
                             </table>
                         </div>
                     </div>
+                    <section class="leaderboard-content-options">
+                        <a class="leaderboard-report" data-i18n="leaderboard_report_button" href="https://discord.gg/y79z83D2Ua" target="_blank" rel="noopener noreferrer">Signaler un contenu</a>
+                    </section>
                     </div>
                 </div>
 
@@ -726,12 +722,13 @@
             <div class="sidebar-guidance">
             <div class="carde_info" info="languages">
                 <div class="header_carde_info">
-                        <h5 class="btr_1">Modifier votre languages</h5>
+                        <h5 class="btr_1">Choisir la langue du jeu</h5>
                         <div class="carde_banner_info">
                             <img src="{{ url_for('static', filename='icon-settings-bronze.png') }}" alt=""/>
                         </div>
                 </div>
-                <p class="btr_2">Le système à besoin de savoir quel languages utilise votre jeux</p>
+                <p class="btr_2">Sélectionne la langue utilisée dans ton jeu pour reconnaître les messages.</p>
+                <p class="sidebar-guidance-action" data-i18n="sidebar_guidance_hint">Clique dans le cadre pour accéder à cette option.</p>
          
             </div>
 
@@ -745,7 +742,7 @@
                         </div>
                 </div>
                 <p data-i18n="sidebar_profile_guidance">Lance Elden Ring et charge ta partie, puis ouvre l’onglet « Quitter la partie » sans quitter. L’application récupérera ton pseudo, ton niveau et ton image.</p>
-                <p class="sidebar-guidance-action" data-i18n="sidebar_profile_open">Clique ici pour ouvrir la configuration du profil.</p>
+                <p class="sidebar-guidance-action" data-i18n="sidebar_guidance_hint">Clique dans le cadre pour accéder à cette option.</p>
             </div>
             </div>
 
@@ -768,8 +765,7 @@
                     <p class="leaderboard-player-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p>
                     <h2 id="leaderboard_player_name"></h2>
                     <div class="leaderboard-player-meta"><span><span data-i18n="leaderboard_rank">Rang</span> <strong id="leaderboard_player_rank"></strong></span><span><span data-i18n="leaderboard_level">Niveau</span> <strong id="leaderboard_player_level"></strong></span></div>
-                    <a class="leaderboard-player-report" data-i18n="leaderboard_report_button" href="mailto:gael.pitras@gmail.com?subject=Signalement%20de%20contenu%20du%20classement&amp;body=Pseudo%20concern%C3%A9%20%3A%0ADescription%20%3A%0A%0AN%E2%80%99inclus%20aucune%20information%20sensible.">Signaler un contenu</a>
-                    <p class="leaderboard-player-report-help" data-i18n="leaderboard_report_help">Un e-mail s’ouvre : indique le pseudo concerné, sans inclure d’informations sensibles.</p>
+                    <a class="leaderboard-player-report" data-i18n="leaderboard_report_button" href="https://discord.gg/y79z83D2Ua" target="_blank" rel="noopener noreferrer">Signaler un contenu</a>
                 </div>
             </div>
             <section class="leaderboard-player-stats" aria-labelledby="leaderboard_player_stats_title">

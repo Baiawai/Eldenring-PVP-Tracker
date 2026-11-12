@@ -11,7 +11,10 @@ from pathlib import Path
 
 import win32api
 import win32con
+import win32event
 import win32process
+import pywintypes
+from win32com.shell import shell, shellcon
 
 from application.init import database_setting
 
@@ -67,16 +70,45 @@ def steam_session():
 
 
 def activate(executable):
-    """Send a fixed command via Steam's own client; this is not game injection."""
+    """Request logging through Steam; None means Windows elevation was refused."""
     try:
         process = subprocess.Popen([str(executable), '-console', '+log_ipc', COMMAND_FILTER],
                                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
                                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         process.wait(timeout=15)
         return process.returncode == 0
-    except (OSError, subprocess.TimeoutExpired):
+    except OSError as error:
+        if error.winerror == 740:
+            return _activate_elevated(executable)
         logging.getLogger(__name__).exception('Unable to request Steam logging')
         return False
+    except subprocess.TimeoutExpired:
+        logging.getLogger(__name__).exception('Unable to request Steam logging')
+        return False
+
+
+def _activate_elevated(executable):
+    """Use Windows consent if Steam itself is configured to require elevation."""
+    handle = None
+    try:
+        launched = shell.ShellExecuteEx(
+            fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+            lpVerb='runas', lpFile=str(executable),
+            lpParameters=subprocess.list2cmdline(['-console', '+log_ipc', COMMAND_FILTER]),
+            lpDirectory=str(executable.parent), nShow=win32con.SW_HIDE,
+        )
+        handle = launched.get('hProcess')
+        if not handle or win32event.WaitForSingleObject(handle, 15000) != win32event.WAIT_OBJECT_0:
+            return False
+        return win32process.GetExitCodeProcess(handle) == 0
+    except (OSError, pywintypes.error) as error:
+        if getattr(error, 'winerror', None) == 1223:
+            return None
+        logging.getLogger(__name__).exception('Unable to request elevated Steam logging')
+        return False
+    finally:
+        if handle:
+            handle.Close()
 
 
 def _worker(peer_enabled):
@@ -101,7 +133,9 @@ def _worker(peer_enabled):
                         next_attempt = 0
                     if session[:2] != last_session and time.monotonic() >= next_attempt:
                         next_attempt = time.monotonic() + 60
-                        if activate(session[2]):
+                        outcome = activate(session[2])
+                        if outcome is True or outcome is None:
+                            # Do not repeatedly prompt after the user refuses elevation.
                             last_session = session[:2]
         except Exception:
             logging.getLogger(__name__).exception('Steam automatic logging failed')

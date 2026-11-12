@@ -7,6 +7,7 @@ import base64
 import os
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.request
@@ -31,7 +32,7 @@ for n in range(72):
  mode,v,d,e=cases[n%len(cases)]
  add_capture('Player '+str(n),v,d,e,15,'01/01/2025',mode,'aW1hZ2U=')
 '''
-    py = root / '.venv/Scripts/python.exe'
+    py = sys.executable
     subprocess.run([str(py), '-c', seed], cwd=root, env=env, check=True, capture_output=True)
     server = subprocess.Popen([str(py), str(root / 'tests/support/browser_server.py')], cwd=root, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -89,9 +90,8 @@ for n in range(72):
                 assert toolbar.evaluate('el => el.scrollWidth <= el.clientWidth + 1')
                 page.screenshot(path=str(root/'build'/f'capture-filter-{width}.png'))
                 page.evaluate("document.getElementById('menu_button_multi').click()")
-                assert not page.locator('.panel_multi_body').is_visible()
-                page.locator('#leaderboard_content_toggle').click()
                 assert page.locator('.panel_multi_body').is_visible()
+                assert page.locator('#leaderboard_content_toggle').count() == 0
                 assert not sync_requests, sync_requests
                 page.evaluate("document.body.dataset.storeBuild = 'true'")
                 assert page.locator('#menu_button_multi').is_visible()

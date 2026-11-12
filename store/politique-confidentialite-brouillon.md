@@ -3,7 +3,7 @@
 Ce texte est un brouillon pour Elden Ring PvP Tracker. Avant publication, le responsable doit renseigner les champs entre crochets, vérifier les traitements effectifs et publier la version finale à une adresse HTTPS accessible publiquement.
 
 **Responsable :** [nom ou raison sociale à confirmer].  
-**Contact :** gael.pitras@gmail.com.  
+**Contact :** support@eldenringpvp.com.<br>
 **Dernière mise à jour :** [date].
 
 ## Données traitées sur votre appareil
@@ -24,8 +24,8 @@ Les données servent à détecter les événements PvP et à afficher l’histor
 
 ## Vos choix et vos droits
 
-Vous pouvez arrêter le suivi et désactiver la détection Steam dans l’application. Pour demander l’accès, la correction ou l’effacement des données traitées par le responsable du classement, contactez gael.pitras@gmail.com. [Confirmer que ces demandes pourront être traitées et préciser la procédure applicable aux données locales et les droits et recours applicables selon les pays.]
+Vous pouvez arrêter le suivi et désactiver la détection Steam dans l’application. Pour demander l’accès, la correction ou l’effacement des données traitées par le responsable du classement, contactez support@eldenringpvp.com. [Confirmer que ces demandes pourront être traitées et préciser la procédure applicable aux données locales et les droits et recours applicables selon les pays.]
 
 ## Modifications et contact
 
-[Décrire comment les changements de cette politique seront communiqués.] Pour toute question : gael.pitras@gmail.com.
+[Décrire comment les changements de cette politique seront communiqués.] Pour toute question : support@eldenringpvp.com.

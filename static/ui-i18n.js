@@ -2,7 +2,7 @@
     let language = 'fra';
     // Keep the FAQ current when Flask serves a template cached before this update.
     const faqFrench = {"faq_a_01": "Lance le tracker et Elden Ring, puis sélectionne dans Configuration la langue utilisée en jeu. Clique sur Start pour commencer et sur Stop pour arrêter le suivi. Un nouveau suivi remet la session en mémoire à zéro.", "faq_a_04": "Le tracker lit les notifications à l’écran par reconnaissance de texte (OCR). Un message masqué, manqué ou mal lu peut laisser un résultat inconnu. Vérifie la langue du jeu et la zone dans Configuration → Capture, puis teste-la avec un exemple reconnu sur deux lignes.", "faq_a_05": "Dans Configuration, sélectionne la langue utilisée dans le jeu. Elle règle l’interface et la reconnaissance des messages, sans changer la langue du jeu. Au premier lancement, la langue du navigateur est utilisée si elle est prise en charge, sinon l’anglais ; ton choix enregistré est conservé.", "faq_a_06": "Dans Configuration → Capture, la détection automatique cherche la zone des notifications et prévoit les messages sur deux lignes. Vérifie l’aperçu avec un exemple reconnu, puis verrouille la zone si elle est correcte ; déverrouille-la si l’affichage change. Tu peux aussi désactiver le mode automatique et régler les limites manuellement. Un intervalle plus long réduit la fréquence des lectures et peut manquer des messages courts.", "faq_a_07": "Choisis un mode : le taux de victoire divise les victoires par les victoires, défaites et égalités enregistrées. Les égalités ne concernent que l’arène. Le graphique utilise les captures de résultats conservées ; il peut donc différer des statistiques cumulées.", "faq_a_09": "Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. En développement, la mesure avancée du ping peut demander une autorisation administrateur ; la version Store utilise le ping Steam disponible sans élévation.", "faq_a_12": "La version Store comprend les composants nécessaires. Pour lancer le projet depuis ses sources, installe Python et prépare la distribution locale de Tesseract ou utilise une installation existante ; consulte le README du projet.", "faq_a_13": "Fermer l’onglet laisse le tracker actif. Stop arrête le suivi ; Configuration → Quitter ferme le programme. Redémarrer le suivi remet la session en mémoire à zéro, mais conserve les statistiques enregistrées.", "faq_q_15": "Comment récupérer mon profil de personnage ?", "faq_a_15": "Dans Configuration → Profil, lance la capture. En jeu, ouvre Configuration → Quitter la partie sans confirmer la sortie et garde le jeu visible. Le tracker récupère ensemble pseudo, niveau et image : vérifie-les avant d’enregistrer ou annule si nécessaire.", "faq_q_16": "Comment fonctionnent l’archivage et la purge de l’historique ?", "faq_a_16": "Arrête le suivi avant d’archiver ou de purger l’historique actif. L’archivage retire les événements de la liste, y compris les rencontres Steam, et les conserve chiffrés localement. La restauration ajoute les événements absents sans doublons et conserve l’archive. La purge retire l’historique actif mais conserve les archives, les captures et les statistiques cumulées.", "faq_q_17": "Comment activer la détection Steam ?", "faq_a_17": "Dans Configuration → P2P, active la détection des joueurs. L’activation automatique du journal Steam est proposée par défaut : elle demande à Steam d’activer le journal nécessaire au démarrage du tracker ou de Steam. Si elle échoue, la commande manuelle reste disponible. Les profils observés ne sont pas automatiquement associés aux personnages en jeu."};
-    faqFrench.faq_a_11 = 'La consultation du classement contacte le serveur configuré, par défaut eldenringpvp.com. La participation est facultative et nécessite de connecter un compte Steam.';
+    faqFrench.faq_a_11 = 'Pour afficher les joueurs dans l’application, active la participation et accepte les conditions. Le classement utilise le serveur configuré, par défaut eldenringpvp.com. La participation est facultative et nécessite un compte Steam.';
     faqFrench.faq_q_18 = 'Comment connecter Steam et participer au classement ?';
     faqFrench.faq_a_18 = 'Dans Configuration → Classement en ligne, active la participation et accepte les conditions. Connecte-toi à Steam dans la fenêtre ouverte, puis saisis dans le tracker le code temporaire affiché par le site ; ne partage pas ce code. La publication d’un lien vers ton profil Steam est facultative.';
     const faqList = document.querySelector(".faq-list");
@@ -46,10 +46,11 @@
         rankingPanel.querySelectorAll('.leaderboard-intro, #leaderboard_refresh').forEach(node => { node.hidden = false; });
         const rankingContent = rankingPanel.querySelector('.panel_multi_body');
         if (rankingContent) { rankingContent.id = 'leaderboard_content'; rankingContent.hidden = true; }
-        if (header && !rankingPanel.querySelector('.leaderboard-content-options')) {
-            const options = document.createElement('section'); options.className = 'leaderboard-content-options';
-            options.innerHTML = '<p data-i18n="leaderboard_content_rules">Le classement est modéré par l’administrateur. La nudité et la violence explicite sont interdites.</p><p data-i18n="leaderboard_content_filter_explain">Les pseudonymes et avatars sont fournis par les joueurs et modérés manuellement. Choisis de les afficher pour consulter le classement.</p><button type="button" id="leaderboard_content_toggle" aria-pressed="false" aria-controls="leaderboard_content" data-i18n="leaderboard_content_show">Afficher le contenu des joueurs</button><p data-i18n="leaderboard_report_help">Un e-mail s’ouvre : indique le pseudo concerné, sans inclure d’informations sensibles.</p><a class="leaderboard-report" data-i18n="leaderboard_report_button" href="mailto:gael.pitras@gmail.com?subject=Signalement%20de%20contenu%20du%20classement&amp;body=Pseudo%20concern%C3%A9%20%3A%0ADescription%20%3A%0A%0AN%E2%80%99inclus%20aucune%20information%20sensible.">Signaler un contenu</a>';
-            header.after(options);
+        if (header) {
+            let options = rankingPanel.querySelector('.leaderboard-content-options');
+            if (!options) { options = document.createElement('section'); options.className = 'leaderboard-content-options'; }
+            options.innerHTML = '<a class="leaderboard-report" data-i18n="leaderboard_report_button" href="https://discord.gg/y79z83D2Ua" target="_blank" rel="noopener noreferrer">Signaler un contenu</a>';
+            header.parentElement.appendChild(options);
         }
         const status = rankingPanel.querySelector('#leaderboard_status');
         if (status) {
@@ -61,13 +62,13 @@
     if (playerHeading && !playerHeading.querySelector('.leaderboard-player-report')) {
         const link = document.createElement('a'); link.className = 'leaderboard-player-report';
         link.dataset.i18n = 'leaderboard_report_button'; link.textContent = 'Signaler un contenu';
-        link.href = 'mailto:gael.pitras@gmail.com?subject=Signalement%20de%20contenu%20du%20classement';
+        link.href = 'https://discord.gg/y79z83D2Ua'; link.target = '_blank'; link.rel = 'noopener noreferrer';
         playerHeading.appendChild(link);
     }
-    if (playerHeading && !playerHeading.querySelector('.leaderboard-player-report-help')) {
-        const help = document.createElement('p'); help.className = 'leaderboard-player-report-help';
-        help.dataset.i18n = 'leaderboard_report_help'; help.textContent = 'Un e-mail s’ouvre : indique le pseudo concerné, sans inclure d’informations sensibles.';
-        playerHeading.appendChild(help);
+    if (playerHeading) {
+        playerHeading.querySelectorAll('.leaderboard-player-report-help').forEach(node => node.remove());
+        const link = playerHeading.querySelector('.leaderboard-player-report');
+        if (link) { link.href = 'https://discord.gg/y79z83D2Ua'; link.target = '_blank'; link.rel = 'noopener noreferrer'; }
     }
     // Refresh the favicon even when the running server has cached an older template.
     document.querySelectorAll('link[rel~="icon"]').forEach(link => { link.href = '/static/tracker-eye-ornament.ico'; });
@@ -87,14 +88,19 @@
     if (profileGuidance) {
         profileGuidance.dataset.i18n = 'sidebar_profile_guidance';
         profileGuidance.textContent = 'Lance Elden Ring et charge ta partie, puis ouvre l’onglet « Quitter la partie » sans quitter. L’application récupérera ton pseudo, ton niveau et ton image.';
-        if (!profileGuidance.parentElement.querySelector('.sidebar-guidance-action')) {
-            const action = document.createElement('p');
-            action.className = 'sidebar-guidance-action';
-            action.dataset.i18n = 'sidebar_profile_open';
-            action.textContent = 'Clique ici pour ouvrir la configuration du profil.';
-            profileGuidance.after(action);
-        }
     }
+    // Keep the entire guidance card operable, including in cached templates.
+    document.querySelectorAll('.sidebar-guidance .carde_info[info="languages"], .sidebar-guidance .carde_info[info="profile"]').forEach(function(card) {
+        let hint = card.querySelector('.sidebar-guidance-action');
+        if (!hint) { hint = document.createElement('p'); hint.className = 'sidebar-guidance-action'; card.appendChild(hint); }
+        hint.dataset.i18n = 'sidebar_guidance_hint';
+        hint.dataset.i18nFr = 'Clique dans le cadre pour accéder à cette option.';
+        hint.textContent = hint.dataset.i18nFr;
+        card.setAttribute('role', 'button'); card.tabIndex = 0;
+        card.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }
+        });
+    });
     document.querySelectorAll('.carde_info[info="captures"]').forEach(node => node.remove());
     [['languages', 'icon-settings-bronze.png'], ['profile', 'icon-edit-profile-bronze.png']].forEach(function (entry) {
         const icon = document.querySelector('.carde_info[info="' + entry[0] + '"] img');

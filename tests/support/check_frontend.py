@@ -42,6 +42,8 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
             for width, height in [(1440, 900), (900, 700), (390, 844)]:
                 page = browser.new_page(viewport={'width':width, 'height':height})
                 page.route('**/*', lambda route: route.continue_() if route.request.url.startswith(url + '/') else route.abort())
+                page.route('**/online-leaderboard/settings', lambda route: route.fulfill(json={'enabled':True, 'configured':True, 'state':'idle'}))
+                page.route('**/online-leaderboard/sync', lambda route: route.fulfill(json={'state':'success'}))
                 errors = []
                 leaderboard_reads = []
                 page.on('pageerror', lambda error: errors.append(str(error)))
@@ -53,13 +55,8 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                         raise AssertionError(('Inactive server transition control is visible', width, selector))
                 for code in ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
                     page.evaluate('(code) => launchLanguages(code)', code)
-                    if code != 'fra':
-                        from urllib.parse import parse_qs, urlsplit
-                        report_url = urlsplit(page.locator('.leaderboard-report').get_attribute('href'))
-                        report_fields = parse_qs(report_url.query)
-                        expected_report = page.evaluate('(code) => ELDEN_UI_PACKS[code].modern', code)
-                        if report_fields.get('subject', [''])[0] != expected_report['leaderboard_report_subject'] or report_fields.get('body', [''])[0] != expected_report['leaderboard_report_body']:
-                            raise AssertionError(('Report email not translated', width, code))
+                    if page.locator('.leaderboard-report').get_attribute('href') != 'https://discord.gg/y79z83D2Ua':
+                        raise AssertionError(('Incorrect Discord report link', width, code))
                     ranking_faq = page.locator('[data-i18n="faq_a_11"]').text_content()
                     if 'eldenringpvp.com' not in ranking_faq or 'Steam' not in ranking_faq:
                         raise AssertionError(('Leaderboard FAQ missing server or Steam', width, code, ranking_faq))
@@ -152,11 +149,8 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                                         'page': page_number, 'per_page': 5, 'total': 6, 'filtered_total': len(filtered)})
                 page.route('**/online-leaderboard/entries?**', leaderboard_response)
                 page.locator('#menu_button_multi').click()
-                if page.locator('.panel_multi_body').is_visible() or leaderboard_reads:
-                    raise AssertionError(('Player content should be hidden and not fetched before opt-in', width, leaderboard_reads))
-                if not page.locator('.leaderboard-content-options').is_visible() or not page.locator('.leaderboard-report').is_visible():
-                    raise AssertionError(('Leaderboard rules or reporting unavailable before opt-in', width))
-                page.locator('#leaderboard_content_toggle').click()
+                if not page.locator('.leaderboard-report').is_visible() or page.locator('#leaderboard_content_toggle').count():
+                    raise AssertionError(('Leaderboard report missing or extra content toggle present', width))
                 page.wait_for_function("() => document.querySelector('#table_multi tbody')?.textContent.includes('Player 1')")
                 page.locator('.cadre_multi .dataTables_paginate .next').click()
                 page.wait_for_function("() => document.querySelector('#table_multi tbody')?.textContent.includes('UniqueFoe')")
@@ -179,15 +173,8 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                     raise AssertionError('A shared Steam profile was shown as unavailable')
                 if not page.locator('.leaderboard-history-notice').is_visible():
                     raise AssertionError('Legacy score must be identified as unverified')
-                from urllib.parse import urlsplit, parse_qs
-                report_url = urlsplit(page.locator('.leaderboard-player-report').get_attribute('href'))
-                report_fields = parse_qs(report_url.query)
-                if report_url.scheme != 'mailto' or report_url.path != 'gael.pitras@gmail.com' or 'UniqueFoe' not in report_fields.get('body', [''])[0] or 'sensible' not in report_fields.get('body', [''])[0]:
-                    raise AssertionError(('Player report email is incorrect', width, report_url))
-                if 'bcc' in report_fields or '&bcc=intruder@example.test' not in report_fields.get('body', [''])[0]:
-                    raise AssertionError('Player name altered email headers')
-                if '76561198000000000' in report_url.query:
-                    raise AssertionError('Player report email must not include a Steam ID')
+                if page.locator('.leaderboard-player-report').get_attribute('href') != 'https://discord.gg/y79z83D2Ua':
+                    raise AssertionError(('Player report must open Discord', width))
                 page.locator('.leaderboard-player-close').click()
                 page.locator('.cadre_multi .dataTables_paginate .previous').click()
                 page.wait_for_function("() => document.querySelector('#table_multi tbody')?.textContent.includes('Player 1')")
@@ -199,27 +186,6 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 if page.locator('.leaderboard-steam-link').get_attribute('href') is not None:
                     raise AssertionError('An unshared Steam profile retained a previous player’s link')
                 page.locator('.leaderboard-player-close').click()
-                page.locator('#leaderboard_content_toggle').click()
-                count_before = len(leaderboard_reads)
-                page.wait_for_timeout(300)
-                if page.locator('.panel_multi_body').is_visible() or len(leaderboard_reads) != count_before or 'Player 1' in page.locator('#table_multi tbody').text_content() or page.locator('#leaderboard_player_name').text_content():
-                    raise AssertionError(('Player content was not cleared when hidden', width))
-                page.evaluate('''() => {
-                    window.trackerFetch = window.fetch;
-                    window.fetch = (input, options) => String(input).startsWith('/online-leaderboard/entries?')
-                        ? new Promise(resolve => { window.finishRanking = () => resolve(new Response(JSON.stringify({mode:'Arena', entries:[{rank:1, name:'LatePlayer', level:1, score:0, stats:{}}], total:1, filtered_total:1, page:1, per_page:5}), {status:200, headers:{'Content-Type':'application/json'}})); })
-                        : window.trackerFetch(input, options);
-                }''')
-                page.locator('#leaderboard_content_toggle').click()
-                page.wait_for_function("() => typeof window.finishRanking === 'function'")
-                page.locator('#leaderboard_content_toggle').click()
-                page.evaluate('() => window.finishRanking()')
-                page.wait_for_timeout(250)
-                if page.locator('.panel_multi_body').is_visible() or 'LatePlayer' in page.locator('#table_multi tbody').text_content():
-                    raise AssertionError(('Late response exposed hidden player content', width))
-                page.evaluate('() => { window.fetch = window.trackerFetch; }')
-                page.locator('#leaderboard_content_toggle').click()
-                page.wait_for_function("() => document.querySelector('#table_multi tbody')?.textContent.includes('Player 1')")
                 search = page.locator('.cadre_multi .dataTables_filter input')
                 search.fill('UniqueFoe')
                 search.press('End')
@@ -400,7 +366,6 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
             page = context.new_page()
             page.goto(url, wait_until='load')
             page.locator('#menu_button_multi').click()
-            page.locator('#leaderboard_content_toggle').click()
             page.wait_for_function("() => document.querySelector('.online-main-status').textContent.includes('synchronization')")
             if not page.locator('#leaderboard_refresh').is_disabled():
                 raise AssertionError('Refresh enabled during synchronization on opening')

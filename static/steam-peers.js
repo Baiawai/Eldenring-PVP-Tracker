@@ -14,7 +14,7 @@
         return ({
             starting: tr('steam_starting', 'Connexion à Steam…'),
             game_closed: tr('steam_game_closed', 'Lance Elden Ring pour détecter les joueurs.'),
-            waiting_log: tr('steam_waiting_log', 'Active le journal Steam dans les paramètres P2P.'),
+            waiting_log: tr('steam_waiting_log', 'En attente du journal Steam…'),
             steam_unavailable: tr('steam_unavailable', 'Steam est indisponible ou non connecté.'),
             helper_error: tr('steam_error', 'La connexion à Steam a échoué.'),
             disabled: tr('steam_off', 'Détection désactivée.'),
@@ -26,7 +26,6 @@
         list.replaceChildren();
         const peers = Array.isArray(state.peers) ? state.peers : [];
         settingsStatus.textContent = state.status === 'active' ? tr('detection_enabled', 'Détection activée') : message(state.status);
-        if (state.status === 'waiting_log') document.getElementById('steam_manual_setup').open = true;
         enabled.value = state.enabled ? 'true' : 'false';
         if (['active', 'unavailable', 'denied'].includes(state.ping_mode)) pingPending = false;
         const pingMessages = {
