@@ -9,10 +9,10 @@ Au démarrage, une installation signée par le Microsoft Store vérifie si le St
 Après réservation du nom dans Partner Center, reprendre exactement le nom d'identité du package, le sujet Publisher et le nom d'éditeur communiqués par Partner Center :
 
 ```powershell
-.\store\build.ps1 -Identity 'IDENTITE_PARTNER_CENTER' -Publisher 'CN=SUJET_PARTNER_CENTER' -PublisherDisplay 'NOM_EDITEUR' -Version '1.0.3.0'
+.\store\build.ps1 -Identity 'IDENTITE_PARTNER_CENTER' -Publisher 'CN=SUJET_PARTNER_CENTER' -PublisherDisplay 'NOM_EDITEUR' -Version '1.0.4.0'
 ```
 
-La version par défaut du script est `1.0.3.0` ; avant une soumission, vérifier dans Partner Center que le numéro choisi est supérieur à celui de la version déjà publiée. Le fichier MSIX non signé est créé dans `dist/store/`. Les options `-OutputDir` et `-WorkDir` permettent de construire dans des dossiers séparés pour conserver les paquets précédents. `-ExecutableOnly` construit uniquement l'exécutable et ses ressources. Une signature de test et un certificat approuvé sont nécessaires pour tester l'installation sur une machine ordinaire ; Microsoft signe le package publié après certification. Tester l'installation, le démarrage, les mises à jour, la désinstallation, les modes de suivi et la capture en plein écran avec Steam et le jeu avant la soumission. Ne pas lancer l'exécutable parallèlement à un tracker actif, car les deux utilisent le port 5000.
+La version par défaut du script est `1.0.4.0` ; avant une soumission, vérifier dans Partner Center que le numéro choisi est supérieur à celui de la version déjà publiée. Le fichier MSIX non signé est créé dans `dist/store/`. Les options `-OutputDir` et `-WorkDir` permettent de construire dans des dossiers séparés pour conserver les paquets précédents. `-ExecutableOnly` construit uniquement l'exécutable et ses ressources. Une signature de test et un certificat approuvé sont nécessaires pour tester l'installation sur une machine ordinaire ; Microsoft signe le package publié après certification. Tester l'installation, le démarrage, les mises à jour, la désinstallation, les modes de suivi et la capture en plein écran avec Steam et le jeu avant la soumission. Ne pas lancer l'exécutable parallèlement à un tracker actif, car les deux utilisent le port 5000.
 
 Le contrôle `.\.venv\Scripts\python.exe store\smoke_test.py` utilise un APPDATA temporaire et interroge l'interface sans ouvrir de port. Il nécessite l'accès à WMI ; il ne remplace pas un essai de capture en jeu ou du package installé.
 

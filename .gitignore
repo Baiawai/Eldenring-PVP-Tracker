@@ -16,6 +16,11 @@ output/
 *.log
 .env
 .env.*
+*.pem
+*.key
+*.p12
+*.pfx
+leaderboard-config.json
 
 # Runtime screenshots and profile images
 /application/simple_*.jpg
