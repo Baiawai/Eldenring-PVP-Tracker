@@ -7,10 +7,10 @@ import time
 import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from application.runtime_paths import data_dir
+from application.runtime_paths import database_path
 
 FEATURES = {'statistics', 'captures', 'players', 'history', 'settings', 'leaderboard', 'information'}
-DB = data_dir() / 'usage_metrics.db'
+DB = database_path('usage_metrics.db')
 _lock = threading.RLock()
 _session = None
 _started = None

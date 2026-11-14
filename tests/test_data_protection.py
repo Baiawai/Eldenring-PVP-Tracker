@@ -13,9 +13,30 @@ from unittest.mock import patch
 from cryptography.fernet import Fernet, InvalidToken
 
 from application import data_protection as protection
+from application import runtime_paths
 
 
 class DataProtectionTests(unittest.TestCase):
+    def test_private_profile_key_and_active_folder_protection(self):
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.dict('os.environ', {'APPDATA': str(Path(temp) / 'roaming'), 'LOCALAPPDATA': str(Path(temp) / 'local')}), \
+             patch.object(runtime_paths, 'package_family_name', return_value='Example.Tracker_family'), \
+             patch.object(protection, '_unprotect', return_value=b'test-key') as unprotect, \
+             patch.object(protection, '_tracker_running', return_value=True):
+            private = runtime_paths._private_data_dir()
+            private.mkdir(parents=True)
+            (private / 'database_user.db').write_bytes(b'profile')
+            (private / protection.KEY_FILE).write_bytes(b'key')
+            self.assertEqual(protection.active_data_key(), b'test-key')
+            self.assertEqual(unprotect.call_args.args[0], str(private / protection.KEY_FILE))
+            with self.assertRaises(RuntimeError):
+                protection.restore_key(private, 'unused password')
+            with self.assertRaises(RuntimeError):
+                protection.prepare_copy(private, Path(temp) / 'copy', 'unused password')
+            (private / protection.INCOMPLETE_FILE).write_bytes(b'incomplete')
+            with self.assertRaises(RuntimeError):
+                protection.active_data_key()
+
     def test_migrated_copy_preserves_original_and_can_restore_the_key(self):
         with tempfile.TemporaryDirectory(prefix='tracker-key-test-') as temporary:
             root = Path(temporary)

@@ -5,9 +5,23 @@ from pathlib import Path
 from unittest.mock import patch
 
 from application import system_details
+from application import runtime_paths
 
 
 class SystemDetailsTests(unittest.TestCase):
+    def test_snapshot_reports_private_database_and_sidecars(self):
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.dict('os.environ', {'APPDATA': str(Path(temp) / 'roaming'), 'LOCALAPPDATA': str(Path(temp) / 'local')}), \
+             patch.object(runtime_paths, 'package_family_name', return_value='Example.Tracker_family'), \
+             patch.object(system_details, 'tesseract_version', return_value=None):
+            private = runtime_paths._private_data_dir()
+            private.mkdir(parents=True)
+            (private / 'database_user.db').write_bytes(b'x' * 10)
+            (private / 'database_user.db-wal').write_bytes(b'x' * 4)
+            result = system_details.snapshot()
+            self.assertEqual(result['storage']['database_bytes'], 14)
+            self.assertEqual(result['environment']['data_path'], str(private))
+
     def test_database_sizes_include_sidecars_and_ignore_other_files(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

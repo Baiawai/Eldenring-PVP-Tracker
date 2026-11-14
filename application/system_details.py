@@ -6,7 +6,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from application.runtime_paths import tesseract_path, data_dir, accessible_data_directories
+from application.runtime_paths import tesseract_path, data_dir, database_path, accessible_data_directories
 from application.version import APP_VERSION
 
 
@@ -43,6 +43,23 @@ def tesseract_version():
 def snapshot():
     directory = data_dir()
     databases = database_sizes(directory)
+    if databases is not None:
+        try:
+            by_name = {item['name']: item for item in databases}
+            for name in ('database_user.db', 'database_capture.db', 'database_multi.db',
+                         'database_setting.db', 'usage_metrics.db'):
+                selected = database_path(name)
+                if selected.parent != directory and selected.is_file():
+                    size = 0
+                    for suffix in ('', '-wal', '-shm', '-journal'):
+                        try:
+                            size += Path(str(selected) + suffix).stat().st_size
+                        except FileNotFoundError:
+                            pass
+                    by_name[name] = {'name': name, 'bytes': size}
+            databases = sorted(by_name.values(), key=lambda item: item['name'].casefold())
+        except OSError:
+            databases = None
     try:
         free_bytes = shutil.disk_usage(str(directory)).free
     except OSError:

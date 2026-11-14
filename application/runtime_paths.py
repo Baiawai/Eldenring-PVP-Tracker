@@ -37,23 +37,100 @@ def package_family_name():
         return None
 
 
+def _private_data_dir():
+    family = package_family_name()
+    local = os.environ.get('LOCALAPPDATA')
+    if not family or not local or Path(family).name != family:
+        return None
+    return Path(local) / 'Packages' / family / 'LocalCache' / 'Roaming' / DATA_FOLDER
+
+
+def existing_data_file(name, directory=None):
+    """Find an existing Store file without replacing a different logical file."""
+    if not isinstance(name, str) or Path(name).name != name or not name:
+        raise ValueError('Invalid data filename')
+    logical = (Path(directory) if directory is not None else data_dir()) / name
+    folder = _private_data_dir()
+    if folder is None:
+        return logical
+    private = folder / name
+    try:
+        if not private.is_file():
+            return logical
+        try:
+            logical.stat()
+        except FileNotFoundError:
+            # A key or migration marker belongs to the selected profile, not
+            # to an unrelated private copy shadowed by another database.
+            return private if database_path('database_user.db').parent == folder else logical
+        return private if os.path.samefile(logical, private) else logical
+    except OSError:
+        return logical
+
+
+def database_path(name):
+    """Resolve an existing Store database without switching between different files.
+
+    A missing database keeps the logical path so Windows can create it normally.
+    Existing SQLite sidecars must also refer to the same files before changing
+    the path, otherwise their pending transactions could be missed.
+    """
+    if not isinstance(name, str) or Path(name).name != name or not name.endswith('.db'):
+        raise ValueError('Invalid database filename')
+    logical = data_dir() / name
+    folder = _private_data_dir()
+    if folder is None:
+        return logical
+    private = folder / name
+    try:
+        if not private.is_file():
+            return logical
+        def present(path):
+            try:
+                path.stat()
+                return True
+            except FileNotFoundError:
+                return False
+        try:
+            logical.stat()
+            logical_exists = True
+        except FileNotFoundError:
+            logical_exists = False
+        if logical_exists and not os.path.samefile(logical, private):
+            return logical
+        for suffix in ('-wal', '-shm', '-journal'):
+            left, right = Path(str(logical) + suffix), Path(str(private) + suffix)
+            left_exists, right_exists = present(left), present(right)
+            if logical_exists:
+                if left_exists != right_exists or (left_exists and not os.path.samefile(left, right)):
+                    return logical
+            elif left_exists:
+                return logical
+        return private
+    except OSError:
+        return logical
+
+
 def accessible_data_directories():
     """Find Explorer-visible locations of the databases in the current process view.
 
     MSIX can overlay individual files, so both directories may be required.
-    This only reports paths; database reads and writes keep using data_dir().
+    Database files may be selected from the private package directory.
     """
     logical = data_dir()
-    family = package_family_name()
-    local = os.environ.get('LOCALAPPDATA')
-    if not family or not local or Path(family).name != family:
+    private = _private_data_dir()
+    if private is None:
         return [logical]
-    private = Path(local) / 'Packages' / family / 'LocalCache' / 'Roaming' / DATA_FOLDER
     locations = []
+    for name in ('database_user.db', 'database_capture.db', 'database_multi.db',
+                 'database_setting.db', 'usage_metrics.db'):
+        resolved = database_path(name)
+        if resolved.is_file() and resolved.parent not in locations:
+            locations.append(resolved.parent)
     try:
         entries = sorted(logical.iterdir(), key=lambda path: path.name.casefold())
     except OSError:
-        return [logical]
+        return locations or [logical]
     for current in entries:
         candidate = private / current.name
         try:
@@ -119,6 +196,18 @@ def image_dir():
     if not FROZEN:
         return RESOURCE_DIR
     directory = data_dir() / 'runtime_images'
+    private_root = _private_data_dir()
+    if private_root is not None:
+        private = private_root / 'runtime_images'
+        try:
+            if private.is_dir():
+                if not directory.exists() or os.path.samefile(directory, private):
+                    return private
+            elif not directory.exists() and database_path('database_user.db').parent == private_root:
+                private.mkdir(parents=True, exist_ok=True)
+                return private
+        except OSError:
+            pass
     directory.mkdir(parents=True, exist_ok=True)
     return directory
 

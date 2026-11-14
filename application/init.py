@@ -9,17 +9,17 @@ import platform
 from contextlib import closing
 from __main__ import app
 from application.secur import encrypt_value, decrypt_value, decrypt_rows
-from application.runtime_paths import image_dir, initialize_data_dir
+from application.runtime_paths import image_dir, initialize_data_dir, database_path
 
 
 
 
 elden_counter_dir_path = str(initialize_data_dir())
 
-database_user = os.path.join(elden_counter_dir_path, 'database_user.db')
-database_capture = os.path.join(elden_counter_dir_path, 'database_capture.db')
-database_multi = os.path.join(elden_counter_dir_path, "database_multi.db")
-database_setting = os.path.join(elden_counter_dir_path, "database_setting.db")
+database_user = str(database_path('database_user.db'))
+database_capture = str(database_path('database_capture.db'))
+database_multi = str(database_path('database_multi.db'))
+database_setting = str(database_path('database_setting.db'))
 
 
 

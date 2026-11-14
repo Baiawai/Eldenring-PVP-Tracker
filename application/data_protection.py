@@ -19,7 +19,7 @@ import win32crypt
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
-from application.runtime_paths import data_dir, _tracker_running
+from application.runtime_paths import data_dir, database_path, existing_data_file, _tracker_running
 
 KEY_FILE = 'data-key.dpapi'
 RECOVERY_FILE = 'data-key-recovery.json'
@@ -46,9 +46,9 @@ def _unprotect(path, mtime, size):
 
 
 def active_data_key():
-    if (data_dir() / INCOMPLETE_FILE).exists():
+    if existing_data_file(INCOMPLETE_FILE, data_dir()).exists():
         raise RuntimeError('La migration des données est incomplète. Conserve le dossier original.')
-    path = data_dir() / KEY_FILE
+    path = existing_data_file(KEY_FILE, data_dir())
     if not path.exists():
         return None
     stat = path.stat()
@@ -90,12 +90,17 @@ def _write_new(path, data):
         os.fsync(output.fileno())
 
 
+def _is_active_data_folder(folder):
+    target = Path(folder).resolve()
+    return target in (data_dir().resolve(), database_path('database_user.db').parent.resolve())
+
+
 def restore_key(folder, password):
     """Reprotect a copied key for this user, preserving an unusable old key."""
     folder = Path(folder)
     if (folder / INCOMPLETE_FILE).exists():
         raise ValueError('Cette copie est incomplète et ne peut pas être restaurée.')
-    if folder.resolve() == data_dir().resolve() and _tracker_running():
+    if _is_active_data_folder(folder) and _tracker_running():
         raise RuntimeError('Arrête le tracker avant de restaurer la clé.')
     key = recover_key((folder / RECOVERY_FILE).read_bytes(), password)
     protected = win32crypt.CryptProtectData(key, 'Elden Ring PvP Tracker data key', None, None, None, 0)
@@ -180,7 +185,7 @@ def prepare_copy(source, destination, password):
     source, destination = Path(source).resolve(strict=True), Path(destination).resolve()
     if not source.is_dir() or destination.exists() or destination == source or source in destination.parents or destination in source.parents:
         raise ValueError('Choisis un nouveau dossier distinct de la source.')
-    if source == data_dir().resolve() and _tracker_running():
+    if _is_active_data_folder(source) and _tracker_running():
         raise RuntimeError('Arrête le tracker avant de copier les données.')
     if not (source / 'database_user.db').is_file():
         raise ValueError('La base du profil est absente : vérifie le dossier source.')

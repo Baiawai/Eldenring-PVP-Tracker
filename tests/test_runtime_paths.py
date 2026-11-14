@@ -1,6 +1,10 @@
 """Migration checks use isolated folders, never the real tracker data."""
 import errno
 import os
+import sqlite3
+import subprocess
+import sys
+from contextlib import closing
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,6 +14,24 @@ from application import runtime_paths
 
 
 class DataDirectoryTests(unittest.TestCase):
+    def test_private_profile_key_and_runtime_images_follow_selected_database(self):
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.dict('os.environ', {'APPDATA': str(Path(temp) / 'roaming'), 'LOCALAPPDATA': str(Path(temp) / 'local')}), \
+             patch.object(runtime_paths, 'FROZEN', True), \
+             patch.object(runtime_paths, 'package_family_name', return_value='Example.Tracker_family'):
+            private = runtime_paths._private_data_dir()
+            private.mkdir(parents=True)
+            (private / 'database_user.db').write_bytes(b'private')
+            (private / 'data-key.dpapi').write_bytes(b'private key')
+            self.assertEqual(runtime_paths.existing_data_file('data-key.dpapi'), private / 'data-key.dpapi')
+            self.assertEqual(runtime_paths.image_dir(), private / 'runtime_images')
+            logical = runtime_paths.data_dir()
+            logical.mkdir(parents=True)
+            (logical / 'database_user.db').write_bytes(b'different')
+            self.assertEqual(runtime_paths.existing_data_file('data-key.dpapi'), logical / 'data-key.dpapi')
+            (logical / 'runtime_images').mkdir()
+            self.assertEqual(runtime_paths.image_dir(), logical / 'runtime_images')
+
     def test_migrates_every_file_once_without_changing_contents(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict('os.environ', {'APPDATA': temp}), \
              patch.object(runtime_paths, '_tracker_running', return_value=False):
@@ -100,6 +122,84 @@ class DataDirectoryTests(unittest.TestCase):
              patch.object(runtime_paths, 'FROZEN', False):
             self.assertIsNone(runtime_paths.package_family_name())
             self.assertEqual(runtime_paths.accessible_data_directories(), [runtime_paths.data_dir()])
+
+    def test_store_database_resolution_preserves_existing_copies_and_sidecars(self):
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.dict('os.environ', {'APPDATA': str(Path(temp) / 'roaming'), 'LOCALAPPDATA': str(Path(temp) / 'local')}), \
+             patch.object(runtime_paths, 'package_family_name', return_value='Example.Tracker_family'):
+            logical = runtime_paths.data_dir()
+            private = Path(temp) / 'local' / 'Packages' / 'Example.Tracker_family' / 'LocalCache' / 'Roaming' / runtime_paths.DATA_FOLDER
+            logical.mkdir(parents=True)
+            private.mkdir(parents=True)
+            name = 'database_user.db'
+            self.assertEqual(runtime_paths.database_path(name), logical / name)
+            with closing(sqlite3.connect(private / name)) as db, db:
+                db.execute('CREATE TABLE proof (value TEXT)')
+                db.execute("INSERT INTO proof VALUES ('existing')")
+            self.assertEqual(runtime_paths.database_path(name), private / name)
+            self.assertEqual(runtime_paths.accessible_data_directories(), [private])
+            (logical / (name + '-wal')).write_bytes(b'pending logical sidecar')
+            self.assertEqual(runtime_paths.database_path(name), logical / name)
+            (logical / (name + '-wal')).unlink()
+            with closing(sqlite3.connect(runtime_paths.database_path(name))) as db, db:
+                self.assertEqual(db.execute('SELECT value FROM proof').fetchone(), ('existing',))
+                db.execute("INSERT INTO proof VALUES ('new')")
+            self.assertFalse((logical / name).exists())
+            (logical / name).write_bytes(b'different existing data')
+            self.assertEqual(runtime_paths.database_path(name), logical / name)
+            self.assertEqual((logical / name).read_bytes(), b'different existing data')
+            (logical / name).unlink()
+            os.link(private / name, logical / name)
+            self.assertEqual(runtime_paths.database_path(name), private / name)
+            with patch.object(runtime_paths.os.path, 'samefile', side_effect=PermissionError('unavailable')):
+                self.assertEqual(runtime_paths.database_path(name), logical / name)
+            (logical / (name + '-wal')).write_bytes(b'pending logical sidecar')
+            self.assertEqual(runtime_paths.database_path(name), logical / name)
+            (logical / (name + '-wal')).unlink()
+            (private / (name + '-wal')).write_bytes(b'pending private sidecar')
+            self.assertEqual(runtime_paths.database_path(name), logical / name)
+            os.link(private / (name + '-wal'), logical / (name + '-wal'))
+            self.assertEqual(runtime_paths.database_path(name), private / name)
+
+    def test_database_resolution_rejects_unexpected_paths(self):
+        for name in ('../database_user.db', 'not-a-database.txt', ''):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                runtime_paths.database_path(name)
+
+    def test_startup_uses_existing_private_databases_without_recreating_them(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            private = root / 'local' / 'Packages' / 'Example.Tracker_family' / 'LocalCache' / 'Roaming' / runtime_paths.DATA_FOLDER
+            private.mkdir(parents=True)
+            names = ('database_user.db', 'database_capture.db', 'database_multi.db', 'database_setting.db', 'usage_metrics.db')
+            for name in names:
+                with closing(sqlite3.connect(private / name)) as db, db:
+                    db.execute('CREATE TABLE test_existing_data (value TEXT)')
+                    db.execute("INSERT INTO test_existing_data VALUES ('preserved')")
+            environment = os.environ.copy()
+            environment.update(APPDATA=str(root / 'roaming'), LOCALAPPDATA=str(root / 'local'))
+            script = '''
+from flask import Flask
+from pathlib import Path
+import sqlite3
+from application import runtime_paths
+app = Flask(__name__)
+runtime_paths.package_family_name = lambda: 'Example.Tracker_family'
+from application import init, usage_metrics
+paths = [init.database_user, init.database_capture, init.database_multi, init.database_setting, usage_metrics.DB]
+for path in paths:
+    assert 'Packages' in str(path), path
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT value FROM test_existing_data').fetchone() == ('preserved',)
+with usage_metrics._connect() as db:
+    assert db.execute('SELECT value FROM test_existing_data').fetchone() == ('preserved',)
+'''
+            project = Path(__file__).resolve().parents[1]
+            result = subprocess.run([sys.executable, '-c', script], cwd=project, env=environment,
+                                    capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            logical = root / 'roaming' / runtime_paths.DATA_FOLDER
+            self.assertFalse(any((logical / name).exists() for name in names))
 
     def test_current_package_family_is_queried_from_windows(self):
         family = 'Example.Tracker_family'

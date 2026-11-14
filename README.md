@@ -79,6 +79,8 @@ Les durées de conservation des captures et de l'historique Steam sont désactiv
 
 En développement, les bases SQLite de profil, configuration, captures, historique et statistiques se trouvent dans `%APPDATA%\Elden Ring PvP Tracker\`. La version Store peut utiliser des fichiers privés au package sous `%LOCALAPPDATA%\Packages\<famille-du-package>\LocalCache\Roaming\Elden Ring PvP Tracker\`. Le tracker affiche les emplacements des bases dans Information → Dossier des données et peut les ouvrir depuis son icône de notification. Des images temporaires générées pendant le suivi peuvent aussi apparaître dans `application/` en développement. Ces fichiers personnels, les journaux et les environnements virtuels sont exclus du dépôt.
 
+Pour une base déjà présente, la version Store peut utiliser son chemin privé s'il est le seul accessible ou s'il désigne le même fichier que le chemin habituel. Si deux copies différentes ou des fichiers SQLite associés incompatibles existent, elle conserve le chemin habituel : aucune copie n'est automatiquement remplacée ou fusionnée.
+
 Pour sauvegarder vos données, consultez d'abord les emplacements affichés, arrêtez le tracker puis copiez chacun des dossiers indiqués. Les captures et historiques peuvent contenir des pseudos et des adresses réseau : protégez vos sauvegardes avant de les partager.
 
 Une migration de chiffrement peut être préparée sur une **copie distincte**, sans modifier les données originales :
