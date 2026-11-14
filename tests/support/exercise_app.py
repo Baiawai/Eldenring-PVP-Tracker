@@ -69,6 +69,25 @@ assert client.get('/init').status_code == 200
 state = client.get('/interval').get_json()
 assert state['fight'] is False and state['monitor_running'] is False
 
+# Exercise the monitor's first Steam probe on a short game display without
+# capturing the real screen or writing any images.
+for width, height in ((1366, 768), (1600, 900)):
+    display = {'x': 0, 'y': 0, 'width': width, 'height': height}
+    def check_probe(*args, **kwargs):
+        with patch.object(functions.capture_display.ImageGrab, 'grab', return_value=Image.new('RGB', (1, 1))):
+            functions.capture_display.capture(display, region=kwargs['region'])
+        raise functions._CaptureStopped()
+    with patch.object(functions, 'width_screen', width), patch.object(functions, 'height_screen', height), \
+         patch.object(functions, 'run_monitor', True), patch.object(functions, 'update_game_display'), \
+         patch.object(functions, 'screenshot_with_retry', side_effect=check_probe) as probe:
+        try:
+            functions.monitor(None)
+        except functions._CaptureStopped:
+            pass
+        else:
+            raise AssertionError('The monitor did not reach the Steam capture probe')
+        assert probe.call_count == 1
+
 # A monitor error remains visible even when its log cannot be written.
 with tempfile.TemporaryDirectory(dir=os.environ['APPDATA']) as directory:
     blocked_parent = Path(directory) / 'not-a-directory'

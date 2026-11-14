@@ -7,6 +7,16 @@ import win32gui
 from PIL import Image, ImageGrab
 
 
+def steam_detection_region(width, height):
+    """Keep the Steam probe inside the detected display at any resolution."""
+    width, height = int(width), int(height)
+    if width <= 0 or height <= 0:
+        raise ValueError('Display dimensions must be positive')
+    top = int((height - height / 2) + (height / 2.5))
+    top = min(top, height - 1)
+    return (0, top, min(width, max(1, int(width / 3.2))), min(100, height - top))
+
+
 def tracker_crop(screenshot):
     """Preserve the original JPEG and crop transformations without a disk round trip."""
     with BytesIO() as buffer:

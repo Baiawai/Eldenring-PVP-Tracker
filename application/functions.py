@@ -1898,9 +1898,8 @@ def monitor(ocr_executor):
 
             # Confirm the screen is available before declaring the game closed:
             # Windows may be showing its secure administrator prompt.
-            img_steam = screenshot_with_retry(path_steam, region=(
-                0, int((height_screen - (height_screen / 2)) + (height_screen / 2.5)),
-                int(width_screen / 3.2), 100))
+            img_steam = screenshot_with_retry(
+                path_steam, region=capture_display.steam_detection_region(width_screen, height_screen))
 
             windows = pygetwindow.getAllWindows()
             window_titles = [(window, window.title) for window in windows]

@@ -10,6 +10,24 @@ from application import capture_display
 
 
 class CaptureDisplayTests(TestCase):
+    def test_steam_probe_stays_inside_displays_of_different_heights(self):
+        for width, height in ((1366, 768), (1600, 900), (1920, 1080), (3840, 2160), (2, 1)):
+            with self.subTest(size=(width, height)):
+                region = capture_display.steam_detection_region(width, height)
+                left, top, region_width, region_height = region
+                self.assertGreater(region_width, 0)
+                self.assertGreater(region_height, 0)
+                self.assertLessEqual(left + region_width, width)
+                self.assertLessEqual(top + region_height, height)
+                with patch.object(capture_display.ImageGrab, 'grab', return_value=Image.new('RGB', (1, 1))) as grab:
+                    capture_display.capture({'x': -100, 'y': 20, 'width': width, 'height': height}, region=region)
+                    grab.assert_called_once()
+        self.assertEqual(capture_display.steam_detection_region(1920, 1080), (0, 972, 600, 100))
+
+    def test_steam_probe_rejects_invalid_display_dimensions(self):
+        with self.assertRaises(ValueError):
+            capture_display.steam_detection_region(1920, 0)
+
     def test_tracker_crop_matches_the_previous_disk_jpeg_pipeline(self):
         rng = np.random.default_rng(17)
         for width, height in ((333, 201), (1920, 1080)):
