@@ -2316,7 +2316,7 @@ font-family: optimus princeps;
 
 /* Keep the home logo current when the running server has cached the template. */
 .img_eldenring img {
-    content: url('elden-pvp-tracker-logo.png');
+    content: url('home-logo-elden-pvp-tracker-choisi.png');
     width: 90%;
     height: auto;
 }
