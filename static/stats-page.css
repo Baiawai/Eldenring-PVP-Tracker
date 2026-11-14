@@ -372,7 +372,12 @@ body .stats-mode-picker select { padding-right:38px; }
 }
 
 /* Use the same logo in the menu and on the home page. */
-.app-header .app-logo { content:url("home-logo-classic-eye.png"); filter:none; }
+.app-header .app-logo { content:url("elden-pvp-tracker-logo.png"); filter:none; }
+/* Development uses its own logo; the packaged Store version keeps its artwork. */
+body[data-store-build="false"] .app-header .app-logo,
+body[data-store-build="false"] .presentation .img_eldenring > img {
+    content:url("home-logo-elden-pvp-tracker-choisi.png");
+}
 .app-header .app-logo:hover { filter:drop-shadow(0 0 5px rgba(255,218,150,.35)); }
 
 /* A shared two-column rhythm for every settings section. */

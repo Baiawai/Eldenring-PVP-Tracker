@@ -6,7 +6,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from application.runtime_paths import tesseract_path, data_dir
+from application.runtime_paths import tesseract_path, data_dir, accessible_data_directories
 from application.version import APP_VERSION
 
 
@@ -53,5 +53,5 @@ def snapshot():
                     'disk_free_bytes': free_bytes},
         'environment': {'tracker': APP_VERSION, 'python': platform.python_version(),
                         'tesseract': tesseract_version(), 'os': platform.platform(),
-                        'data_path': str(directory)},
+                        'data_path': '\n'.join(map(str, accessible_data_directories()))},
     }

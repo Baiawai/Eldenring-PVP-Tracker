@@ -5,17 +5,31 @@
     faqFrench.faq_a_11 = 'Pour afficher les joueurs dans l’application, active la participation et accepte les conditions. Le classement utilise le serveur configuré, par défaut eldenringpvp.com. La participation est facultative et nécessite un compte Steam.';
     faqFrench.faq_q_18 = 'Comment connecter Steam et participer au classement ?';
     faqFrench.faq_a_18 = 'Dans Configuration → Classement en ligne, active la participation et accepte les conditions. Connecte-toi à Steam dans la fenêtre ouverte, puis saisis dans le tracker le code temporaire affiché par le site ; ne partage pas ce code. La publication d’un lien vers ton profil Steam est facultative.';
+    faqFrench.faq_q_19 = 'Comment le tracker établit-il les statistiques ?';
+    faqFrench.faq_a_19 = 'Il capture l’écran du jeu et lit les notifications grâce à l’OCR, ou reconnaissance optique de caractères : cette technologie transforme le texte d’une image en texte lisible. Il identifie les événements et résultats pour mettre à jour les statistiques du mode concerné. L’OCR peut mal lire ou manquer une notification.';
+    faqFrench.faq_q_20 = 'Que se passe-t-il lorsque l’overlay Steam est ouvert ?';
+    faqFrench.faq_a_20 = 'La capture se met en pause lorsque l’overlay Steam est détecté ou que le jeu n’est plus au premier plan. Ferme l’overlay et remets le jeu au premier plan pour reprendre. Les notifications masquées pendant ce temps peuvent être manquées.';
+    faqFrench.faq_q_21 = 'Mes anciens combats sont-ils importés dans le classement ?';
+    faqFrench.faq_a_21 = 'Pour une nouvelle inscription, les anciens résultats locaux ne sont pas importés. Seuls les combats détectés après ton accord sont envoyés ; les événements en attente sont réessayés. Les anciens scores non vérifiés déjà publiés restent signalés.';
+    faqFrench.faq_q_22 = 'Puis-je utiliser le tracker sans connexion ?';
+    faqFrench.faq_a_22 = 'Le suivi et les statistiques locales restent disponibles hors ligne. Le classement en ligne et la connexion Steam nécessitent Internet ; les événements de classement en attente sont réessayés au retour de la connexion.';
     const faqList = document.querySelector(".faq-list");
     if (faqList) {
         Object.keys(faqFrench).forEach(function (key) {
             let node = faqList.querySelector('[data-i18n="' + key + '"]');
-            if (!node && /^faq_q_1[5-8]$/.test(key)) {
+            if (!node && /^faq_q_(?:1[5-9]|2[0-2])$/.test(key)) {
                 const item = document.createElement("details"); item.className = "faq-item";
                 node = document.createElement("summary"); node.dataset.i18n = key;
                 const answer = document.createElement("p"); answer.dataset.i18n = key.replace("faq_q_", "faq_a_");
                 item.append(node, answer); faqList.appendChild(item);
             }
             if (node) { node.textContent = faqFrench[key]; node.dataset.i18nFr = faqFrench[key]; }
+        });
+        // Apply the same reading order to templates cached by a running server.
+        ['12','01','05','03','19','02','06','20','04','07','15','08','17','09','11','18','21','22','10','14','16','13'].forEach(function(number) {
+            const question = faqList.querySelector('[data-i18n="faq_q_' + number + '"]');
+            const item = question && question.closest('.faq-item');
+            if (item) faqList.appendChild(item);
         });
     }
     // Keep the community link available when an existing server has cached its template.

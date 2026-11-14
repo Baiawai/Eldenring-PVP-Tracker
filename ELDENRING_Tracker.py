@@ -6,7 +6,7 @@ import socket
 import secrets
 import pystray
 from PIL import Image
-from application.runtime_paths import tesseract_path, RESOURCE_DIR, FROZEN
+from application.runtime_paths import tesseract_path, RESOURCE_DIR, FROZEN, accessible_data_directories
 from application.version import APP_VERSION
 from application.local_security import is_allowed_request
 from application import store_update
@@ -19,7 +19,7 @@ os.environ['TESSDATA_PREFIX'] = str(RESOURCE_DIR / 'locales' / 'tessdata')
 
 
 print("=====================================")
-print(" ELDENRING TRACKER ")
+print(" ELDEN PVP TRACKER ")
 print("=====================================")
 print(f"version: {APP_VERSION}")
 print("-------------")
@@ -77,7 +77,7 @@ from application import retention
 from application import steam_log_auto, peer_tracking
 from application import history_archives
 
-from application.init import get_selected_language, elden_counter_dir_path
+from application.init import get_selected_language
 from application.ui_localization import packs
 
 
@@ -114,7 +114,8 @@ def open_settings(icon, item):
 
 
 def open_data_folder(icon, item):
-    os.startfile(elden_counter_dir_path)
+    for directory in accessible_data_directories():
+        os.startfile(directory)
 
 
 def data_folder_label(item):
@@ -126,8 +127,8 @@ def quit_tracker(icon, item):
     stop_flask(icon)
 
 
-icon = pystray.Icon("EldenRingPvPTracker", image, "Elden Ring PvP Tracker", menu=pystray.Menu(
-    pystray.MenuItem("Elden Ring PvP Tracker", open_tracker, default=True),
+icon = pystray.Icon("EldenRingPvPTracker", image, "Elden PVP Tracker", menu=pystray.Menu(
+    pystray.MenuItem("Elden PVP Tracker", open_tracker, default=True),
     pystray.MenuItem(tray_text(83, 'Statistiques'), open_statistics),
     pystray.MenuItem(tray_text(4, 'Paramètres'), open_settings),
     pystray.MenuItem(data_folder_label, open_data_folder),

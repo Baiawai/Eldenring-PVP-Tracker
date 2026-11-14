@@ -1,6 +1,6 @@
 # Elden Ring PvP Tracker
 
-Elden Ring PvP Tracker est une application Windows locale qui suit les combats PvP à partir des notifications affichées dans le jeu. Son interface s'ouvre dans le navigateur et les données sont conservées sur le PC. Version actuelle : **1.0.4.0**.
+Elden Ring PvP Tracker est une application Windows locale qui suit les combats PvP à partir des notifications affichées dans le jeu. Son interface s'ouvre dans le navigateur et les données sont conservées sur le PC. Version actuelle : **1.0.5.0**.
 
 ## Fonctionnalités
 
@@ -77,9 +77,9 @@ Les durées de conservation des captures et de l'historique Steam sont désactiv
 
 ## Données locales et sauvegarde
 
-Les bases SQLite de profil, configuration, captures, historique et statistiques se trouvent dans `%APPDATA%\Elden Ring PvP Tracker\`. Des images temporaires générées pendant le suivi peuvent aussi apparaître dans `application/`. Ces fichiers personnels, les journaux et les environnements virtuels sont exclus du dépôt.
+En développement, les bases SQLite de profil, configuration, captures, historique et statistiques se trouvent dans `%APPDATA%\Elden Ring PvP Tracker\`. La version Store peut utiliser des fichiers privés au package sous `%LOCALAPPDATA%\Packages\<famille-du-package>\LocalCache\Roaming\Elden Ring PvP Tracker\`. Le tracker affiche les emplacements des bases dans Information → Dossier des données et peut les ouvrir depuis son icône de notification. Des images temporaires générées pendant le suivi peuvent aussi apparaître dans `application/` en développement. Ces fichiers personnels, les journaux et les environnements virtuels sont exclus du dépôt.
 
-Pour sauvegarder vos données, arrêtez le tracker puis copiez le dossier `%APPDATA%\Elden Ring PvP Tracker\`. Les captures et historiques peuvent contenir des pseudos et des adresses réseau : protégez vos sauvegardes avant de les partager.
+Pour sauvegarder vos données, consultez d'abord les emplacements affichés, arrêtez le tracker puis copiez chacun des dossiers indiqués. Les captures et historiques peuvent contenir des pseudos et des adresses réseau : protégez vos sauvegardes avant de les partager.
 
 Une migration de chiffrement peut être préparée sur une **copie distincte**, sans modifier les données originales :
 

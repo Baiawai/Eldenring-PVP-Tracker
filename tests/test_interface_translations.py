@@ -109,6 +109,20 @@ class InterfaceTranslationTests(unittest.TestCase):
         self.assertTrue(source.startswith(prefix) and source.endswith(';'))
         self.assertEqual(backend, json.loads(source[len(prefix):-1]))
 
+    def test_faq_order_and_ocr_explanation_are_available_in_every_language(self):
+        html = (ROOT / 'templates/index.html').read_text(encoding='utf-8')
+        questions = re.findall(r'<summary data-i18n="faq_q_(\d+)">', html)
+        self.assertEqual(questions, ['12', '01', '05', '03', '19', '02', '06', '20',
+                                     '04', '07', '15', '08', '17', '09', '11', '18',
+                                     '21', '22', '10', '14', '16', '13'])
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertIn('OCR', pack['modern']['faq_a_19'])
+                for number in range(19, 23):
+                    self.assertTrue(pack['modern'][f'faq_q_{number}'])
+                    self.assertTrue(pack['modern'][f'faq_a_{number}'])
+
     def test_match_results_and_settings_are_readable_in_asian_languages(self):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         expected = {

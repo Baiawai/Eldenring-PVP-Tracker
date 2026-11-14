@@ -2,7 +2,7 @@ param(
     [string]$Identity,
     [string]$Publisher,
     [string]$PublisherDisplay,
-    [string]$Version = '1.0.4.0',
+    [string]$Version = '1.0.5.0',
     [string]$TesseractDir = '',
     [string]$MakeAppx = '',
     [string]$OutputDir = '',

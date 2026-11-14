@@ -89,6 +89,7 @@ monitor_lock = threading.Lock()
 run_monitor = False
 monitor_ready = False
 monitor_error = False
+monitor_error_detail = ''
 sighting_tracker = SightingTracker()
 ally_summoning_last_seen = None
 ally_summon_failure_last_seen = None
@@ -908,13 +909,14 @@ def update_game_display():
 
 
 def _run_monitor():
-    global run_monitor, monitor_ready, monitor_error, steam_overlay_open
+    global run_monitor, monitor_ready, monitor_error, monitor_error_detail, steam_overlay_open
     try:
         with ThreadPoolExecutor(max_workers=1, thread_name_prefix='tracker-ocr') as ocr_executor:
             monitor(ocr_executor)
     except _CaptureStopped:
         pass
-    except Exception:
+    except Exception as error:
+        monitor_error_detail = (type(error).__name__ + ': ' + str(error))[:1000]
         monitor_error = True
         usage_metrics.record_monitor_error()
         details = traceback.format_exc()
@@ -930,7 +932,8 @@ def _run_monitor():
         run_monitor = False
         monitor_ready = False
         steam_overlay_open = False
-        tracker_notifications.notify('monitor_error' if monitor_error else 'monitor_stop')
+        tracker_notifications.notify('monitor_error' if monitor_error else 'monitor_stop',
+                                     monitor_error_detail if monitor_error else '')
         try:
             kind = 'monitor_error' if monitor_error else 'monitor_stop'
             message = 'Suivi arrêté à cause d’une erreur' if monitor_error else 'Suivi arrêté'
@@ -944,7 +947,7 @@ def _run_monitor():
 
 @app.route("/start", methods={"POST"})
 def start():
-    global run_monitor, monitor_ready, monitor_error, capture, capture_revision, game_running
+    global run_monitor, monitor_ready, monitor_error, monitor_error_detail, capture, capture_revision, game_running
     global preview_notification_box, preview_notification_version
     global active_capture_display, width_screen, height_screen
     if not monitor_lock.acquire(blocking=False):
@@ -959,6 +962,7 @@ def start():
         run_monitor = True
         monitor_ready = False
         monitor_error = False
+        monitor_error_detail = ''
         with preview_condition:
             capture = ""
             capture_revision += 1
@@ -1088,7 +1092,7 @@ def interval():
             size_notification = [left, top, right, bottom, h, w]
             notif_base64 = base64.b64encode(cv2.imencode('.jpg', image_notif)[1]).decode()
     
-    return jsonify({"request": "success", "datas":array_tampo, "capture":capture, "gameDetected": game_detected, "game_running": game_running, "steamOverlay": steam_overlay_open, "time_actuel": time_actuel, "fight":fight, "mode": mode_select, "mode_detected": mode_detected, "sightings_revision": sightings_revision, "monitor_running": run_monitor, "monitor_ready": monitor_ready, "monitor_error": monitor_error, "session_summary": session_summary.snapshot(), "user": user, "notif_base64": notif_base64, "size_notification": size_notification})
+    return jsonify({"request": "success", "datas":array_tampo, "capture":capture, "gameDetected": game_detected, "game_running": game_running, "steamOverlay": steam_overlay_open, "time_actuel": time_actuel, "fight":fight, "mode": mode_select, "mode_detected": mode_detected, "sightings_revision": sightings_revision, "monitor_running": run_monitor, "monitor_ready": monitor_ready, "monitor_error": monitor_error, "monitor_error_detail": monitor_error_detail, "session_summary": session_summary.snapshot(), "user": user, "notif_base64": notif_base64, "size_notification": size_notification})
 
 
 @app.route('/profile-legend', methods={'GET', 'POST'})

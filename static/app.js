@@ -782,7 +782,10 @@ function intervall(){
                 stopPreviewPolling();
                 $('#start').removeClass('active').text(text_active[0]);
                 start_ready = true;
-                $('.cadreStats').append($('<p class="elden-off simple">').text(appT('monitor_capture_error', 'La capture s’est arrêtée à cause d’une erreur. Un journal a été enregistré.')));
+                const monitorMessage = appT('monitor_capture_error', 'La capture s’est arrêtée à cause d’une erreur.');
+                const monitorDetail = typeof response.monitor_error_detail === 'string' ? response.monitor_error_detail : '';
+                $('.cadreStats').append($('<p class="elden-off simple monitor-error" role="alert">').text(monitorMessage + (monitorDetail ? '\n' + monitorDetail : '')));
+                $('.cadreStats').scrollTop($('.cadreStats')[0].scrollHeight);
                 $('.live_on').addClass('live_off').removeClass('live_on');
             } else if (response.monitor_running === false && $('#start').hasClass('active') && start_ready) {
                 clearInterval(runApp);

@@ -31,6 +31,14 @@ class SystemDetailsTests(unittest.TestCase):
             self.assertEqual(result['environment']['data_path'], str(Path(temp) / 'Elden Ring PvP Tracker'))
             self.assertFalse((Path(temp) / 'Elden Ring PvP Tracker').exists())
 
+    def test_snapshot_shows_every_accessible_location(self):
+        with tempfile.TemporaryDirectory() as temp, \
+             patch.dict('os.environ', {'APPDATA': temp}), \
+             patch.object(system_details, 'accessible_data_directories', return_value=[Path(temp) / 'private', Path(temp) / 'normal']), \
+             patch.object(system_details, 'tesseract_version', return_value=None):
+            result = system_details.snapshot()
+            self.assertEqual(result['environment']['data_path'], str(Path(temp) / 'private') + '\n' + str(Path(temp) / 'normal'))
+
 
 if __name__ == '__main__':
     unittest.main()

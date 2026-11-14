@@ -2055,6 +2055,8 @@ font-family: optimus princeps;
 
 /* Avertissement de limite d’inventaire dans le journal du compteur. */
 .cadreStats .inventory-warning { color:#ff6868; }
+.cadreStats .monitor-error { white-space:pre-wrap; overflow-wrap:anywhere; }
+[data-environment="data_path"] { white-space:pre-line; overflow-wrap:anywhere; }
 
 .game-language-setting select { width:min(300px, 95%); max-width:100%; }
 #game_language_status { display:block; margin-top:7px; color:#e8c37d; font:18px/1.4 Arial,sans-serif; }
@@ -2313,7 +2315,11 @@ font-family: optimus princeps;
 }
 
 /* Keep the home logo current when the running server has cached the template. */
-.img_eldenring img { content: url('home-logo-classic-eye.png'); }
+.img_eldenring img {
+    content: url('elden-pvp-tracker-logo.png');
+    width: 90%;
+    height: auto;
+}
 
 #notification_ocr_result { white-space:pre-wrap; overflow-wrap:anywhere; text-align:left; }
 body.hide-sidebar-legend .sidebar-legend { display:none; }

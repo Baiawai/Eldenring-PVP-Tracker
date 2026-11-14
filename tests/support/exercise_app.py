@@ -4,6 +4,7 @@ import types
 import webbrowser
 import sqlite3
 import os
+import tempfile
 from contextlib import closing
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
@@ -38,6 +39,10 @@ assert functions.game_locale == 'frafr'
 assert client.post('/languages', data={'language':'eng'}).status_code == 200
 assert client.get('/', headers={'Accept-Language':'de-DE'}).status_code == 200
 assert init.get_selected_language() == 'eng'
+with patch.object(module, 'accessible_data_directories', return_value=[Path('first'), Path('second')]), \
+     patch.object(module.os, 'startfile') as open_folder:
+    module.open_data_folder(None, None)
+    assert [call.args[0] for call in open_folder.call_args_list] == [Path('first'), Path('second')]
 assert b'data-store-build="false"' in response.data
 assert ('data-i18n-title="environment_tracker">' + APP_VERSION + '</h5>').encode() in response.data
 assert client.get('/', headers={'Host':'127.0.0.1:5000', 'Origin':'http://127.0.0.1:5000', 'Sec-Fetch-Site':'same-origin'}).status_code == 200
@@ -63,6 +68,24 @@ assert client.post('/profile-legend', data=b'x' * (2 * 1024 * 1024 + 1), content
 assert client.get('/init').status_code == 200
 state = client.get('/interval').get_json()
 assert state['fight'] is False and state['monitor_running'] is False
+
+# A monitor error remains visible even when its log cannot be written.
+with tempfile.TemporaryDirectory(dir=os.environ['APPDATA']) as directory:
+    blocked_parent = Path(directory) / 'not-a-directory'
+    blocked_parent.write_text('fixture', encoding='utf-8')
+    with patch.object(functions, 'monitor', side_effect=RuntimeError('<capture> failed')), \
+         patch.object(functions, 'data_dir', return_value=blocked_parent / 'logs'), \
+         patch.object(functions, 'record_detection'), \
+         patch.object(functions.tracker_notifications, 'notify') as notify:
+        assert functions.monitor_lock.acquire(blocking=False)
+        functions.run_monitor = True
+        functions._run_monitor()
+        error_state = client.get('/interval').get_json()
+        assert error_state['monitor_error'] is True
+        assert error_state['monitor_error_detail'] == 'RuntimeError: <capture> failed'
+        notify.assert_called_once_with('monitor_error', 'RuntimeError: <capture> failed')
+    functions.monitor_error = False
+    functions.monitor_error_detail = ''
 assert client.get('/game-language').status_code == 200
 assert client.get('/steam-log-auto').get_json()['enabled'] is True
 assert client.post('/steam-log-auto', data={'enabled':'nope'}).status_code == 400

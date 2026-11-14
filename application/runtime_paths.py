@@ -5,6 +5,7 @@ import socket
 import errno
 import hashlib
 import shutil
+import ctypes
 from pathlib import Path
 
 RESOURCE_DIR = Path(__file__).resolve().parent
@@ -15,6 +16,53 @@ LEGACY_DATA_FOLDER = 'hid_el_cou'
 
 def data_dir():
     return Path(os.environ['APPDATA']) / DATA_FOLDER
+
+
+def package_family_name():
+    """Return the current package identity, not the identity of another app."""
+    if not FROZEN or os.name != 'nt':
+        return None
+    try:
+        get_family = ctypes.windll.kernel32.GetCurrentPackageFamilyName
+        get_family.argtypes = [ctypes.POINTER(ctypes.c_uint32), ctypes.c_wchar_p]
+        get_family.restype = ctypes.c_long
+        length = ctypes.c_uint32(0)
+        if get_family(ctypes.byref(length), None) != 122 or not 0 < length.value <= 1024:
+            return None
+        buffer = ctypes.create_unicode_buffer(length.value)
+        if get_family(ctypes.byref(length), buffer) != 0:
+            return None
+        return buffer.value or None
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def accessible_data_directories():
+    """Find Explorer-visible locations of the databases in the current process view.
+
+    MSIX can overlay individual files, so both directories may be required.
+    This only reports paths; database reads and writes keep using data_dir().
+    """
+    logical = data_dir()
+    family = package_family_name()
+    local = os.environ.get('LOCALAPPDATA')
+    if not family or not local or Path(family).name != family:
+        return [logical]
+    private = Path(local) / 'Packages' / family / 'LocalCache' / 'Roaming' / DATA_FOLDER
+    locations = []
+    try:
+        entries = sorted(logical.iterdir(), key=lambda path: path.name.casefold())
+    except OSError:
+        return [logical]
+    for current in entries:
+        candidate = private / current.name
+        try:
+            location = private if candidate.exists() and os.path.samefile(current, candidate) else logical
+        except OSError:
+            location = logical
+        if location not in locations:
+            locations.append(location)
+    return locations or [logical]
 
 
 def _tracker_running():
