@@ -60,6 +60,7 @@ for path in ('/start', '/stop', '/exit', '/interval', '/capture', '/nextCaptures
 for path in ('/start', '/stop', '/exit'):
     assert client.get(path).status_code == 405
 assert client.get('/monitor-status').get_json()['running'] is False
+assert client.get('/monitor-status').get_json()['instance'] == module.app.config['TRACKER_INSTANCE_ID']
 security_response = client.get('/monitor-status')
 assert security_response.headers['Cache-Control'] == 'no-store'
 assert security_response.headers['X-Frame-Options'] == 'DENY'

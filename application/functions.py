@@ -728,7 +728,8 @@ def tracking_notifications_setting():
 @app.route('/monitor-status', methods={'GET'})
 def monitor_status():
     # Unlike /interval, this does not consume pending tracker events.
-    return jsonify(request='success', running=run_monitor)
+    return jsonify(request='success', running=run_monitor,
+                   instance=app.config.get('TRACKER_INSTANCE_ID'))
 
 
 @app.route('/retention-settings', methods={'GET', 'POST'})

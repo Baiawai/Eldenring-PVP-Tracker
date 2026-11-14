@@ -579,6 +579,37 @@ const trackingFavicon = (function () {
     }};
 })();
 let monitorStatusGeneration = 0;
+let trackerDisconnected = false;
+let trackerInstance = null;
+let trackerStatusObserved = false;
+let monitorStatusPending = false;
+function showTrackerDisconnected() {
+    if (!trackerDisconnected) {
+        trackerDisconnected = true;
+        monitorStatusGeneration++;
+        clearInterval(runApp);
+        stopPreviewPolling();
+        trackingFavicon.setRunning(false);
+        $('#start').removeClass('active').text(text_active[0]).attr('aria-disabled', 'true');
+        $('.monitor-status, .monitor-starting').remove();
+        $('.live_on').addClass('live_off').removeClass('live_on');
+        start_ready = true;
+        sidebarTracking = false;
+        renderSidebar();
+    }
+    let banner = document.getElementById('tracker-disconnected');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'tracker-disconnected';
+        banner.className = 'tracker-disconnected';
+        banner.setAttribute('role', 'status');
+        document.body.appendChild(banner);
+    }
+    banner.textContent = appT('tracker_disconnected', 'Le tracker est fermé ou inaccessible. Relance l’application : cette page se reconnectera automatiquement.');
+}
+document.addEventListener('ui-language-change', function() {
+    if (trackerDisconnected) showTrackerDisconnected();
+});
 // A monitor started in the background (or in another tab) must be reflected
 // without calling /start again or consuming the pending event queue here.
 function attachRunningMonitor() {
@@ -599,17 +630,30 @@ function attachRunningMonitor() {
     startPreviewPolling();
 }
 function refreshMonitorStatus() {
-    if (!start_ready) return;
+    if (monitorStatusPending) return;
+    monitorStatusPending = true;
     const generation = monitorStatusGeneration;
-    $.get('/monitor-status', function (data) {
+    $.ajax({url:'/monitor-status', type:'GET', timeout:5000}).done(function (data) {
+        if (!data || data.request !== 'success' || typeof data.running !== 'boolean') return;
+        const instance = data.instance || null;
+        if (trackerDisconnected || (trackerStatusObserved && trackerInstance !== instance)) {
+            window.location.reload();
+            return;
+        }
+        trackerStatusObserved = true;
+        trackerInstance = instance;
         if (!start_ready || generation !== monitorStatusGeneration || !data || typeof data.running !== 'boolean') return;
         trackingFavicon.setRunning(data.running);
         if (data.running) attachRunningMonitor();
-    });
+    }).fail(function(xhr) {
+        if (xhr && xhr.status === 0) showTrackerDisconnected();
+        else if (xhr && xhr.status === 423) window.location.reload();
+    }).always(function() { monitorStatusPending = false; });
 }
 refreshMonitorStatus();
 setInterval(refreshMonitorStatus, 3000);
 $("#start").click(function(){
+    if (trackerDisconnected) { showTrackerDisconnected(); return; }
     if(start_ready == true){
     if (!$(this).hasClass("active") && $(".settings-panel").is(":visible")) {
         $("#menu_button_settings").click();
@@ -643,8 +687,11 @@ $("#start").click(function(){
                     setTimeout(function() {
                         $('.cadreStats').scrollTop($('.cadreStats')[0].scrollHeight);
                     }, 0);
-                }, error:function(){
-                    console.log("error")
+                }, error:function(response){
+                    start_ready = true;
+                    if (response && response.status === 0) showTrackerDisconnected();
+                    else if (response && (response.status === 403 || response.status === 423)) window.location.reload();
+                    else $('.cadreStats').append($('<p class="elden-off simple">').text(appT('tray_stop_error', 'Impossible d’arrêter le suivi.')));
                 }
             })
 
@@ -684,6 +731,8 @@ $("#start").click(function(){
             $('#start').removeClass('active').text(text_active[0]);
             start_ready = true;
             $('.monitor-starting').remove();
+            if (response && response.status === 0) { showTrackerDisconnected(); return; }
+            if (response && (response.status === 403 || response.status === 423)) { window.location.reload(); return; }
             const errorMessage = appT('monitor_start_error', 'Impossible de démarrer le suivi. Réessaie dans quelques instants.');
             $('.cadreStats').append($('<p class="elden-off simple">').text(errorMessage));
             $('.live_on').addClass('live_off').removeClass('live_on');
@@ -2166,11 +2215,69 @@ $('.full_screen').on('click', function(){
 
   });
 
-// Shortcuts from the Windows notification area open the requested section.
-$(window).on('load', function() {
-    const section = { '#statistics': 'menu_button_info', '#settings': 'menu_button_settings' }[window.location.hash];
-    if (section) document.getElementById(section).click();
-});
+// Notification-area shortcuts may also change the hash in an existing tab.
+function openShortcutSection() {
+    if (window.location.hash === '#home') {
+        ['menu_button_captures', 'menu_button_multi', 'menu_button_info', 'menu_button_players',
+            'menu_button_history', 'menu_button_settings', 'menu_button_information'].forEach(function(id) {
+            const button = document.getElementById(id);
+            if (button && button.classList.contains('active')) button.click();
+        });
+        return;
+    }
+    const section = { '#statistics': 'menu_button_info', '#settings': 'menu_button_settings',
+        '#captures': 'menu_button_captures', '#history': 'menu_button_history' }[window.location.hash];
+    const button = section && document.getElementById(section);
+    if (button && !button.classList.contains('active')) button.click();
+}
+$(window).on('load hashchange', openShortcutSection);
+
+// Reuse one live tracker tab when a notification-area shortcut is selected.
+(function () {
+    const tab = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() :
+        Date.now().toString(36) + Math.random().toString(36).slice(2);
+    let acknowledged = null;
+    let lastCommand = null;
+    let inFlight = false;
+    function poll() {
+        if (inFlight) return;
+        inFlight = true;
+        const sentAck = acknowledged;
+        let replyImmediately = false;
+        fetch('/tray-navigation', {
+            method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({tab: tab, visible: !document.hidden,
+                focused: document.hasFocus(), ack: sentAck})
+        }).then(function(response) {
+            if (response.status === 403 || response.status === 423) {
+                window.location.reload();
+                throw new Error('Tracker session changed');
+            }
+            if (!response.ok) throw new Error('Navigation unavailable');
+            return response.json();
+        }).then(function(data) {
+            if (acknowledged === sentAck) acknowledged = null;
+            const command = data && data.command;
+            if (!command || typeof command.id !== 'string' ||
+                !['home', 'captures', 'statistics', 'history', 'settings'].includes(command.section)) return;
+            if (command.id !== lastCommand) {
+                lastCommand = command.id;
+                window.location.hash = '#' + command.section;
+                openShortcutSection();
+            }
+            acknowledged = command.id;
+            replyImmediately = true;
+        }).catch(function() {}).finally(function() {
+            inFlight = false;
+            if (replyImmediately) poll();
+        });
+    }
+    setInterval(poll, 2000);
+    window.addEventListener('focus', poll);
+    document.addEventListener('visibilitychange', poll);
+    poll();
+})();
 
 
 // Redistribute the active-tab sparks whenever the selected section changes.

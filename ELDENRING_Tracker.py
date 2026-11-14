@@ -1,5 +1,5 @@
 import threading
-from flask import Flask, abort, render_template, request
+from flask import Flask, abort, jsonify, render_template, request
 import webbrowser
 import os
 import socket
@@ -31,6 +31,7 @@ print("=====================================")
 app = Flask(__name__)
 # Local commands contain only small forms and JSON, never uploaded images.
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
+app.config['TRACKER_INSTANCE_ID'] = secrets.token_urlsafe(18)
 _LOCAL_SESSION = secrets.token_urlsafe(32)
 _LOCAL_COOKIE = 'tracker_session'
 
@@ -60,6 +61,13 @@ def secure_local_response(response):
         response.headers['Cache-Control'] = 'no-store'
     if request.path == '/' and request.method == 'GET' and response.status_code == 200:
         response.set_cookie(_LOCAL_COOKIE, _LOCAL_SESSION, httponly=True, samesite='Strict', path='/')
+    if request.path in ('/', '/languages') and response.status_code == 200:
+        tray = globals().get('icon')
+        if tray is not None and tray.visible:
+            try:
+                tray.update_menu()
+            except Exception:
+                app.logger.exception('Unable to refresh the notification-area menu')
     return response
 
 
@@ -76,6 +84,8 @@ from application import auto_tracking
 from application import retention
 from application import steam_log_auto, peer_tracking
 from application import history_archives
+from application import tray_controls
+from application.tray_navigation import Navigation
 
 from application.init import get_selected_language
 from application.ui_localization import packs
@@ -89,6 +99,7 @@ current_folder = os.path.dirname(os.path.abspath(__file__))
 static_folder = os.path.join(current_folder, "static")
 icon_path = os.path.join(static_folder, "tracker-eye-ornament.ico")
 image = Image.open(icon_path)
+tray_navigation = Navigation(webbrowser.open_new)
 
 
 
@@ -102,15 +113,43 @@ def tray_text(index, fallback):
 
 
 def open_tracker(icon, item):
-    webbrowser.open_new('http://localhost:5000/')
+    tray_navigation.open('home')
 
 
 def open_statistics(icon, item):
-    webbrowser.open_new('http://localhost:5000/#statistics')
+    tray_navigation.open('statistics')
 
 
 def open_settings(icon, item):
-    webbrowser.open_new('http://localhost:5000/#settings')
+    tray_navigation.open('settings')
+
+
+def open_captures(icon, item):
+    tray_navigation.open('captures')
+
+
+def open_history(icon, item):
+    tray_navigation.open('history')
+
+
+def tray_modern(key, fallback):
+    return tray_controls.text(packs(), get_selected_language(), key, fallback)
+
+
+def tray_start_label(item):
+    return tray_modern('tray_start_tracking', 'Démarrer le suivi')
+
+
+def tray_stop_label(item):
+    return tray_modern('tray_stop_tracking', 'Arrêter le suivi')
+
+
+def start_tracking(icon, item):
+    tray_controls.change_tracking(app, functions, store_update, icon, True, tray_modern)
+
+
+def stop_tracking(icon, item):
+    tray_controls.change_tracking(app, functions, store_update, icon, False, tray_modern)
 
 
 def open_data_folder(icon, item):
@@ -129,8 +168,13 @@ def quit_tracker(icon, item):
 
 icon = pystray.Icon("EldenRingPvPTracker", image, "Elden PVP Tracker", menu=pystray.Menu(
     pystray.MenuItem("Elden PVP Tracker", open_tracker, default=True),
+    pystray.MenuItem(tray_start_label, start_tracking),
+    pystray.MenuItem(tray_stop_label, stop_tracking),
+    pystray.Menu.SEPARATOR,
+    pystray.MenuItem(tray_text(3, 'Captures'), open_captures),
     pystray.MenuItem(tray_text(83, 'Statistiques'), open_statistics),
-    pystray.MenuItem(tray_text(4, 'Paramètres'), open_settings),
+    pystray.MenuItem(lambda item: tray_modern('menu_history', 'Historique'), open_history),
+    pystray.MenuItem(tray_text(4, 'Configurations'), open_settings),
     pystray.MenuItem(data_folder_label, open_data_folder),
     pystray.Menu.SEPARATOR,
     pystray.MenuItem(tray_text(62, 'Quitter le tracker'), quit_tracker)
@@ -138,6 +182,19 @@ icon = pystray.Icon("EldenRingPvPTracker", image, "Elden PVP Tracker", menu=pyst
  
 def start_pystray():
     icon.run()
+
+
+@app.route('/tray-navigation', methods={'POST'})
+def poll_tray_navigation():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        abort(400)
+    try:
+        command = tray_navigation.poll(data.get('tab'), data.get('visible'),
+                                       data.get('focused'), data.get('ack'))
+    except ValueError:
+        abort(400)
+    return jsonify(command=command)
 
 
 path_to_tesseract = tesseract_path()
@@ -221,7 +278,6 @@ else:
     url = 'http://localhost:5000/'
     if __name__ == '__main__':
         store_update.check_at_start()
-    webbrowser.open_new(url)
     print("app ready")
 
 
@@ -232,6 +288,12 @@ def start_flask():
 
     # POUR PASSER SUR UN SERVEUR WSGI
     serve(app, _quiet=True, listen='127.0.0.1:5000', max_request_body_size=2 * 1024 * 1024)
+
+
+def open_initial_browser():
+    # A previously open tab can reconnect once the server is listening.
+    if not tray_navigation.wait_for_tab(6):
+        webbrowser.open_new('http://localhost:5000/')
     
 
 
@@ -270,6 +332,7 @@ if __name__ == '__main__' and app_started == True:
         auto_tracking.start_worker(app, functions)
         steam_log_auto.start_worker(peer_tracking.enabled)
     flask_thread.start()
+    threading.Thread(target=open_initial_browser, name='initial-browser', daemon=True).start()
     start_pystray()
 
 

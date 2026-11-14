@@ -695,3 +695,10 @@ input[type="range"]:focus-visible { outline:2px solid #e1c487; outline-offset:3p
         background-position:right 12px center,right 7px center,right 22px center,center;
     }
 }
+/* Keep connection state visible on every section of the tracker. */
+.tracker-disconnected {
+    position:fixed; z-index:10000; top:12px; left:50%; transform:translateX(-50%);
+    max-width:min(90vw, 780px); padding:12px 18px; border:1px solid #aa8851;
+    background:#21180f; color:#f5e4bf; font-size:18px; text-align:center;
+    box-shadow:0 3px 16px #000b;
+}

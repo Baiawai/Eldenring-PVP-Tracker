@@ -702,7 +702,11 @@
       "faq_q_21": "Werden ältere Kämpfe in die Rangliste übernommen?",
       "faq_a_21": "Bei einer neuen Anmeldung werden frühere lokale Ergebnisse nicht importiert. Nur nach deiner Zustimmung erkannte Kämpfe werden gesendet; ausstehende Ereignisse werden erneut versucht. Bereits veröffentlichte ungeprüfte Werte bleiben entsprechend markiert.",
       "faq_q_22": "Kann ich den Tracker offline verwenden?",
-      "faq_a_22": "Lokale Aufzeichnung und Statistiken bleiben offline verfügbar. Online-Rangliste und Steam-Anmeldung benötigen Internet; ausstehende Ranglistenereignisse werden nach Wiederherstellung der Verbindung erneut gesendet."
+      "faq_a_22": "Lokale Aufzeichnung und Statistiken bleiben offline verfügbar. Online-Rangliste und Steam-Anmeldung benötigen Internet; ausstehende Ranglistenereignisse werden nach Wiederherstellung der Verbindung erneut gesendet.",
+      "tray_start_tracking": "Überwachung starten",
+      "tray_stop_tracking": "Überwachung stoppen",
+      "tray_stop_error": "Überwachung konnte nicht gestoppt werden.",
+      "tracker_disconnected": "Der Tracker ist geschlossen oder nicht erreichbar. Starte die Anwendung erneut; diese Seite verbindet sich automatisch."
     },
     "html_lang": "de"
   },
@@ -1409,7 +1413,11 @@
       "faq_q_21": "Le vecchie battaglie vengono importate nella classifica?",
       "faq_a_21": "Per una nuova registrazione, i risultati locali precedenti non vengono importati. Vengono inviati solo i combattimenti rilevati dopo il consenso; gli eventi in attesa vengono ritentati. I punteggi non verificati già pubblicati restano contrassegnati.",
       "faq_q_22": "Posso usare il tracker offline?",
-      "faq_a_22": "Il monitoraggio e le statistiche locali restano disponibili offline. La classifica online e l’accesso a Steam richiedono Internet; gli eventi in attesa vengono ritentati al ritorno della connessione."
+      "faq_a_22": "Il monitoraggio e le statistiche locali restano disponibili offline. La classifica online e l’accesso a Steam richiedono Internet; gli eventi in attesa vengono ritentati al ritorno della connessione.",
+      "tray_start_tracking": "Avvia monitoraggio",
+      "tray_stop_tracking": "Interrompi monitoraggio",
+      "tray_stop_error": "Impossibile interrompere il monitoraggio.",
+      "tracker_disconnected": "Il tracker è chiuso o non raggiungibile. Riavvia l’applicazione: questa pagina si riconnetterà automaticamente."
     },
     "html_lang": "it"
   },
@@ -2116,7 +2124,11 @@
       "faq_q_21": "Minhas lutas antigas são importadas para a classificação?",
       "faq_a_21": "Em um novo cadastro, os resultados locais anteriores não são importados. Apenas lutas detectadas após o consentimento são enviadas; eventos pendentes são reenviados. Pontuações não verificadas já publicadas continuam identificadas.",
       "faq_q_22": "Posso usar o tracker offline?",
-      "faq_a_22": "O acompanhamento e as estatísticas locais continuam disponíveis offline. A classificação online e o login no Steam precisam de internet; eventos pendentes são reenviados quando a conexão retorna."
+      "faq_a_22": "O acompanhamento e as estatísticas locais continuam disponíveis offline. A classificação online e o login no Steam precisam de internet; eventos pendentes são reenviados quando a conexão retorna.",
+      "tray_start_tracking": "Iniciar rastreamento",
+      "tray_stop_tracking": "Parar rastreamento",
+      "tray_stop_error": "Não foi possível parar o rastreamento.",
+      "tracker_disconnected": "O tracker está fechado ou inacessível. Reinicie o aplicativo: esta página será reconectada automaticamente."
     },
     "html_lang": "pt-BR"
   },
@@ -2823,7 +2835,11 @@
       "faq_q_21": "Czy wcześniejsze walki są importowane do rankingu?",
       "faq_a_21": "Przy nowej rejestracji wcześniejsze wyniki lokalne nie są importowane. Wysyłane są tylko walki wykryte po wyrażeniu zgody; oczekujące zdarzenia są ponawiane. Wcześniej opublikowane niezweryfikowane wyniki pozostają oznaczone.",
       "faq_q_22": "Czy tracker działa bez internetu?",
-      "faq_a_22": "Lokalne śledzenie i statystyki działają offline. Ranking online i logowanie Steam wymagają internetu; oczekujące zdarzenia rankingu są ponawiane po przywróceniu połączenia."
+      "faq_a_22": "Lokalne śledzenie i statystyki działają offline. Ranking online i logowanie Steam wymagają internetu; oczekujące zdarzenia rankingu są ponawiane po przywróceniu połączenia.",
+      "tray_start_tracking": "Rozpocznij śledzenie",
+      "tray_stop_tracking": "Zatrzymaj śledzenie",
+      "tray_stop_error": "Nie udało się zatrzymać śledzenia.",
+      "tracker_disconnected": "Tracker jest zamknięty lub niedostępny. Uruchom aplikację ponownie, a ta strona połączy się automatycznie."
     },
     "html_lang": "pl"
   },
@@ -3530,7 +3546,11 @@
       "faq_q_21": "Импортируются ли прежние бои в рейтинг?",
       "faq_a_21": "При новой регистрации прежние локальные результаты не импортируются. Отправляются только бои, обнаруженные после согласия; ожидающие события отправляются повторно. Ранее опубликованные непроверенные результаты остаются помеченными.",
       "faq_q_22": "Можно ли пользоваться трекером без интернета?",
-      "faq_a_22": "Локальное отслеживание и статистика доступны офлайн. Для рейтинга и входа в Steam нужен интернет; ожидающие события рейтинга будут отправлены после восстановления соединения."
+      "faq_a_22": "Локальное отслеживание и статистика доступны офлайн. Для рейтинга и входа в Steam нужен интернет; ожидающие события рейтинга будут отправлены после восстановления соединения.",
+      "tray_start_tracking": "Начать отслеживание",
+      "tray_stop_tracking": "Остановить отслеживание",
+      "tray_stop_error": "Не удалось остановить отслеживание.",
+      "tracker_disconnected": "Трекер закрыт или недоступен. Запустите приложение снова — эта страница подключится автоматически."
     },
     "html_lang": "ru"
   },
@@ -4237,7 +4257,11 @@
       "faq_q_21": "過去の対戦はランキングに取り込まれますか？",
       "faq_a_21": "新規登録では、それ以前のローカル結果は取り込まれません。参加に同意した後に検出された対戦だけが送信され、保留中のイベントは再送されます。既に公開された未検証のスコアはその旨が表示されます。",
       "faq_q_22": "オフラインでも使えますか？",
-      "faq_a_22": "ローカルの追跡と統計はオフラインでも利用できます。オンラインランキングとSteamへのサインインにはインターネットが必要です。保留中のランキングイベントは接続回復後に再送されます。"
+      "faq_a_22": "ローカルの追跡と統計はオフラインでも利用できます。オンラインランキングとSteamへのサインインにはインターネットが必要です。保留中のランキングイベントは接続回復後に再送されます。",
+      "tray_start_tracking": "追跡を開始",
+      "tray_stop_tracking": "追跡を停止",
+      "tray_stop_error": "追跡を停止できませんでした。",
+      "tracker_disconnected": "トラッカーが終了したか、接続できません。アプリを再起動すると、このページは自動的に再接続します。"
     },
     "html_lang": "ja"
   },
@@ -4944,7 +4968,11 @@
       "faq_q_21": "이전 전투도 순위표에 가져오나요?",
       "faq_a_21": "새로 등록할 때 이전 로컬 결과는 가져오지 않습니다. 참여에 동의한 뒤 감지된 전투만 전송되며 대기 중인 이벤트는 다시 시도됩니다. 이미 게시된 검증되지 않은 점수는 계속 표시됩니다.",
       "faq_q_22": "오프라인으로도 사용할 수 있나요?",
-      "faq_a_22": "로컬 추적과 통계는 오프라인에서도 사용할 수 있습니다. 온라인 순위표와 Steam 로그인에는 인터넷이 필요하며, 대기 중인 순위표 이벤트는 연결이 복구되면 다시 전송됩니다."
+      "faq_a_22": "로컬 추적과 통계는 오프라인에서도 사용할 수 있습니다. 온라인 순위표와 Steam 로그인에는 인터넷이 필요하며, 대기 중인 순위표 이벤트는 연결이 복구되면 다시 전송됩니다.",
+      "tray_start_tracking": "추적 시작",
+      "tray_stop_tracking": "추적 중지",
+      "tray_stop_error": "추적을 중지할 수 없습니다.",
+      "tracker_disconnected": "트래커가 종료되었거나 연결할 수 없습니다. 앱을 다시 실행하면 이 페이지가 자동으로 다시 연결됩니다."
     },
     "html_lang": "ko"
   },
@@ -5651,7 +5679,11 @@
       "faq_q_21": "以前的对战会导入排行榜吗？",
       "faq_a_21": "新注册时不会导入以前的本地结果。只有同意参与后检测到的对战才会发送；待发送的事件会重试。已发布的未验证分数仍会标明。",
       "faq_q_22": "可以离线使用追踪器吗？",
-      "faq_a_22": "本地追踪和统计可以离线使用。在线排行榜和 Steam 登录需要互联网；等待发送的排行榜事件会在网络恢复后重试。"
+      "faq_a_22": "本地追踪和统计可以离线使用。在线排行榜和 Steam 登录需要互联网；等待发送的排行榜事件会在网络恢复后重试。",
+      "tray_start_tracking": "开始追踪",
+      "tray_stop_tracking": "停止追踪",
+      "tray_stop_error": "无法停止追踪。",
+      "tracker_disconnected": "追踪器已关闭或无法连接。重新启动应用后，此页面将自动重新连接。"
     },
     "html_lang": "zh-Hans"
   },
@@ -6358,7 +6390,11 @@
       "faq_q_21": "以前的對戰會匯入排行榜嗎？",
       "faq_a_21": "新註冊時不會匯入以前的本機結果。只有同意參與後偵測到的對戰才會傳送；待傳送事件會重試。已發布的未驗證分數仍會標示。",
       "faq_q_22": "可以離線使用追蹤器嗎？",
-      "faq_a_22": "本機追蹤和統計可離線使用。線上排行榜和 Steam 登入需要網路；等待傳送的排行榜事件會在連線恢復後重試。"
+      "faq_a_22": "本機追蹤和統計可離線使用。線上排行榜和 Steam 登入需要網路；等待傳送的排行榜事件會在連線恢復後重試。",
+      "tray_start_tracking": "開始追蹤",
+      "tray_stop_tracking": "停止追蹤",
+      "tray_stop_error": "無法停止追蹤。",
+      "tracker_disconnected": "追蹤器已關閉或無法連線。重新啟動應用程式後，此頁面會自動重新連線。"
     },
     "html_lang": "zh-Hant"
   },
@@ -7065,7 +7101,11 @@
       "faq_q_21": "การต่อสู้เก่าจะถูกนำเข้าตารางอันดับหรือไม่?",
       "faq_a_21": "ในการลงทะเบียนใหม่ ผลลัพธ์ในเครื่องก่อนหน้านี้จะไม่ถูกนำเข้า ระบบส่งเฉพาะการต่อสู้ที่ตรวจพบหลังยอมรับการเข้าร่วม และลองส่งเหตุการณ์ที่ค้างอีกครั้ง คะแนนเก่าที่เผยแพร่แต่ยังไม่ยืนยันจะยังมีเครื่องหมายกำกับ",
       "faq_q_22": "ใช้ตัวติดตามแบบออฟไลน์ได้หรือไม่?",
-      "faq_a_22": "การติดตามและสถิติในเครื่องยังใช้แบบออฟไลน์ได้ ตารางอันดับออนไลน์และการเข้าสู่ระบบ Steam ต้องใช้อินเทอร์เน็ต โดยเหตุการณ์ที่ค้างจะลองส่งอีกครั้งเมื่อเชื่อมต่อได้"
+      "faq_a_22": "การติดตามและสถิติในเครื่องยังใช้แบบออฟไลน์ได้ ตารางอันดับออนไลน์และการเข้าสู่ระบบ Steam ต้องใช้อินเทอร์เน็ต โดยเหตุการณ์ที่ค้างจะลองส่งอีกครั้งเมื่อเชื่อมต่อได้",
+      "tray_start_tracking": "เริ่มติดตาม",
+      "tray_stop_tracking": "หยุดติดตาม",
+      "tray_stop_error": "ไม่สามารถหยุดการติดตามได้",
+      "tracker_disconnected": "ตัวติดตามปิดอยู่หรือไม่สามารถเชื่อมต่อได้ เปิดแอปอีกครั้ง แล้วหน้านี้จะเชื่อมต่อใหม่โดยอัตโนมัติ"
     },
     "html_lang": "th"
   },
@@ -7772,7 +7812,11 @@
       "faq_q_21": "هل تُستورد معاركي القديمة إلى لوحة الصدارة؟",
       "faq_a_21": "عند التسجيل الجديد لا تُستورد النتائج المحلية السابقة. تُرسل فقط المعارك المكتشفة بعد الموافقة على المشاركة، وتُعاد محاولة إرسال الأحداث المعلقة. تبقى النتائج غير المتحققة المنشورة سابقاً مميزة على هذا الأساس.",
       "faq_q_22": "هل يمكن استخدام المتتبع دون اتصال؟",
-      "faq_a_22": "يبقى التتبع والإحصاءات المحلية متاحين دون اتصال. تحتاج لوحة الصدارة وتسجيل الدخول إلى Steam إلى الإنترنت؛ وتُعاد محاولة إرسال الأحداث المعلقة عند عودة الاتصال."
+      "faq_a_22": "يبقى التتبع والإحصاءات المحلية متاحين دون اتصال. تحتاج لوحة الصدارة وتسجيل الدخول إلى Steam إلى الإنترنت؛ وتُعاد محاولة إرسال الأحداث المعلقة عند عودة الاتصال.",
+      "tray_start_tracking": "بدء التتبع",
+      "tray_stop_tracking": "إيقاف التتبع",
+      "tray_stop_error": "تعذر إيقاف التتبع.",
+      "tracker_disconnected": "التطبيق مغلق أو يتعذر الوصول إليه. أعد تشغيله وستتصل هذه الصفحة تلقائيًا."
     },
     "html_lang": "ar"
   },
@@ -8479,7 +8523,11 @@
       "faq_q_21": "Are my older fights imported into the leaderboard?",
       "faq_a_21": "For a new registration, earlier local results are not imported. Only fights detected after you accept participation are sent; events waiting for a connection are retried. Previously published unverified scores remain marked as such.",
       "faq_q_22": "Can I use the tracker offline?",
-      "faq_a_22": "Local tracking and statistics remain available offline. The online leaderboard and Steam sign-in need an internet connection; queued leaderboard events are retried when the connection returns."
+      "faq_a_22": "Local tracking and statistics remain available offline. The online leaderboard and Steam sign-in need an internet connection; queued leaderboard events are retried when the connection returns.",
+      "tray_start_tracking": "Start tracking",
+      "tray_stop_tracking": "Stop tracking",
+      "tray_stop_error": "Could not stop tracking.",
+      "tracker_disconnected": "The tracker is closed or unreachable. Restart the app and this page will reconnect automatically."
     },
     "html_lang": "en"
   },
@@ -9186,7 +9234,11 @@
       "faq_q_21": "¿Se importan mis combates anteriores a la clasificación?",
       "faq_a_21": "En un registro nuevo no se importan los resultados locales anteriores. Solo se envían los combates detectados después de aceptar la participación; los eventos pendientes se reintentan. Las puntuaciones no verificadas ya publicadas siguen identificadas como tales.",
       "faq_q_22": "¿Puedo usar el tracker sin conexión?",
-      "faq_a_22": "El seguimiento y las estadísticas locales siguen disponibles sin conexión. La clasificación online y el inicio de sesión en Steam necesitan Internet; los eventos pendientes se reintentan al recuperar la conexión."
+      "faq_a_22": "El seguimiento y las estadísticas locales siguen disponibles sin conexión. La clasificación online y el inicio de sesión en Steam necesitan Internet; los eventos pendientes se reintentan al recuperar la conexión.",
+      "tray_start_tracking": "Iniciar seguimiento",
+      "tray_stop_tracking": "Detener seguimiento",
+      "tray_stop_error": "No se pudo detener el seguimiento.",
+      "tracker_disconnected": "El tracker está cerrado o no está disponible. Reinicia la aplicación y esta página se reconectará automáticamente."
     },
     "html_lang": "es-ES"
   },
@@ -9893,7 +9945,11 @@
       "faq_q_21": "¿Se importan mis combates anteriores a la clasificación?",
       "faq_a_21": "En un registro nuevo no se importan los resultados locales anteriores. Solo se envían los combates detectados después de aceptar la participación; los eventos pendientes se reintentan. Las puntuaciones no verificadas ya publicadas siguen identificadas como tales.",
       "faq_q_22": "¿Puedo usar el tracker sin conexión?",
-      "faq_a_22": "El seguimiento y las estadísticas locales siguen disponibles sin conexión. La clasificación en línea y el inicio de sesión en Steam necesitan Internet; los eventos pendientes se reintentan al recuperar la conexión."
+      "faq_a_22": "El seguimiento y las estadísticas locales siguen disponibles sin conexión. La clasificación en línea y el inicio de sesión en Steam necesitan Internet; los eventos pendientes se reintentan al recuperar la conexión.",
+      "tray_start_tracking": "Iniciar seguimiento",
+      "tray_stop_tracking": "Detener seguimiento",
+      "tray_stop_error": "No se pudo detener el seguimiento.",
+      "tracker_disconnected": "El tracker está cerrado o no está disponible. Reinicia la aplicación y esta página se reconectará automáticamente."
     },
     "html_lang": "es-419"
   }

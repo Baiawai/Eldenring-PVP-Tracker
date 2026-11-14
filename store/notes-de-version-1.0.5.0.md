@@ -4,6 +4,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## Français (fr-FR)
 
+- Le menu de l’icône permet de démarrer ou arrêter le suivi et d’ouvrir directement les rubriques. L’onglet du tracker est réutilisé et se reconnecte après le redémarrage de l’application.
 - Accès amélioré aux bases existantes du dossier privé Microsoft Store lorsque le chemin habituel ne les retrouve pas, sans remplacer automatiquement une autre copie.
 - Correction d’un arrêt du suivi sur certains écrans de faible hauteur lors de la détection de l’overlay Steam.
 - Le détail technique apparaît lorsque le suivi s’arrête sur une erreur, même si le journal ne peut pas être enregistré.
@@ -12,6 +13,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## English (en-US)
 
+- Use the tray menu to start or stop tracking and open sections directly. The tracker tab is reused and reconnects after the app restarts.
 - Improved access to existing databases in the Microsoft Store private folder when they are unavailable at the usual path, without automatically replacing another copy.
 - Fixed a tracking stop on some shorter displays during Steam overlay detection.
 - Technical error details are shown when tracking stops because of an error, even if the log cannot be saved.
@@ -20,6 +22,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## Deutsch (de-DE)
 
+- Über das Infobereichsmenü lässt sich die Überwachung starten oder stoppen und Bereiche lassen sich direkt öffnen. Der Tracker-Tab wird wiederverwendet und nach einem Neustart erneut verbunden.
 - Verbesserter Zugriff auf vorhandene Datenbanken im privaten Microsoft-Store-Ordner, wenn sie am üblichen Pfad nicht verfügbar sind, ohne eine andere Kopie automatisch zu ersetzen.
 - Ein Abbruch der Überwachung bei der Steam-Overlay-Erkennung auf manchen Bildschirmen mit geringer Höhe wurde behoben.
 - Technische Fehlerdetails werden beim Abbruch der Überwachung angezeigt, auch wenn das Protokoll nicht gespeichert werden kann.
@@ -28,6 +31,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## Italiano (it-IT)
 
+- Dal menu dell’icona puoi avviare o interrompere il monitoraggio e aprire direttamente le sezioni. La scheda del tracker viene riutilizzata e si riconnette al riavvio.
 - Migliorato l’accesso ai database esistenti nella cartella privata Microsoft Store quando non sono disponibili nel percorso abituale, senza sostituire automaticamente altre copie.
 - Corretto un arresto del monitoraggio durante il rilevamento dell’overlay Steam su alcuni schermi di altezza ridotta.
 - I dettagli tecnici vengono mostrati quando il monitoraggio si interrompe per un errore, anche se non è possibile salvare il registro.
@@ -36,6 +40,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## Español de España (es-ES)
 
+- El menú del icono permite iniciar o detener el seguimiento y abrir secciones. La pestaña del tracker se reutiliza y se reconecta al reiniciar la aplicación.
 - Mejorado el acceso a las bases existentes de la carpeta privada de Microsoft Store cuando no están disponibles en la ruta habitual, sin sustituir automáticamente otra copia.
 - Corregida una detención del seguimiento durante la detección de la superposición de Steam en algunas pantallas de poca altura.
 - Se muestran los detalles técnicos cuando el seguimiento se detiene por un error, aunque no se pueda guardar el registro.
@@ -44,6 +49,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## Español de Latinoamérica (es-419)
 
+- El menú del ícono permite iniciar o detener el seguimiento y abrir secciones. La pestaña del tracker se reutiliza y se reconecta al reiniciar la aplicación.
 - Se mejoró el acceso a las bases existentes de la carpeta privada de Microsoft Store cuando no están disponibles en la ruta habitual, sin reemplazar automáticamente otra copia.
 - Se corrigió una detención del seguimiento durante la detección de la superposición de Steam en algunas pantallas de poca altura.
 - Se muestran los detalles técnicos cuando el seguimiento se detiene por un error, aunque no se pueda guardar el registro.
@@ -52,6 +58,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## Português (pt-BR)
 
+- O menu do ícone permite iniciar ou parar o rastreamento e abrir seções. A aba do tracker é reutilizada e se reconecta após reiniciar o aplicativo.
 - Melhorado o acesso aos bancos existentes na pasta privada da Microsoft Store quando não estão disponíveis no caminho habitual, sem substituir automaticamente outra cópia.
 - Corrigida uma interrupção do acompanhamento durante a detecção da sobreposição do Steam em algumas telas de baixa altura.
 - Os detalhes técnicos são exibidos quando o acompanhamento para por um erro, mesmo que o registro não possa ser salvo.
@@ -60,6 +67,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## Polski (pl-PL)
 
+- Menu ikony umożliwia rozpoczęcie lub zatrzymanie śledzenia i otwieranie sekcji. Karta trackera jest ponownie używana i łączy się po ponownym uruchomieniu aplikacji.
 - Ulepszono dostęp do istniejących baz danych w prywatnym folderze Microsoft Store, gdy nie są dostępne w zwykłej lokalizacji, bez automatycznego zastępowania innej kopii.
 - Naprawiono zatrzymywanie śledzenia podczas wykrywania nakładki Steam na niektórych ekranach o mniejszej wysokości.
 - Szczegóły techniczne błędu są wyświetlane po zatrzymaniu śledzenia, nawet jeśli nie można zapisać dziennika.
@@ -68,6 +76,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## Русский (ru-RU)
 
+- Меню значка позволяет запускать и останавливать отслеживание и открывать разделы. Вкладка трекера используется повторно и подключается после перезапуска приложения.
 - Улучшен доступ к существующим базам в закрытой папке Microsoft Store, если они недоступны по обычному пути, без автоматической замены другой копии.
 - Исправлена остановка отслеживания при обнаружении оверлея Steam на некоторых экранах с небольшой высотой.
 - При остановке отслеживания из-за ошибки показываются технические сведения, даже если журнал не удалось сохранить.
@@ -76,6 +85,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## 日本語 (ja-JP)
 
+- 通知領域のメニューから追跡の開始・停止や各ページを開けます。トラッカーのタブは再利用され、アプリの再起動後に再接続します。
 - 通常の場所からアクセスできない場合にMicrosoft Storeのプライベートフォルダー内の既存データベースへアクセスしやすくしました。別のコピーを自動的に置き換えることはありません。
 - 高さの低い一部の画面で、Steamオーバーレイの検出中に追跡が停止する問題を修正しました。
 - エラーで追跡が停止したとき、ログを保存できない場合でも技術的な詳細を表示します。
@@ -84,6 +94,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## 한국어 (ko-KR)
 
+- 알림 영역 메뉴에서 추적을 시작하거나 중지하고 각 섹션을 열 수 있습니다. 트래커 탭은 재사용되며 앱을 다시 시작하면 다시 연결됩니다.
 - 일반 경로에서 기존 데이터베이스에 접근할 수 없을 때 Microsoft Store 개인 폴더에서 접근하도록 개선했으며, 다른 복사본을 자동으로 교체하지 않습니다.
 - 높이가 낮은 일부 화면에서 Steam 오버레이를 감지할 때 추적이 중지되는 문제를 수정했습니다.
 - 오류로 추적이 중지되면 로그를 저장할 수 없는 경우에도 기술적 세부 정보를 표시합니다.
@@ -92,6 +103,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## 简体中文 (zh-CN)
 
+- 可通过通知区域菜单启动或停止追踪并打开各页面。追踪器标签页会被重复使用，并在应用重启后重新连接。
 - 当常用路径无法访问现有数据库时，改进了对 Microsoft Store 私有文件夹中数据库的访问，不会自动替换其他副本。
 - 修复了部分较矮屏幕上检测 Steam 叠加界面时追踪停止的问题。
 - 因错误停止追踪时，即使无法保存日志，也会显示技术错误详情。
@@ -100,6 +112,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## 繁體中文 (zh-TW)
 
+- 可透過通知區域選單啟動或停止追蹤並開啟各頁面。追蹤器分頁會重複使用，並在應用程式重新啟動後重新連線。
 - 當一般路徑無法存取現有資料庫時，改善了對 Microsoft Store 私人資料夾中資料庫的存取，不會自動取代其他副本。
 - 修正部分高度較低的螢幕在偵測 Steam 遊戲內介面時追蹤停止的問題。
 - 因錯誤停止追蹤時，即使無法儲存記錄，也會顯示技術錯誤詳情。
@@ -108,6 +121,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## ไทย (th-TH)
 
+- ใช้เมนูไอคอนเพื่อเริ่มหรือหยุดการติดตามและเปิดส่วนต่าง ๆ แท็บตัวติดตามจะถูกใช้ซ้ำและเชื่อมต่อใหม่เมื่อเปิดแอปอีกครั้ง
 - ปรับปรุงการเข้าถึงฐานข้อมูลเดิมในโฟลเดอร์ส่วนตัวของ Microsoft Store เมื่อไม่พบในตำแหน่งปกติ โดยไม่แทนที่สำเนาอื่นโดยอัตโนมัติ
 - แก้ไขการติดตามหยุดระหว่างตรวจจับโอเวอร์เลย์ Steam บนหน้าจอบางรุ่นที่มีความสูงน้อย
 - เมื่อการติดตามหยุดเพราะข้อผิดพลาด จะแสดงรายละเอียดทางเทคนิคแม้บันทึกล็อกไม่ได้
@@ -116,6 +130,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 
 ## العربية (ar-SA)
 
+- تتيح قائمة الأيقونة بدء التتبع أو إيقافه وفتح الأقسام مباشرة. يُعاد استخدام علامة تبويب المتتبع وتُعاد مزامنتها بعد إعادة تشغيل التطبيق.
 - تحسين الوصول إلى قواعد البيانات الموجودة في مجلد Microsoft Store الخاص عندما لا تكون متاحة في المسار المعتاد، دون استبدال نسخة أخرى تلقائياً.
 - إصلاح توقف التتبع عند اكتشاف واجهة Steam على بعض الشاشات منخفضة الارتفاع.
 - تظهر التفاصيل التقنية عند توقف التتبع بسبب خطأ، حتى إذا تعذر حفظ السجل.
