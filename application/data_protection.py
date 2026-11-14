@@ -29,6 +29,7 @@ FIELDS = {
     'tabel_user': None,
     'table_multi': None,
     'tabel_captures': ('name', 'victory', 'defeat', 'egality', 'time', 'date', 'mode', 'base64'),
+    'capture_steam_names': ('steam_name',),
     'detection_history': ('message', 'metadata'),
     'history_archive_events': ('message', 'metadata'),
     'player_sightings': ('name',),

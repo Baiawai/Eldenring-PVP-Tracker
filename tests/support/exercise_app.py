@@ -5,12 +5,13 @@ import webbrowser
 import sqlite3
 import os
 import tempfile
-from contextlib import closing
+from contextlib import closing, nullcontext
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 from pathlib import Path
 import numpy as np
 import base64
+from itertools import count
 from io import BytesIO
 from PIL import Image
 
@@ -52,6 +53,19 @@ assert client.get('/', headers={'Host':'attacker.example:5000'}).status_code == 
 anonymous = module.app.test_client(use_cookies=False)
 assert anonymous.get('/modeStats').status_code == 403
 assert anonymous.post('/history-purge').status_code == 403
+assert anonymous.post('/initialization-notice').status_code == 403
+assert anonymous.post('/initialization-error-log').status_code == 403
+with patch.object(module.first_run, 'claim', return_value={'state':'ready', 'log_available':False}):
+    assert client.post('/initialization-notice').get_json()['notice']['state'] == 'ready'
+with patch.object(module.first_run, 'open_log', return_value=True) as opened:
+    assert client.post('/initialization-error-log').get_json()['opened'] is True
+    opened.assert_called_once()
+if module.first_run.read_status().get('state') == 'pending':
+    with closing(module.usage_metrics._connect()):
+        pass
+    module.first_run.finish()
+    assert client.post('/initialization-notice').get_json()['notice'] == {'state':'ready', 'log_available':False}
+    assert client.post('/initialization-notice').get_json()['notice'] is None
 assert anonymous.get('/monitor-status').status_code == 200
 cookie_response = anonymous.get('/')
 assert 'HttpOnly' in cookie_response.headers['Set-Cookie'] and 'SameSite=Strict' in cookie_response.headers['Set-Cookie']
@@ -137,6 +151,21 @@ with patch.object(functions, 'run_monitor', True), patch.object(functions, 'acti
     assert functions.screenshot_with_retry('fake.jpg', region=(1, 2, 3, 4)) == 'fake'
     assert grabbed.call_args.kwargs['region'] == (1, 2, 3, 4)
 assert client.get('/auto-game-start').get_json()['enabled'] is False
+with patch.object(functions.peer_tracking, 'snapshot', return_value={'status':'active', 'peers':[], 'enabled':True}) as peer_snapshot, \
+     patch.object(functions, 'run_monitor', True), patch.object(functions, 'fight', True), \
+     patch.object(functions, 'mode_select', 'Invasion'), patch.object(functions, 'opponent_name', 'Hôte Jeu'), \
+     patch.object(functions, 'invasion_host_peer_id', None):
+    assert client.get('/steam-peers').get_json()['world_host'] == {'name':'Hôte Jeu', 'peer_id':None}
+    peer_snapshot.return_value['peers'] = [{'id':'76561198000000001'}, {'id':'76561198000000002'}]
+    assert client.get('/steam-peers').get_json()['world_host']['peer_id'] == '76561198000000001'
+    peer_snapshot.return_value['peers'].reverse()
+    assert client.get('/steam-peers').get_json()['world_host']['peer_id'] == '76561198000000001'
+    peer_snapshot.return_value['peers'] = [{'id':'76561198000000002'}]
+    assert client.get('/steam-peers').get_json()['world_host']['peer_id'] == '76561198000000001'
+    with patch.object(functions, 'mode_select', 'Defense'):
+        assert client.get('/steam-peers').get_json()['world_host'] is None
+    with patch.object(functions, 'fight', False):
+        assert client.get('/steam-peers').get_json()['world_host'] is None
 assert client.post('/auto-game-start', data={'enabled':'true'}).get_json()['enabled'] is True
 assert client.post('/auto-game-start', data={'enabled':'invalid'}).status_code == 400
 assert client.post('/auto-game-start', data={'enabled':'false'}).get_json()['enabled'] is False
@@ -163,6 +192,14 @@ with patch.object(functions, 'run_monitor', True), patch.object(functions, 'game
         assert not functions._publish_preview_notification(90, (.1, .2, .8, .4))
         assert client.get('/live-preview?after=90').get_json()['notification'] is None
 assert client.get('/live-preview?boxAfter=invalid').status_code == 400
+with patch.object(functions, 'run_monitor', True), patch.object(functions, 'monitor_ready', False), \
+     patch.object(functions, 'game_running', None):
+    status = client.get('/live-preview').get_json()
+    assert status['monitorRunning'] is True and status['monitorReady'] is False
+    assert status['gameRunning'] is None
+    with patch.object(functions, 'monitor_ready', True), patch.object(functions, 'game_running', False):
+        status = client.get('/live-preview?after=' + str(status['revision']) + '&wait=1&ready=0').get_json()
+        assert status['monitorReady'] is True and status['gameRunning'] is False
 synthetic_frame = np.zeros((100, 200), dtype=np.uint8)
 synthetic_box = (.2, .3, .6, .5)
 sampled_pixels = functions._preview_box_pixels(synthetic_frame, synthetic_box)
@@ -504,14 +541,438 @@ with patch.object(functions, 'apply_score') as score, \
         score_count = score.call_count
         functions.process_game_text(functions.detect_text_active[15], str(image_path), frame)
         assert score.call_count == score_count
+# An invader death can be observed even when its arrival was missed. A
+# repeated OCR frame must not add another sighting or invent a combat result.
+with patch.object(functions, 'game_locale', 'frafr'), \
+     patch.object(functions, 'fight', False), patch.object(functions, 'mode_select', 'Arena'), \
+     patch.object(functions, 'mode_detected', False), patch.object(functions, 'invasion_phase', None), \
+     patch.object(functions, 'sighting_tracker', type(functions.sighting_tracker)()), \
+     patch.object(functions, 'apply_score') as score, \
+     patch.object(functions, 'add_capture') as capture, \
+     patch.object(functions, 'emit_tracking_event') as event:
+    death = 'Le Réfractaire MissingArrivalTest a péri.'
+    functions.process_game_text(death, str(image_path), frame, death)
+    functions.process_game_text(death, str(image_path), frame, death)
+    assert event.call_count == 1 and event.call_args.kwargs['mode_override'] == 'Unknown'
+    assert 'MissingArrivalTest' in event.call_args.args[0]
+    assert not score.called and not capture.called and not functions.fight
 # Failed ally summons produce one history event per notification, never a combat.
 import html
 from application.locale_catalog import messages as game_messages
 for ui_language, locale in functions.game_language.UI_TO_GAME.items():
     expected = game_messages()[locale]['2490000']
     if ui_language != 'fra':
-        expected = html.escape(expected, quote=False)
+        expected = html.escape(functions.display_game_text(expected), quote=False)
     assert functions.localize_counter("Impossible d'invoquer l'allié.", ui_language) == expected
+
+# Exercise the live multilingual adapter, not only the catalog in isolation.
+# Both OCR readings may contain the same message; repeated frames must not
+# start or score an invasion twice. All images and scoring are isolated.
+with patch.object(functions, 'apply_score') as score, \
+     patch.object(functions, 'emit_tracking_event', return_value=123), \
+     patch.object(functions, 'add_capture') as capture, \
+     patch.object(functions, 'captures_stats', []), \
+     patch.object(functions, 'path_start_fight', str(image_path)), \
+     patch.object(functions.sighting_tracker, 'observe', return_value=[]), \
+     patch.object(functions.steam_history, 'begin_arena'), \
+     patch.object(functions.steam_history, 'finish_arena', return_value=False), \
+     patch.object(functions.cv2, 'imread', return_value=frame), \
+     patch.object(functions.cv2, 'imwrite', return_value=True):
+    for locale, entries in game_messages().items():
+        if locale == 'frafr':
+            continue
+        functions.game_locale = locale
+        functions.fight = False
+        functions.mode_select = 'Arena'
+        functions.mode_detected = False
+        functions.invasion_phase = None
+        functions.invasion_return_pending = None
+        functions.recent_invasion_no_result = None
+        functions.invasion_search_visibility.reset()
+        score.reset_mock(); capture.reset_mock()
+        search = entries['2331200']
+        start = entries['2601200'].replace('<?hostName?>', 'TestPlayer')
+        win = entries['2611200']
+        for text in (search, search):
+            functions.process_game_text(text, str(image_path), frame, text)
+        assert not functions.fight and functions.mode_select == 'Invasion', locale
+        for text in (start, start):
+            functions.process_game_text(text, str(image_path), frame, text)
+        assert functions.fight and functions.mode_select == 'Invasion', locale
+        assert score.call_count == 1, (locale, score.call_args_list)
+        for text in (win, win):
+            functions.process_game_text(text, str(image_path), frame, text)
+        assert not functions.fight and score.call_count == 2, (locale, score.call_args_list)
+        assert capture.call_count == 1 and capture.call_args.args[1:4] == (1, 0, 0), locale
+        assert base64.b64decode(capture.call_args.args[7]) == image_path.read_bytes(), locale
+
+        # A return without a recognized result is counted once, not as a win
+        # or a loss, including when both OCR readings contain the same text.
+        score.reset_mock(); capture.reset_mock()
+        with patch.object(functions.time, 'monotonic', return_value=100) as clock:
+            functions.process_game_text(start, str(image_path), frame, start)
+            returned = entries['2631200']
+            functions.process_game_text(returned, str(image_path), frame, returned)
+            assert functions.fight, locale
+            clock.return_value = 105
+            functions.process_game_text(returned, str(image_path), frame, returned)
+            functions.process_game_text(returned, str(image_path), frame, returned)
+        assert not functions.fight and score.call_count == 2, (locale, score.call_args_list)
+        assert score.call_args.args[4] == 1 and not capture.called, locale
+
+        # Defense is a separate mode; only the invading opponent's death
+        # finishes the encounter, and a repeated notification is ignored.
+        score.reset_mock(); capture.reset_mock()
+        defense = entries['2600200'].replace('<?joinName?>', 'TestPlayer')
+        died = entries['2620200'].replace('<?deadName?>', 'TestPlayer')
+        for text in (defense, defense):
+            functions.process_game_text(text, str(image_path), frame, text)
+        assert functions.fight and functions.mode_select == 'Defense', locale
+        for text in (died, died):
+            functions.process_game_text(text, str(image_path), frame, text)
+        assert not functions.fight and score.call_count == 2, (locale, score.call_args_list)
+        assert capture.call_count == 1 and capture.call_args.args[6] == 'Defense', locale
+        assert base64.b64decode(capture.call_args.args[7]) == image_path.read_bytes(), locale
+
+        # Arena recognition uses the game's selected language while the French
+        # adapter and original OCR coexist. Score each repeated victory once.
+        score.reset_mock(); capture.reset_mock()
+        functions.detect_text_active = functions.detect_text_en if locale == 'engus' else functions.detect_text_fr
+        functions.detect_mod_active = functions.detect_mod_en if locale == 'engus' else functions.detect_mod_fr
+        functions.mode_select = 'Arena'
+        functions.mode_detected = False
+        functions.invasion_phase = None
+        functions.stape = 0
+        arena_start = entries['arena:88000'].replace('<?matchDuel_TotalTime?>', '180')
+        arena_win = entries['arena:88050']
+        with patch.object(functions.time, 'time', return_value=100) as clock:
+            for text in (arena_start, arena_start):
+                functions.process_game_text(text, str(image_path), frame, text)
+            assert functions.fight and functions.mode_select == 'Arena', locale
+            clock.return_value = 110
+            for text in (arena_win, arena_win):
+                functions.process_game_text(text, str(image_path), frame, text)
+        assert not functions.fight and score.call_count == 2, (locale, score.call_args_list)
+        assert capture.call_count == 1 and capture.call_args.args[1:4] == (1, 0, 0), locale
+
+        # Victory, defeat and draw are distinct arena outcomes.
+        for message_id, expected_outcome in [('arena:88052', (0, 1, 0)), ('arena:88051', (0, 0, 1))]:
+            score.reset_mock(); capture.reset_mock()
+            functions.fight = False
+            functions.mode_select = 'Arena'
+            functions.mode_detected = False
+            functions.invasion_phase = None
+            functions.stape = 1
+            result_text = entries[message_id]
+            with patch.object(functions.time, 'time', return_value=200) as clock:
+                functions.process_game_text(arena_start, str(image_path), frame, arena_start)
+                assert functions.fight and functions.mode_select == 'Arena', (locale, message_id)
+                clock.return_value = 210
+                for text in (result_text, result_text):
+                    functions.process_game_text(text, str(image_path), frame, text)
+            assert not functions.fight and score.call_count == 2, (locale, message_id, score.call_args_list)
+            assert capture.call_count == 1 and capture.call_args.args[1:4] == expected_outcome, (locale, message_id)
+
+functions.detect_text_active = functions.detect_text_fr
+functions.detect_mod_active = functions.detect_mod_fr
+
+# Arena captures retain the start frame and keep an optional, explicitly
+# separate Steam name. Exercise real participant disambiguation with fake peers;
+# the capture, scoring, Steam history and image writes remain isolated/mocked.
+arena_start_image = Path(os.environ['APPDATA']) / 'isolated-arena-start.jpg'
+arena_start_image.write_bytes(b'frame from beginning of duel')
+result_image = image_path.read_bytes()
+start_image = arena_start_image.read_bytes()
+assert start_image != result_image
+one_peer = {'id':'76561198000000001', 'name':'SteamTestPlayer'}
+other_peer = {'id':'76561198000000002', 'name':'OtherSteamPlayer'}
+id_only_peer = {'id':'76561198000000003'}
+arena_cases = [
+    ('victory', 1, [one_peer], 'SteamTestPlayer', (1, 0, 0)),
+    ('defeat', 9, [], '', (0, 1, 0)),
+    ('draw', 15, [one_peer, other_peer], '', (0, 0, 1)),
+    ('id-only', 1, [id_only_peer], '', (1, 0, 0)),
+    ('late-peer', 1, [one_peer], 'SteamTestPlayer', (1, 0, 0)),
+    ('steam-unavailable', 1, [one_peer], '', (1, 0, 0)),
+]
+with patch.object(functions, 'apply_score') as score, \
+     patch.object(functions, 'emit_tracking_event', return_value=123), \
+     patch.object(functions, 'add_capture') as capture, \
+     patch.object(functions, 'captures_stats', []), \
+     patch.object(functions, 'captures', []), \
+     patch.object(functions, 'path_start_fight', str(arena_start_image)), \
+     patch.object(functions.sighting_tracker, 'observe', return_value=[]), \
+     patch.object(functions.steam_history, '_known', {}), \
+     patch.object(functions.steam_history, '_arena', None), \
+     patch.object(functions.steam_history, 'record_detection', side_effect=count(100)), \
+     patch.object(functions.steam_history, 'update_detection', return_value=True) as steam_update, \
+     patch.object(functions.cv2, 'imread', return_value=frame), \
+     patch.object(functions.cv2, 'imwrite', return_value=True):
+    for label, outcome_index, peers, expected_steam, expected_result in arena_cases:
+        functions.steam_history._known.clear()
+        functions.steam_history._arena = None
+        functions.steam_history.observe('active', peers, 'Arena')
+        initial_id = functions.steam_history._known[one_peer['id']]['id'] if one_peer in peers else None
+        functions.game_locale = 'frafr'
+        functions.fight = False
+        functions.mode_select = 'Arena'
+        functions.mode_detected = False
+        functions.invasion_phase = None
+        functions.invasion_return_pending = None
+        functions.stape = 1
+        score.reset_mock(); capture.reset_mock(); steam_update.reset_mock(); functions.captures_stats.clear()
+        original_seal = functions.steam_history.seal_arena_participant
+        def seal_then_arrival():
+            result = original_seal()
+            functions.steam_history.observe('active', [one_peer, other_peer], 'Arena')
+            return result
+        if label == 'steam-unavailable':
+            seal = patch.object(functions.steam_history, 'seal_arena_participant', side_effect=RuntimeError('Steam unavailable'))
+        elif label == 'late-peer':
+            seal = patch.object(functions.steam_history, 'seal_arena_participant', side_effect=seal_then_arrival)
+        else:
+            seal = nullcontext()
+        with seal, patch.object(functions.time, 'time', return_value=300) as clock:
+            functions.process_game_text(functions.detect_text_active[0], str(image_path), frame)
+            assert functions.fight and functions.mode_select == 'Arena', label
+            clock.return_value = 310
+            for _ in range(2):
+                functions.process_game_text(functions.detect_text_active[outcome_index], str(image_path), frame)
+        assert not functions.fight and score.call_count == 2 and capture.call_count == 1, label
+        args, kwargs = capture.call_args
+        assert args[0] == '' and args[1:4] == expected_result and args[6] == 'Arena', label
+        assert base64.b64decode(args[7]) == start_image, label
+        assert kwargs.get('steam_name', '') == expected_steam, (label, kwargs)
+        recent = client.get('/capture').get_json()
+        assert base64.b64decode(recent['datas']) == start_image, label
+        assert recent['mode'] == 'Arena' and recent['opponent'] == '', label
+        assert recent.get('steam_name', '') == expected_steam, label
+        if label == 'late-peer':
+            assert steam_update.call_count == 1 and steam_update.call_args.args[0] == initial_id, (label, steam_update.call_args_list)
+arena_start_image.unlink()
+
+# Arena screenshots must contain the entire frame seen at the beginning of
+# the duel, rather than a cropped section or the later result frame. Use real
+# JPEG reads/writes in the private image directory so cropping is observable.
+arena_source = test_images / 'arena-full-frame-source.jpg'
+arena_start = test_images / 'arena-full-frame-start.jpg'
+arena_finish = test_images / 'arena-full-frame-finish.jpg'
+full_start_frame = np.empty((80, 120, 3), dtype=np.uint8)
+full_start_frame[:] = (0, 0, 220)
+full_start_frame[40:, 60:] = (0, 220, 0)
+full_result_frame = np.full((80, 120, 3), (220, 0, 0), dtype=np.uint8)
+with patch.object(functions, 'apply_score') as score, \
+     patch.object(functions, 'emit_tracking_event', return_value=123), \
+     patch.object(functions, 'add_capture') as capture, \
+     patch.object(functions, 'captures_stats', []), \
+     patch.object(functions, 'captures', []), \
+     patch.object(functions, 'path_start_fight', str(arena_start)), \
+     patch.object(functions, 'path_finish_fight', str(arena_finish)), \
+     patch.object(functions.sighting_tracker, 'observe', return_value=[]), \
+     patch.object(functions.steam_history, 'begin_arena'), \
+     patch.object(functions.steam_history, 'seal_arena_participant', return_value=''), \
+     patch.object(functions.steam_history, 'finish_arena', return_value=False):
+    for label, outcome_index, expected_result in [
+        ('victory', 1, (1, 0, 0)),
+        ('defeat', 9, (0, 1, 0)),
+        ('draw', 15, (0, 0, 1)),
+    ]:
+        assert functions.cv2.imwrite(str(arena_source), full_start_frame)
+        functions.game_locale = 'frafr'
+        functions.fight = False
+        functions.mode_select = 'Arena'
+        functions.mode_detected = False
+        functions.invasion_phase = None
+        functions.invasion_return_pending = None
+        functions.stape = 1
+        score.reset_mock(); capture.reset_mock(); functions.captures_stats.clear()
+        with patch.object(functions.time, 'time', return_value=400) as clock:
+            functions.process_game_text(functions.detect_text_fr[0], str(arena_source), full_start_frame)
+            assert functions.fight, label
+            assert functions.cv2.imwrite(str(arena_source), full_result_frame)
+            clock.return_value = 410
+            functions.process_game_text(functions.detect_text_fr[outcome_index], str(arena_source), full_result_frame)
+        assert capture.call_count == 1 and capture.call_args.args[1:4] == expected_result, label
+        stored = base64.b64decode(capture.call_args.args[7])
+        decoded = functions.cv2.imdecode(np.frombuffer(stored, dtype=np.uint8), functions.cv2.IMREAD_COLOR)
+        assert decoded.shape == full_start_frame.shape, (label, decoded.shape)
+        assert np.max(np.abs(decoded[15, 15].astype(int) - full_start_frame[15, 15])) < 25, label
+        assert np.max(np.abs(decoded[65, 105].astype(int) - full_start_frame[65, 105])) < 25, label
+        assert base64.b64decode(client.get('/capture').get_json()['datas']) == stored, label
+
+# Victory notifications use game names first and a unique Steam profile only
+# as a fallback. Inspect the public event queue and isolated history rather
+# than only the implementation's calls; no real Steam or game is involved.
+game_name = 'Ocr<Name>, & Hero'
+steam_name = 'Steam<Name>, & Hero'
+named_peer = {'id':'76561198000000011', 'name':steam_name}
+second_peer = {'id':'76561198000000012', 'name':'AnotherSteam'}
+victory_cases = [
+    ('arena-steam', 'Arena', 'fra', [named_peer], 'contre', steam_name, 'win'),
+    ('arena-none', 'Arena', 'fra', [], '', '', 'win'),
+    ('arena-ambiguous', 'Arena', 'fra', [named_peer, second_peer], '', '', 'win'),
+    ('arena-defeat', 'Arena', 'fra', [named_peer], 'contre', steam_name, 'loss'),
+    ('arena-draw', 'Arena', 'fra', [named_peer], '', '', 'draw'),
+    ('invasion-game', 'Invasion', 'fra', [named_peer], 'contre', game_name, 'win'),
+    ('invasion-loss', 'Invasion', 'fra', [named_peer], 'contre', game_name, 'loss'),
+    ('invasion-steam', 'Invasion', 'fra', [named_peer], 'contre', steam_name, 'win'),
+    ('invasion-no-peer', 'Invasion', 'fra', [], '', '', 'win'),
+    ('invasion-id-only', 'Invasion', 'fra', [id_only_peer], '', '', 'win'),
+    ('invasion-ambiguous', 'Invasion', 'fra', [named_peer, second_peer], '', '', 'win'),
+    ('invasion-peer-joins', 'Invasion', 'fra', [named_peer], '', '', 'win'),
+    ('invasion-peer-leaves', 'Invasion', 'fra', [named_peer], 'contre', steam_name, 'win'),
+    ('invasion-ambiguous-then-leaves', 'Invasion', 'fra', [named_peer], '', '', 'win'),
+    ('defense-game', 'Defense', 'fra', [named_peer], 'contre', game_name, 'win'),
+    ('defense-loss', 'Defense', 'fra', [named_peer], 'contre', game_name, 'loss'),
+    ('arena-english', 'Arena', 'eng', [named_peer], 'defeated', steam_name, 'win'),
+]
+with patch.object(functions, 'apply_score') as score, \
+     patch.object(functions, 'add_capture') as capture, \
+     patch.object(functions, 'captures_stats', []), \
+     patch.object(functions, 'array_stats', dict(functions.array_stats)), \
+     patch.object(functions, 'tampo_text', ''), \
+     patch.object(functions, 'path_start_fight', str(image_path)), \
+     patch.object(functions.sighting_tracker, 'observe', return_value=[]), \
+     patch.object(functions.steam_history, '_known', {}), \
+     patch.object(functions.steam_history, '_arena', None), \
+     patch.object(functions.steam_history, '_pvp_encounter', None), \
+     patch.object(functions.steam_history, 'record_detection', side_effect=count(1000)), \
+     patch.object(functions.steam_history, 'update_detection', return_value=True), \
+     patch.object(functions.cv2, 'imread', return_value=frame), \
+     patch.object(functions.cv2, 'imwrite', return_value=True):
+    for label, combat_mode, language, peers, expected_label, expected_name, outcome in victory_cases:
+        functions.steam_history._known.clear()
+        functions.steam_history._arena = None
+        functions.steam_history._pvp_encounter = None
+        functions.steam_history.observe('active', peers, combat_mode)
+        functions.game_locale = 'engus' if language == 'eng' else 'frafr'
+        functions.langue_select = language
+        functions.detect_text_active = functions.detect_text_en if language == 'eng' else functions.detect_text_fr
+        functions.detect_mod_active = functions.detect_mod_en if language == 'eng' else functions.detect_mod_fr
+        functions.fight = False
+        functions.mode_select = 'Arena'
+        functions.mode_detected = False
+        functions.invasion_phase = None
+        functions.invasion_return_pending = None
+        functions.recent_invasion_no_result = None
+        functions.stape = 1
+        functions.array_stats['text'] = ''
+        functions.tampo_text = ''
+        score.reset_mock(); capture.reset_mock(); functions.captures_stats.clear()
+        if combat_mode == 'Arena':
+            start_text = functions.detect_text_active[0]
+            result_text = functions.detect_text_active[9 if outcome == 'loss' else 15 if outcome == 'draw' else 1]
+        elif combat_mode == 'Invasion':
+            host = game_name if label in ('invasion-game', 'invasion-loss') else ' '
+            start_text = "Invasion d'un autre monde.\nTerrassez " + host + ', Hôte des Doigts !'
+            result_text = ('Vous avez péri.\nRetour dans votre monde.' if outcome == 'loss' else
+                           'Hôte des Doigts vaincu.\nRetour dans votre monde.')
+        else:
+            start_text = 'Le Doigt sanglant ' + game_name + ' a envahi votre monde !'
+            result_text = 'Vous avez péri.' if outcome == 'loss' else 'Le Doigt sanglant ' + game_name + ' est mort.'
+        with patch.object(functions.time, 'time', return_value=400) as clock:
+            functions.process_game_text(start_text, str(image_path), frame, start_text)
+            assert functions.fight and functions.mode_select == combat_mode, label
+            if label == 'invasion-peer-joins':
+                functions.steam_history.observe('active', [named_peer, second_peer], combat_mode)
+            if label == 'invasion-peer-leaves':
+                functions.steam_history.observe('active', [], combat_mode)
+            if label == 'invasion-ambiguous-then-leaves':
+                functions.steam_history.observe('active', [named_peer, second_peer], combat_mode)
+                functions.steam_history.observe('active', [named_peer], combat_mode)
+            clock.return_value = 410
+            for _ in range(2):
+                functions.process_game_text(result_text, str(image_path), frame, result_text)
+        assert not functions.fight and capture.call_count == 1 and score.call_count == 2, label
+        queue = client.get('/interval').get_json()['datas']['text']
+        if expected_name:
+            encoded = html.escape(expected_name, quote=False).replace(',', '&#44;')
+            fragment = expected_label + ' ' + encoded
+            assert queue.count('combat-result-text') == 1 and fragment in queue, (label, queue)
+            assert 'victory-opponent-detail' not in queue and 'Profil Steam :' not in queue, (label, queue)
+            assert expected_name not in queue and '<Name>' not in queue, (label, queue)
+            events = client.get('/detection-history', query_string={'mode':combat_mode}).get_json()['events']
+            assert any(expected_label + ' ' + expected_name in entry['message'] for entry in events), label
+        else:
+            assert 'combat-result-text' not in queue and 'victory-opponent-detail' not in queue, (label, queue)
+functions.detect_text_active = functions.detect_text_fr
+functions.detect_mod_active = functions.detect_mod_fr
+
+# Every translated sentence must preserve the result marker used by live
+# capture detection and safely include the participant in the same sentence.
+with patch.object(functions, 'array_stats', dict(functions.array_stats)), \
+     patch.object(functions, 'record_detection', return_value=1):
+    for language, pack in functions.ui_packs().items():
+        for outcome, idx in (('victory', 8), ('defeat', 9)):
+            functions.langue_select = language
+            functions.array_stats['text'] = ''
+            functions.emit_tracking_event('result<br> Time: 17 s', opponent='A<B>, C', opponent_source='steam', outcome=outcome)
+            queue = functions.array_stats['text']
+            assert pack['counter'][idx] in queue, (language, outcome)
+            assert 'A&lt;B&gt;&#44; C' in queue and '<B>' not in queue, (language, outcome)
+            assert 'combat-result-text' in queue and 'Time: 17 s' in queue, (language, outcome)
+            assert '{opponent}' not in queue, (language, outcome)
+
+# Preserve the recognized game notification after it disappears from the frame.
+with patch.object(functions, 'apply_score') as score, \
+     patch.object(functions, 'emit_tracking_event', return_value=123) as event, \
+     patch.object(functions, 'add_capture'), \
+     patch.object(functions.sighting_tracker, 'observe', return_value=[]), \
+     patch.object(functions.cv2, 'imread', return_value=frame), \
+     patch.object(functions.cv2, 'imwrite', return_value=True), \
+     patch.object(functions, 'correct_invasion_no_result', return_value=True) as correct:
+    for locale, entries in game_messages().items():
+        functions.game_locale = locale
+        functions.fight = False
+        functions.mode_select = 'Arena'
+        functions.mode_detected = False
+        functions.invasion_phase = None
+        functions.invasion_return_pending = None
+        functions.invasion_return_message = None
+        functions.recent_invasion_no_result = None
+        score.reset_mock(); event.reset_mock(); correct.reset_mock()
+        start = entries['2601200'].replace('<?hostName?>', 'TestPlayer')
+        goal = entries['2661210']
+        with patch.object(functions.time, 'monotonic', return_value=100) as clock:
+            functions.process_game_text(start, str(image_path), frame, start)
+            functions.process_game_text(goal, str(image_path), frame, goal)
+            assert functions.fight, locale
+            clock.return_value = 105
+            functions.process_game_text('', str(image_path), frame, '')
+        assert not functions.fight and score.call_count == 2, locale
+        assert score.call_args.args[4] == 1, locale
+        shown = event.call_args.args[0]
+        assert shown.startswith('<!--invasion-no-result-->'), (locale, shown)
+        display_goal = functions.display_game_text(goal)
+        assert functions.message_text(shown) == display_goal, (locale, shown, display_goal)
+        with patch.object(functions.time, 'monotonic', return_value=110):
+            functions.handle_invasion('Une erreur de connexion est survenue.', str(image_path), frame)
+        assert correct.call_args.args[1] == display_goal, locale
+
+# Thai game-font glyphs are converted for both the live event and persistent
+# history, without changing the catalog used for OCR.
+thai_goal = game_messages()['thath']['2661210']
+thai_display = functions.display_game_text(thai_goal)
+assert thai_goal != thai_display
+with patch.object(functions, 'apply_score'), \
+     patch.object(functions, 'array_stats', dict(functions.array_stats, text='')), \
+     patch.object(functions, 'tampo_text', ''), \
+     patch.object(functions, 'game_locale', 'thath'), \
+     patch.object(functions, 'langue_select', 'tha'), \
+     patch.object(functions, 'fight', True), \
+     patch.object(functions, 'mode_select', 'Invasion'), \
+     patch.object(functions, 'mode_detected', True), \
+     patch.object(functions, 'invasion_return_pending', 100), \
+     patch.object(functions, 'invasion_return_message', thai_goal), \
+     patch.object(functions, 'time_start', 90), \
+     patch.object(functions.time, 'monotonic', return_value=105):
+    functions.handle_invasion('', str(image_path), frame)
+    visible = client.get('/interval').get_json()['datas']['text']
+    assert functions.message_text(visible) == thai_display
+    recent = client.get('/detection-history?mode=Invasion').get_json()['events']
+    assert any(entry['message'] == thai_display for entry in recent)
+    assert game_messages()['thath']['2661210'] == thai_goal
+
 functions.fight = False
 functions.mode_select = 'Defense'
 functions.mode_detected = True

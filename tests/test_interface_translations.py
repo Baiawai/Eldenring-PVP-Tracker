@@ -45,6 +45,8 @@ class InterfaceTranslationTests(unittest.TestCase):
                 continue
             source = file.read_text(encoding='utf-8')
             keys.update(re.findall(r"\b(?:t|tr|appT|uiT)\(\s*['\"]([\w-]+)['\"]", source))
+            keys.update(re.findall(r"\b(?:uiSetStatus|appStatus)\(\s*(?:[^,()]|\([^()]*\))+,\s*['\"]([\w-]+)['\"]", source))
+            keys.update(re.findall(r"\bsetStatus\(\s*['\"]([\w-]+)['\"]", source))
             keys.update(re.findall(r'data-online=["\']([\w-]+)["\']', source))
         html = (ROOT / 'templates/index.html').read_text(encoding='utf-8')
         keys.update(re.findall(r'data-i18n(?:-aria|-placeholder|-title)?="([\w-]+)"', html))
@@ -141,6 +143,44 @@ class InterfaceTranslationTests(unittest.TestCase):
         self.assertEqual(packs['chi']['legacy'][25:30], ['24小时', '48小时', '7天', '30天', '全部'])
         self.assertEqual(packs['jap']['modern']['all'], 'すべて')
         self.assertEqual(packs['tha']['modern']['fights'], 'การต่อสู้')
+
+    def test_game_mode_and_legacy_result_labels_keep_their_meaning(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                modern, legacy = pack['modern'], pack['legacy']
+                self.assertEqual(modern['online_mode'], modern['mode'])
+                self.assertEqual(modern['online_level'], modern['leaderboard_level'])
+                self.assertEqual(legacy[35], modern['victories'])
+                self.assertEqual(legacy[36], modern['defeats'])
+                self.assertEqual(legacy[79], modern['stats_abandons'])
+                self.assertEqual(legacy[80], modern['stats_opponent_left'])
+                self.assertEqual(legacy[86], modern['session_streak'])
+                self.assertTrue(modern['leaderboard_avatar'])
+        self.assertEqual(packs['kor']['modern']['mode'], '모드')
+        self.assertEqual(packs['ara']['legacy'][7], packs['ara']['legacy'][63])
+        self.assertIn('لقطات', packs['ara']['legacy'][7])
+        for language in ('spaes', 'spaar'):
+            self.assertEqual(packs[language]['legacy'][77], 'Combates totales')
+            self.assertEqual(packs[language]['legacy'][87], 'Racha de derrotas')
+
+    def test_player_and_event_labels_are_not_corrupted(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        self.assertEqual(packs['jap']['modern']['defeated_players'], '倒したプレイヤー')
+        self.assertEqual(packs['kor']['modern']['defeated_me'], '나를 이긴 플레이어')
+        self.assertEqual(packs['kor']['modern']['hunter'], '사냥꾼')
+        self.assertEqual(packs['ara']['modern']['hunter_opponent'], 'صياد الخصم')
+        self.assertEqual(packs['chi']['modern']['invader_died'], '入侵者死亡')
+        self.assertEqual(packs['pol']['legacy'][79], 'Poddania')
+        self.assertEqual(packs['deu']['modern']['online_level'], 'Stufe')
+        self.assertEqual(packs['deu']['modern']['ally_dismissed'], 'Verbündeter zurückgeschickt')
+        self.assertEqual(packs['kor']['modern']['ally'], '아군')
+        self.assertEqual(packs['kor']['modern']['unknown_side'], '진영 알 수 없음')
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                for key in ('hunter_opponent', 'hunter_mixed', 'hunter_unknown', 'hunter_left', 'invader_died'):
+                    self.assertNotIn('Hunter', pack['modern'][key] if language != 'eng' else '')
+                    self.assertNotIn('\\3c', pack['modern'][key])
 
 if __name__ == '__main__':
     unittest.main()

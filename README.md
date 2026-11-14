@@ -45,6 +45,8 @@ Un environnement virtuel dépend de l'installation Python et de son chemin : rec
 
 ### Capture et reconnaissance
 
+Les messages du jeu utilisés pour la reconnaissance proviennent du dépôt [HigorFr/Elden-Ring-Unpacked-msg](https://github.com/HigorFr/Elden-Ring-Unpacked-msg), dérivé de [elden-ring-data/msg](https://github.com/elden-ring-data/msg). Le tracker utilise une sélection de 64 messages pour chacune des 15 langues ; la provenance et les limites de vérification sont détaillées dans [application/locales/README.md](application/locales/README.md).
+
 Dans **Configuration → Capture**, la détection automatique de la zone de notification est active par défaut. Elle cherche les messages reconnus et prévoit une hauteur suffisante pour deux lignes ; si elle ne peut pas situer le message, elle analyse la zone centrale de l'image. Vous pouvez verrouiller une zone vérifiée, puis la déverrouiller pour reprendre la détection, ou désactiver le mode automatique pour définir les limites manuellement.
 
 L'aperçu et le test OCR utilisent une notification reconnue sur deux lignes. Si aucun exemple n'est disponible, démarrez le suivi et attendez une notification de ce type. Le test ne modifie pas les statistiques. Le dernier exemple est chiffré et conservé localement après le redémarrage.

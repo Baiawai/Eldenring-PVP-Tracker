@@ -13,6 +13,7 @@ from application import store_update
 import threading
 from waitress import serve
 import sys
+import traceback
 
 os.environ['TESSDATA_PREFIX'] = str(RESOURCE_DIR / 'locales' / 'tessdata')
 
@@ -72,23 +73,28 @@ def secure_local_response(response):
 
 
 
-from application import init
-from application import functions
-from application import multi
-from application import online_leaderboard
-from application import secur
-from application import players
-from application import metrics_routes
-from application import usage_metrics
-from application import auto_tracking
-from application import retention
-from application import steam_log_auto, peer_tracking
-from application import history_archives
-from application import tray_controls
-from application.tray_navigation import Navigation
-
-from application.init import get_selected_language
-from application.ui_localization import packs
+from application import first_run
+try:
+    first_run.begin()
+    from application import init
+    from application import functions
+    from application import multi
+    from application import online_leaderboard
+    from application import secur
+    from application import players
+    from application import metrics_routes
+    from application import usage_metrics
+    from application import auto_tracking
+    from application import retention
+    from application import steam_log_auto, peer_tracking
+    from application import history_archives
+    from application import tray_controls
+    from application.tray_navigation import Navigation
+    from application.init import get_selected_language
+    from application.ui_localization import packs
+except Exception:
+    first_run.report_fatal(traceback.format_exc())
+    raise
 
 
 # POUR LE NO CONSOLE 
@@ -195,6 +201,19 @@ def poll_tray_navigation():
     except ValueError:
         abort(400)
     return jsonify(command=command)
+
+
+@app.route('/initialization-notice', methods={'POST'})
+def initialization_notice():
+    return jsonify(notice=first_run.claim())
+
+
+@app.route('/initialization-error-log', methods={'POST'})
+def initialization_error_log():
+    try:
+        return jsonify(opened=first_run.open_log())
+    except OSError:
+        return jsonify(opened=False), 500
 
 
 path_to_tesseract = tesseract_path()
@@ -328,6 +347,10 @@ if __name__ == '__main__' and app_started == True:
             usage_metrics.start()
         except Exception:
             app.logger.exception('Unable to start local usage metrics')
+        try:
+            first_run.finish()
+        except Exception:
+            first_run.report_fatal(traceback.format_exc())
         online_leaderboard.start_sync()
         auto_tracking.start_worker(app, functions)
         steam_log_auto.start_worker(peer_tracking.enabled)

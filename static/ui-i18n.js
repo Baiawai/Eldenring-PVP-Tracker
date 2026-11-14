@@ -87,7 +87,10 @@
     // Refresh the favicon even when the running server has cached an older template.
     document.querySelectorAll('link[rel~="icon"]').forEach(link => { link.href = '/static/tracker-eye-ornament.ico'; });
     const profileInstructions = document.getElementById('profile_capture_instructions');
-    if (profileInstructions) profileInstructions.textContent = 'Lance Elden Ring et charge ta partie. Une fois dans le monde du jeu, ouvre le menu principal, puis Configuration. Va dans l’onglet tout à droite, « Quitter la partie », sans quitter la partie. L’application y récupérera automatiquement ton pseudo, ton niveau et ton image. Attends quelques secondes (environ 2 à 5 secondes), puis reviens ici pour vérifier les informations récupérées et les enregistrer.';
+    if (profileInstructions) {
+        profileInstructions.dataset.i18n = 'profile_step_menu';
+        profileInstructions.textContent = 'Lance Elden Ring et charge ta partie. Une fois dans le monde du jeu, ouvre le menu principal, puis Configuration. Va dans l’onglet tout à droite, « Quitter la partie », sans quitter la partie. L’application y récupérera automatiquement ton pseudo, ton niveau et ton image. Attends quelques secondes (environ 2 à 5 secondes), puis reviens ici pour vérifier les informations récupérées et les enregistrer.';
+    }
     // Upgrade the guidance in templates cached by an already-running tracker.
     const legacyProfile = document.querySelector('.carde_info[info="pseudo"]');
     if (legacyProfile) {
@@ -204,6 +207,7 @@
         '3': ['settings_tab_profile', 'Profil'],
         '5': ['settings_tab_p2p', 'P2P'],
         '6': ['settings_tab_diagnostics', 'Diagnostic'],
+        '7': ['online_title', 'Classement en ligne'],
         '4': ['settings_tab_exit', 'Quitter']
     };
     document.querySelectorAll('.contente_header_settings .btn_menu_settings[menu]').forEach(function(tab) {
@@ -226,6 +230,19 @@
     window.uiT = function(key, french) {
         const pack = window.ELDEN_UI_PACKS && window.ELDEN_UI_PACKS[language];
         return pack && pack.modern && pack.modern[key] ? pack.modern[key] : french;
+    };
+    // Remember the key for temporary status text so language changes update it too.
+    window.uiSetStatus = function(node, key, french) {
+        if (!node) return;
+        if (!key) {
+            delete node.dataset.i18n;
+            delete node.dataset.i18nFr;
+            node.textContent = '';
+            return;
+        }
+        node.dataset.i18n = key;
+        node.dataset.i18nFr = french;
+        node.textContent = window.uiT(key, french);
     };
     window.uiApplyLanguage = function(next) {
         language = next || 'fra';

@@ -7,6 +7,10 @@
     const pingStatus = document.getElementById('steam_ping_status');
     const pingButton = document.getElementById('steam_ping_activate');
     const pingHelp = document.getElementById('steam_ping_help');
+    const host = document.createElement('p');
+    host.className = 'steam-world-host';
+    host.hidden = true;
+    status.before(host);
     let state = null;
     let pingPending = false;
     function tr(key, fallback) { return window.uiT ? window.uiT(key, fallback) : fallback; }
@@ -25,6 +29,12 @@
         if (!state) return;
         list.replaceChildren();
         const peers = Array.isArray(state.peers) ? state.peers : [];
+        host.hidden = !state.world_host;
+        if (state.world_host) {
+            const hostName = typeof state.world_host.name === 'string' ? state.world_host.name.trim() : '';
+            host.textContent = tr('steam_world_host', 'Hôte du monde (nom en jeu)') + ' : ' +
+                (hostName || tr('steam_world_host_unknown', 'Non identifié'));
+        }
         settingsStatus.textContent = state.status === 'active' ? tr('detection_enabled', 'Détection activée') : message(state.status);
         enabled.value = state.enabled ? 'true' : 'false';
         if (['active', 'unavailable', 'denied'].includes(state.ping_mode)) pingPending = false;
@@ -57,18 +67,25 @@
             name.textContent = peer.name || peer.id;
             name.title = tr('steam_profile_open', 'Ouvrir le profil dans Steam');
             name.addEventListener('click', async function() {
-                profileStatus.textContent = '';
+                window.uiSetStatus(profileStatus);
                 try {
                     const response = await fetch('/steam-profile', {method:'POST', body:new URLSearchParams({steam_id:peer.id})});
                     if (!response.ok) throw new Error('request');
-                    profileStatus.textContent = tr('steam_profile_sent', 'Profil demandé : reviens dans le jeu pour voir Steam.');
-                } catch (_) { profileStatus.textContent = tr('steam_profile_error', 'Impossible d’ouvrir ce profil Steam.'); }
+                    window.uiSetStatus(profileStatus, 'steam_profile_sent', 'Profil demandé : reviens dans le jeu pour voir Steam.');
+                } catch (_) { window.uiSetStatus(profileStatus, 'steam_profile_error', 'Impossible d’ouvrir ce profil Steam.'); }
             });
             ping.className = 'steam-peer-ping';
             ping.textContent = typeof peer.ping === 'number' && peer.ping >= 0 ? Math.round(peer.ping) + ' ms' : '—';
             country.className = 'steam-peer-country';
             window.appendIpCountry(country, peer.country_code);
-            row.append(name, ping); item.append(row, country); list.append(item);
+            row.append(name);
+            if (state.world_host && state.world_host.peer_id && peer.id === state.world_host.peer_id) {
+                const badge = document.createElement('span');
+                badge.className = 'steam-peer-host';
+                badge.textContent = tr('steam_host_probable', 'Hôte');
+                row.append(badge);
+            }
+            row.append(ping); item.append(row, country); list.append(item);
         });
     }
     async function refresh() {

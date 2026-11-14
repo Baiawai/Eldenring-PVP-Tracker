@@ -53,6 +53,8 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 for selector in ('.online-server-move', '.online-server-consent-review'):
                     if page.locator(selector).evaluate('(element) => getComputedStyle(element).display') != 'none':
                         raise AssertionError(('Inactive server transition control is visible', width, selector))
+                previous_interval = page.locator('#capture_speed').input_value()
+                page.evaluate("document.getElementById('capture_speed').value = '0.5'")
                 for code in ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
                     page.evaluate('(code) => launchLanguages(code)', code)
                     if page.locator('.leaderboard-report').get_attribute('href') != 'https://discord.gg/y79z83D2Ua':
@@ -84,9 +86,16 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                         expected_period = page.evaluate('() => new Intl.NumberFormat(document.documentElement.lang, {style: "unit", unit: "day", unitDisplay: "long"}).format(30)')
                         if actual_period != expected_period:
                             raise AssertionError((width, code, selector, actual_period, expected_period))
+                    interval = page.locator('#capture_speed option[value="0.5"]').text_content()
+                    expected_interval = page.evaluate('() => new Intl.NumberFormat(document.documentElement.lang, {style: "unit", unit: "second", unitDisplay: "short"}).format(0.5)')
+                    if interval != expected_interval:
+                        raise AssertionError((width, code, 'capture interval', interval, expected_interval))
+                    if page.locator('#capture_speed').input_value() != '0.5':
+                        raise AssertionError((width, code, 'capture interval selection changed'))
                     actual = page.locator('.scoreboard .victory').first.text_content()
                     if actual != expected:
                         raise AssertionError((width, code, actual, expected))
+                page.evaluate('(value) => { document.getElementById("capture_speed").value = value; }', previous_interval)
                 page.evaluate("() => { launchLanguages('fra'); launchLanguages('spaes'); }")
                 page.wait_for_timeout(500)
                 if errors:
@@ -228,7 +237,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 page.locator('#menu_button_settings').click()
                 information = page.locator('#information_panel')
                 page.locator('#menu_button_information').click()
-                if not information.is_visible() or information.locator('.faq-item').count() != 18:
+                if not information.is_visible() or information.locator('.faq-item').count() != 22:
                     raise AssertionError(('Information FAQ unavailable', width))
                 discord = information.locator('.information-discord')
                 if discord.count() != 1 or not discord.is_visible() or discord.get_attribute('href') != 'https://discord.gg/y79z83D2Ua':
@@ -247,7 +256,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                     raise AssertionError(('FAQ answer did not open', width))
                 for code in ['eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
                     page.evaluate('(code) => launchLanguages(code)', code)
-                    if information.locator('.faq-item summary').first.text_content() != page.evaluate('(code) => ELDEN_UI_PACKS[code].modern.faq_q_01', code):
+                    if information.locator('.faq-item summary').first.text_content() != page.evaluate('(code) => ELDEN_UI_PACKS[code].modern.faq_q_12', code):
                         raise AssertionError(('FAQ language did not change', width, code))
                     if discord.text_content() != page.evaluate('(code) => ELDEN_UI_PACKS[code].modern.information_discord', code):
                         raise AssertionError(('Discord link language did not change', width, code))

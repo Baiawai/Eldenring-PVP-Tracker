@@ -95,6 +95,12 @@ def connect_multiplayer():
 def connect_settings():
     return sqlite3.connect(database_setting)
 
+
+def _is_qualifying_result(victory, defeat, mode):
+    truthy = lambda value: str(value).strip().lower() in ('1', 'true')
+    return str(mode).strip().lower() in ('arena', 'invasion', 'defense') and (truthy(victory) != truthy(defeat))
+
+
 def create_tables():
     """Create missing base tables without replacing existing user data."""
     schemas = (
@@ -107,6 +113,38 @@ def create_tables():
         with closing(sqlite3.connect(path, timeout=10)) as con:
             with con:
                 con.execute(sql)
+    with closing(sqlite3.connect(database_capture, timeout=10)) as con, con:
+        # Keep Steam identities separate from character names and preserve the
+        # legacy nine-column capture rows used by older tracker versions.
+        con.execute('CREATE TABLE IF NOT EXISTS capture_steam_names (id INTEGER PRIMARY KEY, steam_name BLOB NOT NULL)')
+        # These triggers also protect databases opened later by older versions:
+        # a removed or reused capture ID must never inherit another Steam name.
+        con.execute('''CREATE TRIGGER IF NOT EXISTS capture_steam_names_on_delete
+                       AFTER DELETE ON tabel_captures BEGIN
+                           DELETE FROM capture_steam_names WHERE id=OLD.id;
+                       END''')
+        con.execute('''CREATE TRIGGER IF NOT EXISTS capture_steam_names_on_insert
+                       AFTER INSERT ON tabel_captures BEGIN
+                           DELETE FROM capture_steam_names WHERE id=NEW.id;
+                       END''')
+        con.execute('CREATE TABLE IF NOT EXISTS tracker_onboarding (id INTEGER PRIMARY KEY CHECK(id=1), first_capture INTEGER NOT NULL CHECK(first_capture=1))')
+        con.execute('CREATE TABLE IF NOT EXISTS tracker_first_game_event (id INTEGER PRIMARY KEY CHECK(id=1))')
+        has_result = con.execute('SELECT 1 FROM tracker_onboarding WHERE id=1').fetchone() is not None
+        has_event = con.execute('SELECT 1 FROM tracker_first_game_event WHERE id=1').fetchone() is not None
+        if not has_result or not has_event:
+            for row in con.execute('SELECT id, victory, defeat, mode FROM tabel_captures'):
+                try:
+                    _, victory, defeat, mode = decrypt_rows([row])[0]
+                    if str(mode).strip().lower() in ('arena', 'invasion', 'defense'):
+                        con.execute('INSERT OR IGNORE INTO tracker_first_game_event(id) VALUES(1)')
+                        has_event = True
+                    if _is_qualifying_result(victory, defeat, mode):
+                        con.execute('INSERT OR IGNORE INTO tracker_onboarding(id, first_capture) VALUES(1, 1)')
+                        has_result = True
+                    if has_result and has_event:
+                        break
+                except Exception:
+                    app.logger.exception('Unable to inspect an existing capture for onboarding')
 
 
 create_tables()
@@ -310,7 +348,28 @@ def all_captures_chart():
 
 @app.route("/allCaptures", endpoint="allCaptures", methods={"GET"})
 def all_captures():
-    return jsonify({"request": "success", "captures": _load_captures(request.args.get('mode'), True)})
+    captures = _load_captures(request.args.get('mode'), True)
+    return jsonify({"request": "success", "captures": captures,
+                    "steam_names": capture_steam_names(row[0] for row in captures)})
+
+
+def capture_steam_names(capture_ids):
+    """Return recorded Steam names for these captures, without merging identities."""
+    ids = list(dict.fromkeys(int(ident) for ident in capture_ids))
+    if not ids:
+        return {}
+    result = {}
+    with closing(sqlite3.connect(database_capture, timeout=10)) as con:
+        if not con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='capture_steam_names'").fetchone():
+            return result
+        # Stay below SQLite's parameter limit even for a large unfiltered list.
+        for offset in range(0, len(ids), 500):
+            batch = ids[offset:offset + 500]
+            placeholders = ','.join('?' for _ in batch)
+            rows = con.execute('SELECT id,steam_name FROM capture_steam_names WHERE id IN (' + placeholders + ')', batch).fetchall()
+            for ident, name in rows:
+                result[ident] = decrypt_value(name).decode('utf-8')
+    return result
 
 def get_capture_page(space, captur_send):
     with closing(sqlite3.connect(database_capture, timeout=10)) as con:
@@ -324,15 +383,29 @@ def get_capture_page(space, captur_send):
     return [decrypt_rows(result), space, count]
 
  
-def add_capture(name, victory, defeat, egality, time, date, mode, base64):
+def add_capture(name, victory, defeat, egality, time, date, mode, base64, steam_name=''):
     
     sql = "INSERT INTO tabel_captures (name, victory, defeat, egality, time, date, mode, base64) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     val = (encrypt_value(name), encrypt_value(victory), encrypt_value(defeat), encrypt_value(egality), encrypt_value(time), encrypt_value(date), encrypt_value(mode), encrypt_value(base64))
     with closing(sqlite3.connect(database_capture, timeout=10)) as con:
         with con:
-            con.execute(sql, val)
+            cursor = con.execute(sql, val)
+            if steam_name:
+                con.execute('INSERT INTO capture_steam_names(id,steam_name) VALUES (?,?)',
+                            (cursor.lastrowid, encrypt_value(steam_name)))
+            con.execute('INSERT OR IGNORE INTO tracker_first_game_event(id) VALUES(1)')
+            if _is_qualifying_result(victory, defeat, mode):
+                con.execute('INSERT OR IGNORE INTO tracker_onboarding(id, first_capture) VALUES(1, 1)')
     
     return "ok"
+
+
+@app.route('/onboarding-status', methods={'GET'})
+def onboarding_status():
+    with closing(sqlite3.connect(database_capture, timeout=10)) as con:
+        complete = con.execute('SELECT 1 FROM tracker_onboarding WHERE id=1').fetchone() is not None
+        first_event = con.execute('SELECT 1 FROM tracker_first_game_event WHERE id=1').fetchone() is not None
+    return jsonify(first_capture=complete, first_event=first_event)
 
 
 

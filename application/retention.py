@@ -55,6 +55,8 @@ def cleanup(database, settings, decode, now=None):
                         remove.append((ident,))
                 except (TypeError, ValueError, UnicodeError, InvalidToken):
                     continue
+            if remove and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='capture_steam_names'").fetchone():
+                db.executemany('DELETE FROM capture_steam_names WHERE id=?', remove)
             db.executemany('DELETE FROM tabel_captures WHERE id=?', remove)
             counts['captures'] = len(remove)
         if steam_days and db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='detection_history'").fetchone():

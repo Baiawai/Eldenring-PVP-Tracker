@@ -88,7 +88,6 @@
     attachInfo(lock.closest('.form_single'), [lockHelp, lockActive, lockUnavailable], 'notification_lock_info');
     const retentionHelp = section.querySelector('[data-i18n="retention_captures_help"]');
     if (retentionHelp) attachInfo(retentionHelp.closest('.form_single'), [retentionHelp], 'notification_retention_info');
-    const tr = (key, fallback) => window.uiT ? window.uiT(key, fallback) : fallback;
     let saved = [40, 100], previewId = null, testing = false, loading = false, editing = false, modeUpdating = false, modeEpoch = 0;
     function display() {
         const a = Number(top.value), b = Number(bottom.value);
@@ -97,7 +96,7 @@
         area.style.top = a + '%'; area.style.height = (b - a) + '%';
     }
     function setValues(a, b) { top.value = a; bottom.value = b; display(); }
-    function clearResult() { testResult.hidden = true; testStatus.textContent = ''; }
+    function clearResult() { testResult.hidden = true; window.uiSetStatus(testStatus); }
     function showSample(data) {
         const nextId = data.preview && data.preview_id != null ? data.preview_id : null;
         if (nextId !== previewId) {
@@ -140,11 +139,11 @@
             const response = await fetch('/notification-region', {method:'POST', body:new URLSearchParams({manual:String(!selected)})});
             if (!response.ok) throw new Error('request');
             const data = await response.json();
-            renderMode(data, true); showSample(data); clearResult(); status.textContent = '';
+            renderMode(data, true); showSample(data); clearResult(); window.uiSetStatus(status);
         } catch (_) {
             manual.checked = !selected; manual.disabled = false;
             manual.dispatchEvent(new Event('tracker-setting-render'));
-            status.textContent = tr('notification_error', 'Impossible d’enregistrer la zone.');
+            window.uiSetStatus(status, 'notification_error', 'Impossible d’enregistrer la zone.');
         } finally { modeUpdating = false; testButton.disabled = previewId === null || testing || editing; }
     });
     lock.addEventListener('change', async function () {
@@ -161,14 +160,16 @@
                 if (data.reason === 'preview_changed') throw new Error('preview_changed');
                 throw new Error('lock');
             }
-            renderMode(data, true); showSample(data); clearResult(); status.textContent = '';
+            renderMode(data, true); showSample(data); clearResult(); window.uiSetStatus(status);
         } catch (error) {
             lock.checked = !selected; lock.disabled = manual.disabled = false;
             lock.dispatchEvent(new Event('tracker-setting-render'));
             manual.dispatchEvent(new Event('tracker-setting-render'));
-            status.textContent = error.message === 'preview_changed' ?
-                tr('notification_lock_changed', 'Un nouvel exemple est disponible. Vérifie-le avant de verrouiller.') :
-                tr('notification_error', 'Impossible d’enregistrer la zone.');
+            if (error.message === 'preview_changed') {
+                window.uiSetStatus(status, 'notification_lock_changed', 'Un nouvel exemple est disponible. Vérifie-le avant de verrouiller.');
+            } else {
+                window.uiSetStatus(status, 'notification_error', 'Impossible d’enregistrer la zone.');
+            }
         } finally { modeUpdating = false; testButton.disabled = previewId === null || testing || editing; }
     });
     async function fetchSettings(initial) {
@@ -181,8 +182,8 @@
             const data = await response.json();
             if (epoch !== modeEpoch) return;
             renderMode(data, initial);
-            showSample(data); status.textContent = '';
-        } catch (_) { status.textContent = tr('notification_error', 'Impossible d’enregistrer la zone.'); }
+            showSample(data); window.uiSetStatus(status);
+        } catch (_) { window.uiSetStatus(status, 'notification_error', 'Impossible d’enregistrer la zone.'); }
         finally { loading = false; }
     }
     window.initNotificationRegion = function () { return fetchSettings(true); };
@@ -199,8 +200,8 @@
         try {
             const response = await fetch('/notification-region', {method:'POST', body:new URLSearchParams({top:selected[0]/100,bottom:selected[1]/100})});
             if (!response.ok) throw new Error('request');
-            saved = selected; status.textContent = ''; clearResult();
-        } catch (_) { setValues(...saved); status.textContent = tr('notification_error', 'Impossible d’enregistrer la zone.'); }
+            saved = selected; window.uiSetStatus(status); clearResult();
+        } catch (_) { setValues(...saved); window.uiSetStatus(status, 'notification_error', 'Impossible d’enregistrer la zone.'); }
         finally { editing = false; top.disabled = bottom.disabled = false; testButton.disabled = previewId === null || testing; }
     }
     top.addEventListener('change', save); bottom.addEventListener('change', save);
@@ -209,23 +210,23 @@
         if (previewId === null) return;
         const testedId = previewId, testedEpoch = modeEpoch;
         testing = true; testButton.disabled = true; testResult.hidden = true;
-        testStatus.textContent = tr('notification_ocr_testing', 'Analyse en cours…');
+        window.uiSetStatus(testStatus, 'notification_ocr_testing', 'Analyse en cours…');
         try {
             const response = await fetch('/notification-ocr-test', {method:'POST', body:new URLSearchParams({preview_id:String(testedId)})});
             const data = await response.json();
             if (!response.ok) {
                 if (data.reason === 'preview_changed' || data.reason === 'no_preview') {
                     await fetchSettings(false);
-                    testStatus.textContent = tr('notification_ocr_changed', 'Un nouvel exemple est disponible. Lance à nouveau le test.');
+                    window.uiSetStatus(testStatus, 'notification_ocr_changed', 'Un nouvel exemple est disponible. Lance à nouveau le test.');
                     return;
                 }
                 throw new Error('ocr');
             }
             if (testedId !== previewId || testedEpoch !== modeEpoch) return;
-            testStatus.textContent = data.matched ? tr('notification_ocr_matched', 'Message reconnu comme événement de suivi.') :
-                tr('notification_ocr_unmatched', 'Aucun événement reconnu dans la zone sélectionnée.');
+            if (data.matched) window.uiSetStatus(testStatus, 'notification_ocr_matched', 'Message reconnu comme événement de suivi.');
+            else window.uiSetStatus(testStatus, 'notification_ocr_unmatched', 'Aucun événement reconnu dans la zone sélectionnée.');
             if (data.text.trim()) { testResult.textContent = data.text; testResult.hidden = false; }
-        } catch (_) { testStatus.textContent = tr('notification_ocr_error', 'Impossible de tester la reconnaissance.'); }
+        } catch (_) { window.uiSetStatus(testStatus, 'notification_ocr_error', 'Impossible de tester la reconnaissance.'); }
         finally { testing = false; testButton.disabled = previewId === null || editing; }
     });
 })();

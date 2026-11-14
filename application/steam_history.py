@@ -5,16 +5,18 @@ from application.detection_history import record_detection, update_detection
 _lock = threading.Lock()
 _known = {}
 _arena = None
+_pvp_encounter = None
 
 
 def clear_history_transaction(operation):
     """Serialize clearing history with Steam observations and forget stale IDs."""
-    global _arena
+    global _arena, _pvp_encounter
     with _lock:
         result = operation()
         if result:
             _known.clear()
             _arena = None
+            _pvp_encounter = None
         return result
 
 def _clean(peer):
@@ -59,11 +61,16 @@ def observe(status, peers, mode='Unknown'):
                     update_detection(state['id'], 'Joueur Steam rencontré : ' + item['name'], updated_mode, item)
                     state.update(steam=item, mode=updated_mode)
                     changed += 1
-        if _arena is not None and status == 'active':
+        if _arena is not None and not _arena.get('sealed') and status == 'active':
             for sid, state in _known.items():
                 _arena['participants'][sid] = state
             if len(_arena['participants']) > 1:
                 _arena['ambiguous'] = True
+        if _pvp_encounter is not None and status == 'active':
+            for sid in current:
+                _pvp_encounter['participants'][sid] = dict(_known[sid]['steam'])
+            if len(_pvp_encounter['participants']) > 1:
+                _pvp_encounter['ambiguous'] = True
         for sid in list(_known):
             if sid not in current:
                 _known.pop(sid)
@@ -84,7 +91,28 @@ def begin_arena():
                 state = {'steam':item, 'id':ident, 'mode':'Arena'}
                 _known[sid] = state
             participants[sid] = state
-        _arena = {'participants':participants, 'ambiguous':len(participants) > 1}
+        _arena = {'participants':participants, 'ambiguous':len(participants) > 1, 'sealed':False}
+
+
+def seal_arena_participant():
+    """Freeze the duel's participants at its result and return a unique Steam name."""
+    with _lock:
+        if not _arena:
+            return ''
+        if not _arena.get('sealed'):
+            _arena['participants'] = {
+                sid: {'steam':dict(state['steam']), 'id':state['id'], 'mode':state['mode']}
+                for sid, state in _arena['participants'].items()
+            }
+            _arena['sealed'] = True
+        if _arena['ambiguous'] or len(_arena['participants']) != 1:
+            return ''
+        state = next(iter(_arena['participants'].values()))
+        if state['mode'] not in ('Unknown', 'Arena'):
+            return ''
+        steam = state['steam']
+        name, ident = steam.get('name', '').strip(), steam.get('id', '')
+        return name if name and name != ident else ''
 
 
 def arena_opponent_name():
@@ -110,6 +138,9 @@ def finish_arena(outcome, match_date):
         if not update_detection(state['id'], 'Joueur Steam rencontré : ' + item['name'], 'Arena', item):
             return False
         state.update(steam=item, mode='Arena')
+        current = _known.get(item['id'])
+        if current and current['id'] == state['id']:
+            current.update(steam=item, mode='Arena')
         return True
 
 
@@ -117,4 +148,30 @@ def cancel_arena():
     global _arena
     with _lock:
         _arena = None
+
+
+def begin_pvp_encounter():
+    """Remember Steam peers seen during an invasion or defense, without assigning roles."""
+    global _pvp_encounter
+    with _lock:
+        participants = {sid:dict(state['steam']) for sid, state in _known.items()}
+        _pvp_encounter = {'participants':participants, 'ambiguous':len(participants) > 1}
+
+
+def seal_pvp_participant():
+    """Finish observation and return a unique detected Steam name, if available."""
+    global _pvp_encounter
+    with _lock:
+        session, _pvp_encounter = _pvp_encounter, None
+        if not session or session['ambiguous'] or len(session['participants']) != 1:
+            return ''
+        steam = next(iter(session['participants'].values()))
+        name, ident = steam.get('name', '').strip(), steam.get('id', '')
+        return name if name and name != ident else ''
+
+
+def cancel_pvp_encounter():
+    global _pvp_encounter
+    with _lock:
+        _pvp_encounter = None
 

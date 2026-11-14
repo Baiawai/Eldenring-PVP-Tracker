@@ -64,7 +64,7 @@ def parse_sightings(text, mode, mode_detected, in_combat=True):
             event = 'died' if 'mort' in action else 'dismissed' if 'renvoy' in action else 'left' if 'retourn' in action else 'joined'
             relation = 'opponent' if context == 'Invasion' else 'ally' if context == 'Defense' else 'unknown'
             result.append({'name': name, 'role': 'hunter', 'relation': relation, 'mode': context, 'event': event})
-    if context in ('Invasion', 'Defense'):
+    if context in ('Invasion', 'Defense', 'Unknown'):
         # A death identifies a participant, not who dealt the final blow.
         if context == 'Invasion':
             cooperator_death = re.search(r'\bdoigt\s+crochu(?:\s+alli[ée])?\s+([^\r\n]{1,64}?)\s+est\s+mort\b', text, re.IGNORECASE)
@@ -79,15 +79,16 @@ def parse_sightings(text, mode, mode_detected, in_combat=True):
         arrival = re.search(
             r'\binvasion\s+par\s+(?:le\s+)?(?:doigt\s+sanglant|r[ée]fractaire)\s+([^\r\n]{1,64})',
             text, re.IGNORECASE)
-        if invader or arrival:
+        if invader or (arrival and context != 'Unknown'):
             match = invader or arrival
             name = ' '.join(match.group(1).split()).strip(' .!…')
             if name and any(char.isalnum() for char in name):
                 action = invader.group(2).casefold() if invader else ''
                 event = 'died' if action.startswith(('est', 'a péri', 'a peri')) else 'invaded'
-                result.append({'name': name, 'role': 'invader',
-                               'relation': 'coinvader' if context == 'Invasion' else 'opponent',
-                               'mode': context, 'event': event})
+                if context != 'Unknown' or event == 'died':
+                    relation = 'coinvader' if context == 'Invasion' else 'opponent' if context == 'Defense' else 'unknown'
+                    result.append({'name': name, 'role': 'invader', 'relation': relation,
+                                   'mode': context, 'event': event})
     return result
 
 

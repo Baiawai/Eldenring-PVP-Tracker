@@ -6,7 +6,6 @@
     const uiCodes = {frafr:'fra', engus:'eng', deude:'deu', itait:'ita', spaes:'spaes', spaar:'spaar', porbr:'por', polpl:'pol', rusru:'rus', jpnjp:'jap', korkr:'kor', zhocn:'chi', zhotw:'zht', thath:'tha', araae:'ara'};
     const labels = {fra:'Langue',eng:'Language',deu:'Sprache',ita:'Lingua',spaes:'Idioma',spaar:'Idioma',por:'Idioma',pol:'Język',rus:'Язык',jap:'言語',kor:'언어',chi:'语言',zht:'語言',tha:'ภาษา',ara:'اللغة'};
     let current = '';
-    function tr(key, french) { return window.uiT ? window.uiT(key, french) : french; }
     function updateLabel() { label.textContent = labels[window.uiCurrentLanguage ? window.uiCurrentLanguage() : 'fra'] || 'Langue'; }
     async function init() {
         updateLabel();
@@ -26,13 +25,13 @@
             selector.disabled = false;
         } catch (error) {
             status.classList.add('error');
-            status.textContent = tr('game_language_loading_error', 'Impossible de charger les langues.');
+            window.uiSetStatus(status, 'game_language_loading_error', 'Impossible de charger les langues.');
         }
     }
     selector.addEventListener('change', async function() {
         const next = selector.value;
         selector.disabled = true;
-        status.textContent = '';
+        window.uiSetStatus(status);
         status.classList.remove('error');
         try {
             const response = await fetch('/languages', {method:'POST', body:new URLSearchParams({language:uiCodes[next]})});
@@ -48,9 +47,8 @@
         } catch (error) {
             selector.value = current;
             status.classList.add('error');
-            status.textContent = error.message === 'combat' ?
-                tr('game_language_combat_error', 'Termine la partie en cours avant de changer la langue.') :
-                tr('game_language_error', 'Impossible de changer la langue.');
+            if (error.message === 'combat') window.uiSetStatus(status, 'game_language_combat_error', 'Termine la partie en cours avant de changer la langue.');
+            else window.uiSetStatus(status, 'game_language_error', 'Impossible de changer la langue.');
         } finally { selector.disabled = false; }
     });
     document.addEventListener('ui-language-change', updateLabel);

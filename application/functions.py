@@ -27,15 +27,15 @@ from io import BytesIO
 from __main__ import app
 
 
-from application.init import load_user, load_settings, initialize_display_settings, update_settings, verify_identity, get_selected_language, update_language, apply_score as add_arena_score, add_capture, get_capture_page, get_ratio, update_user_image, update_user_level
+from application.init import load_user, load_settings, initialize_display_settings, update_settings, verify_identity, get_selected_language, update_language, apply_score as add_arena_score, add_capture, get_capture_page, capture_steam_names, get_ratio, update_user_image, update_user_level
 from application.mode_stats import mode_user, add_mode_score, correct_invasion_no_result
 from application.player_sightings import SightingTracker, record_sighting
 from application.detection_history import record_detection, update_detection, message_text, read_steam_history
-from application.locale_catalog import tracker_notifications, classify
+from application.locale_catalog import tracker_notifications as game_notification_messages, classify, recognize, messages as game_messages
 from application import game_language, capture_speed, notification_region, peer_tracking, steam_history, steam_overlay, profile_legend, ocr_runner
 from application.session_summary import SessionSummary
 from application.browser_language import browser_language
-from application.ui_localization import packs as ui_packs, localize_counter
+from application.ui_localization import packs as ui_packs, localize_counter, display_game_text
 from application.runtime_paths import image_dir, RESOURCE_DIR, tesseract_path, data_dir
 from application import usage_metrics
 from application import auto_tracking
@@ -83,8 +83,11 @@ invasion_search_extent = None
 invasion_search_history_id = None
 invasion_search_visibility = SearchVisibility()
 invasion_return_pending = None
+invasion_return_message = None
 recent_invasion_no_result = None
 opponent_name = ''
+invasion_host_peer_id = None
+invasion_host_peer_lock = threading.Lock()
 monitor_lock = threading.Lock()
 run_monitor = False
 monitor_ready = False
@@ -207,28 +210,28 @@ correspondly_en = ["The combatant has left combat <br> Leaving combat ",
                    "Quitter la partie"
                    ]
 
-correspondly_fr = ["Le combattant à quittés le combat <br> Fin du combat ",
-                   "Tous les combattants ont quittés le combat <br> Fin du combat ",
+correspondly_fr = ["Le combattant a quitté le combat <br> Fin du combat ",
+                   "Tous les combattants ont quitté le combat <br> Fin du combat ",
                    "Echec du matchmaking <br> Impossible de rejoindre la session",
                    "Une erreur de connexion est survenue <br> Fin du combat ",
                    "En attente de joueur(s)",
-                   "Le matchmaking à été annulé",
+                   "Le matchmaking a été annulé",
                    "Matchmaking annulé",
                    "Vous voulez annuler le duel ? ",
                    "Tous les combattants sont rassemblés",
                    "Début du combat",
                    "Vous remportez la victoire ! ",
-                   "Erreur de stape",
+                   "Erreur de suivi du combat",
                    "Vous avez perdu ",
-                   "Fin du combat <br> Désoler nous n'avons pas pu captuer la fin du combat ",
+                   "Fin du combat <br> Désolé, nous n'avons pas pu capturer la fin du combat ",
                    "2 combattants",
                    "Interdit",
                    "Tous les joueurs",
                    "Aucune préférence",
-                   "Colysé royal",
+                   "Colisée royal",
                    "sur le bureau",
                    "Le combat s\'achève par une égalité",
-                   "Fin du combat <br> Le jeu c'est fermé pendant le combat",
+                   "Fin du combat <br> Le jeu s'est fermé pendant le combat",
                    "Quitter la partie"
                    ]
 
@@ -478,12 +481,27 @@ def configure_first_browser_language():
 
 @app.route('/steam-peers', methods={'GET', 'POST'})
 def steam_peers():
+    global invasion_host_peer_id
     if request.method == 'POST':
         value = request.form.get('enabled')
         if value not in ('true', 'false'):
             return jsonify({'request':'error', 'reason':'invalid_setting'}), 400
         peer_tracking.set_enabled(value == 'true')
-    return jsonify(peer_tracking.snapshot())
+    result = peer_tracking.snapshot()
+    # The first Steam peer is an observed convention, not a verified identity.
+    # Keep it stable during the invasion rather than promoting another peer
+    # if that connection disappears or the list changes order.
+    with invasion_host_peer_lock:
+        if run_monitor and fight and mode_select == 'Invasion':
+            peers = result.get('peers', [])
+            if invasion_host_peer_id is None and result.get('status') == 'active' and peers:
+                first_id = peers[0].get('id') if isinstance(peers[0], dict) else None
+                if isinstance(first_id, str) and first_id.isascii() and first_id.isdigit():
+                    invasion_host_peer_id = first_id
+            result['world_host'] = {'name': (opponent_name or '').strip(), 'peer_id': invasion_host_peer_id}
+        else:
+            result['world_host'] = None
+    return jsonify(result)
 
 
 @app.route('/steam-log-auto', methods={'GET', 'POST'})
@@ -783,17 +801,21 @@ def game_language_setting():
 
 
 def reset_monitor_state():
-    global mode_select, mode_detected
-    global invasion_phase, invasion_search_extent, invasion_search_history_id, invasion_return_pending, recent_invasion_no_result, opponent_name, ally_summoning_last_seen, ally_summon_failure_last_seen, inventory_warning_seen
+    global mode_select, mode_detected, invasion_host_peer_id
+    with invasion_host_peer_lock:
+        invasion_host_peer_id = None
+    global invasion_phase, invasion_search_extent, invasion_search_history_id, invasion_return_pending, invasion_return_message, recent_invasion_no_result, opponent_name, ally_summoning_last_seen, ally_summon_failure_last_seen, inventory_warning_seen
     recent_invasion_no_result = None
     invasion_search_history_id = None
     invasion_search_visibility.reset()
     steam_history.cancel_arena()
+    _cancel_pvp_encounter()
     mode_select = 'Arena'
     mode_detected = False
     invasion_phase = None
     invasion_search_extent = None
     invasion_return_pending = None
+    invasion_return_message = None
     opponent_name = ''
     sighting_tracker.pending.clear()
     ally_summoning_last_seen = None
@@ -842,6 +864,7 @@ def init():
     verifiy = verify_identity()
     user = mode_user(load_user()[0], mode_select)
     captures = get_capture_page(50 , captur_send)
+    steam_names = capture_steam_names(row[0] for row in captures[0])
     settings = initialize_display_settings()
     langue_select = get_selected_language()
     apply_score(0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -865,10 +888,10 @@ def init():
         notif_base64 = base64.b64encode(cv2.imencode('.jpg', image_notif)[1]).decode()
         
 
-        return jsonify({"request": "success", "captures":captures, "user":user, "notif": notif_base64, "size_notification":size_notification, "settings":settings, "language_default": language_default})
+        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "size_notification":size_notification, "settings":settings, "language_default": language_default})
     else:                  
         notif_base64 = ""               
-        return jsonify({"request": "success", "captures":captures, "user":user, "notif": notif_base64, "settings":settings, "language_default": language_default})
+        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "settings":settings, "language_default": language_default})
 
 @app.route("/nextCaptures", endpoint="nextCaptures", methods={"GET"})
 def next_captures():
@@ -876,7 +899,8 @@ def next_captures():
     captur_send = captur_send +1 
     captures = get_capture_page(50, captur_send)
     
-    return jsonify({"request": "success", "captures":captures})
+    return jsonify({"request": "success", "captures":captures,
+                    "steam_names":capture_steam_names(row[0] for row in captures[0])})
 
 
 
@@ -1021,7 +1045,7 @@ def capture_select():
         
     
    
-    return jsonify({"request": "success", "datas":image, "victory":victory, "defeat":defeat, "egality":egality, "date":last[2], "mode": last[3] if len(last) > 3 else 'Arena', "opponent": last[4] if len(last) > 4 else '', "ratio": ratio})
+    return jsonify({"request": "success", "datas":image, "victory":victory, "defeat":defeat, "egality":egality, "date":last[2], "mode": last[3] if len(last) > 3 else 'Arena', "opponent": last[4] if len(last) > 4 else '', "steam_name": last[6] if len(last) > 6 else '', "ratio": ratio})
 
 @app.route('/live-preview', methods={'GET'})
 def live_preview():
@@ -1031,6 +1055,7 @@ def live_preview():
     except ValueError:
         return jsonify({'request':'error'}), 400
     previous_detected = request.args.get('detected')
+    previous_ready = request.args.get('ready')
     wants_wait = request.args.get('wait') == '1' and last_revision >= 0
     acquired = preview_wait_slots.acquire(blocking=False) if wants_wait else False
     try:
@@ -1039,10 +1064,13 @@ def live_preview():
                 preview_condition.wait_for(
                     lambda: capture_revision != last_revision or
                     (previous_box_version is not None and preview_notification_version != previous_box_version) or
+                    (previous_ready == '0' and monitor_ready) or
                     (previous_detected in ('0', '1') and game_detected != (previous_detected == '1')),
                     timeout=1.0)
             revision = capture_revision
             return jsonify({'revision': revision, 'gameDetected': game_detected,
+                            'monitorRunning': run_monitor, 'monitorReady': monitor_ready,
+                            'gameRunning': game_running,
                             'capture': capture if revision != last_revision else None,
                             'notification': preview_notification_box if game_detected and run_monitor else None,
                             'boxVersion': preview_notification_version,
@@ -1143,7 +1171,7 @@ legacy_screen_size = (width_screen, height_screen)
 active_capture_display = None
         
 
-def emit_tracking_event(text):
+def emit_tracking_event(text, mode_override=None, *, opponent='', opponent_source='', outcome=''):
     global array_stats, invasion_search_history_id
     marker = ''
     for candidate in ('<!--search-start-->', '<!--search-update-->', '<!--invasion-no-result-->', '<!--connection-correction-->'):
@@ -1152,7 +1180,27 @@ def emit_tracking_event(text):
             break
     # The frontend uses commas as message separators. Preserve literal commas
     # inside translated strings and leave the queue delimiter unambiguous.
-    text = marker + localize_counter(text, langue_select).replace(',', '&#44;')
+    text = localize_counter(text, langue_select)
+    if opponent and opponent_source in ('game', 'steam') and outcome in ('victory', 'defeat'):
+        key = 'victory_against' if outcome == 'victory' else 'defeat_against'
+        fallback = 'Vous remportez la victoire contre {opponent} !' if outcome == 'victory' else 'Vous avez perdu contre {opponent}.'
+        legacy = correspondly_fr[10 if outcome == 'victory' else 12].strip()
+        try:
+            pack = ui_packs().get(langue_select, {})
+            template = pack.get('modern', {}).get(key, fallback)
+            if pack:
+                legacy = pack['counter'][8 if outcome == 'victory' else 9]
+        except (OSError, ValueError, TypeError):
+            app.logger.exception('Unable to translate combat result')
+            template = fallback
+        # The comment preserves result detection in already-open older pages.
+        # History strips it, while the visible sentence escapes player names.
+        sentence = html.escape(template, quote=False).replace('{opponent}', html.escape(str(opponent), quote=False))
+        duration = text.partition('<br>')[2]
+        text = '<!--' + html.escape(legacy, quote=False).replace('--', '') + '--><span class="combat-result-text">' + sentence + '</span>'
+        if duration:
+            text += '<br>' + duration
+    text = marker + text.replace(',', '&#44;')
  
     if(len(array_stats["text"].split(",")[0]) == "Lets go !" and text == "Lets go !"):
         array_stats["text"] = array_stats["text"]
@@ -1168,7 +1216,7 @@ def emit_tracking_event(text):
             elif marker == '<!--search-update-->' and update_detection(invasion_search_history_id, text):
                 pass
             else:
-                event_id = record_detection(text, mode_select if mode_detected else 'Unknown')
+                event_id = record_detection(text, mode_override if mode_override is not None else (mode_select if mode_detected else 'Unknown'))
                 if marker in ('<!--search-start-->', '<!--search-update-->'):
                     invasion_search_history_id = event_id
         except Exception:
@@ -1295,11 +1343,48 @@ def normalise_ocr(text):
                             if not unicodedata.combining(c)).replace('’', "'").replace('‘', "'").split())
 
 
+def invasion_return_notice(text):
+    """Return the most specific complete game template seen in this OCR frame."""
+    identifiers = {'2631200', '2631210', '2611010', '2661210', '2661220', '2661225'}
+    catalog = game_messages().get(game_locale, {})
+    matches = [item for item in recognize(text, game_locale) if item['id'] in identifiers]
+    if not matches:
+        return None
+    normalized_text = normalise_ocr(text)
+    def specificity(item):
+        template = normalise_ocr(catalog[item['id']])
+        return (sum(char.isalnum() for char in template), template in normalized_text, len(template))
+    match = max(matches, key=specificity)
+    return catalog[match['id']]
+
+
+def _begin_pvp_encounter():
+    try:
+        steam_history.begin_pvp_encounter()
+    except Exception:
+        app.logger.exception('Unable to start Steam participant observation')
+
+
+def _seal_pvp_participant():
+    try:
+        return steam_history.seal_pvp_participant() or ''
+    except Exception:
+        app.logger.exception('Unable to finish Steam participant observation')
+        return ''
+
+
+def _cancel_pvp_encounter():
+    try:
+        steam_history.cancel_pvp_encounter()
+    except Exception:
+        app.logger.exception('Unable to cancel Steam participant observation')
+
+
 def handle_invasion(text, path_video_simple, original_grey):
     global fight, mode_select, mode_detected, stape, time_start, time_end, time_result
     global fighter_find, fighters_exit, fighter_exit, error, want_annul
     global wait_fighter, connexion_error, mod_launch
-    global invasion_phase, invasion_search_extent, invasion_return_pending, recent_invasion_no_result, opponent_name
+    global invasion_phase, invasion_search_extent, invasion_return_pending, invasion_return_message, recent_invasion_no_result, opponent_name, invasion_host_peer_id
 
     original_text = text
     text = normalise_ocr(text)
@@ -1308,7 +1393,7 @@ def handle_invasion(text, path_video_simple, original_grey):
     if not fight and mode_select == 'Invasion' and connection_problem and recent_invasion_no_result:
         previous = recent_invasion_no_result
         if time.monotonic() <= previous['deadline']:
-            expected = message_text(localize_counter('Retour dans votre monde · Combat sans résultat', langue_select))
+            expected = previous['message']
             replacement = message_text(localize_counter(error_message, langue_select))
             if correct_invasion_no_result(previous['id'], expected, replacement):
                 session_summary.correct_connection_error()
@@ -1329,6 +1414,7 @@ def handle_invasion(text, path_video_simple, original_grey):
         fighter_find = fighters_exit = fighter_exit = error = want_annul = False
         wait_fighter = connexion_error = False
         mod_launch = 0
+        _begin_pvp_encounter()
         original_image = cv2.imread(path_video_simple)
         height, width = original_image.shape[:2]
         cv2.imwrite(path_start_fight, original_image[0:int(height / 3), int(width / 4):int(width - width / 4)])
@@ -1365,18 +1451,22 @@ def handle_invasion(text, path_video_simple, original_grey):
             emit_tracking_event("Invasion d'un autre monde…")
         return True
     if not fight and "invasion d'un autre monde" in text and 'terrassez' in text and 'hote des doigts' in text:
+        with invasion_host_peer_lock:
+            invasion_host_peer_id = None
         fight = True
         mode_select = 'Invasion'
         mode_detected = True
         stape = 1
         invasion_phase = 'fight'
         invasion_return_pending = None
+        invasion_return_message = None
         match = re.search(r'terrassez\s+(.{1,80}?)\s*,\s*h[oô]te\s+des\s+doigts', original_text, re.IGNORECASE | re.DOTALL)
         opponent_name = ' '.join(match.group(1).split()) if match else ''
         time_start = time.time()
         fighter_find = fighters_exit = fighter_exit = error = want_annul = False
         wait_fighter = connexion_error = False
         mod_launch = 0
+        _begin_pvp_encounter()
         original_image = cv2.imread(path_video_simple)
         height, width = original_image.shape[:2]
         cv2.imwrite(path_start_fight, original_image[0:int(height / 3), int(width / 4):int(width - width / 4)])
@@ -1400,6 +1490,7 @@ def handle_invasion(text, path_video_simple, original_grey):
                 break
         defeat = 'vous avez peri' in text
     if connection_problem and not (victory or defeat):
+        _seal_pvp_participant()
         apply_score(0, 0, 0, 0, 0, 0, 0, 1, 0)
         fight = False
         stape = 0
@@ -1410,35 +1501,52 @@ def handle_invasion(text, path_video_simple, original_grey):
         emit_tracking_event(error_message)
         return True
     if mode_select == 'Invasion' and not (victory or defeat):
+        notice = invasion_return_notice(original_text)
+        if notice and (not invasion_return_message or len(notice) > len(invasion_return_message)):
+            invasion_return_message = notice
         if 'retour dans votre monde' in text and invasion_return_pending is None:
             invasion_return_pending = time.monotonic()
         # Leave time for the result to appear in the next OCR readings.
         if invasion_return_pending is not None and time.monotonic() - invasion_return_pending >= 4:
             time_end = time.time()
             time_result = time_end - time_start
+            _seal_pvp_participant()
             apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
             fight = False
             stape = 0
             invasion_phase = 'finished'
             invasion_return_pending = None
-            event_id = emit_tracking_event('<!--invasion-no-result-->Retour dans votre monde · Combat sans résultat')
-            recent_invasion_no_result = {'id':event_id, 'deadline':time.monotonic() + 30} if event_id else None
+            notice = invasion_return_message or game_messages()[game_locale]['2631200']
+            invasion_return_message = None
+            rendered_notice = html.escape(display_game_text(notice), quote=False).replace('\n', '<br>')
+            event_id = emit_tracking_event('<!--invasion-no-result-->' + rendered_notice)
+            recent_invasion_no_result = {'id':event_id, 'deadline':time.monotonic() + 30,
+                                         'message':message_text(rendered_notice)} if event_id else None
             return True
     if victory or defeat:
         invasion_return_pending = None
         time_end = time.time()
         time_result = time_end - time_start
+        candidate_steam_name = _seal_pvp_participant()
+        game_name = (opponent_name or '').strip()
+        steam_name = candidate_steam_name if victory and not game_name else ''
         with open(path_video_simple, 'rb') as image_file:
             image = b64encode(image_file.read()).decode('utf-8')
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        add_capture(opponent_name, int(victory), int(defeat), 0, str(math.ceil(time_result)), now, mode_select, image)
+        add_capture(opponent_name, int(victory), int(defeat), 0, str(math.ceil(time_result)), now, mode_select, image, steam_name=steam_name)
         apply_score(int(victory), int(defeat), 0, 0, 0, 0, 0, 0, 0)
-        captures_stats.append([victory, str(math.ceil(time_result)), now, mode_select, opponent_name, image])
+        captures_stats.append([victory, str(math.ceil(time_result)), now, mode_select, opponent_name, image, steam_name])
         cv2.imwrite(path_finish_fight, original_grey)
         fight = False
         stape = 0
         invasion_phase = 'finished'
-        emit_tracking_event(correspondly_active[10 if victory else 12] + '<br> Time: ' + str(math.ceil(time_result)) + ' s')
+        result_message = correspondly_active[10 if victory else 12] + '<br> Time: ' + str(math.ceil(time_result)) + ' s'
+        if game_name or steam_name:
+            emit_tracking_event(result_message, opponent=game_name or steam_name,
+                                opponent_source='game' if game_name else 'steam',
+                                outcome='victory' if victory else 'defeat')
+        else:
+            emit_tracking_event(result_message)
     return True
 
 
@@ -1450,6 +1558,15 @@ def inventory_limit_item(text):
         return None
     item = ' '.join(match.group(1).split()).strip(' :;!…')
     return item if any(c.isalnum() for c in item) else None
+
+
+def _arena_steam_display_name():
+    """Best-effort Steam label; a missing profile must never stop tracking."""
+    try:
+        return steam_history.seal_arena_participant() or ''
+    except Exception:
+        app.logger.exception('Unable to read arena Steam participant')
+        return ''
 
 
 def process_game_text(text_simple, path_video_simple, original_grey, notification_text=None):
@@ -1481,8 +1598,8 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
                         for text in (text_simple, notification_text) if text
                         for event in classify(text, game_locale))
     if game_locale != 'frafr':
-        first = tracker_notifications(text_simple or '', game_locale)
-        second = tracker_notifications(notification_text or '', game_locale)
+        first = game_notification_messages(text_simple or '', game_locale)
+        second = game_notification_messages(notification_text or '', game_locale)
         if first:
             text_simple = (text_simple or '') + '\n' + '\n'.join(first)
         if second:
@@ -1527,7 +1644,11 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
                     role = 'Autre envahisseur'
                 role += {'joined': ' arrivé', 'summoning': ' en cours d’invocation',
                          'left': ' reparti', 'dismissed': ' renvoyé dans son monde', 'died': ' mort', 'invaded': ' arrivé'}.get(sighting['event'], ' observé')
-                emit_tracking_event(role + ' : ' + html.escape(sighting['name'].replace(',', ' ')))
+                message = role + ' : ' + html.escape(sighting['name'].replace(',', ' '))
+                if sighting['mode'] == 'Unknown':
+                    emit_tracking_event(message, mode_override='Unknown')
+                else:
+                    emit_tracking_event(message)
         except Exception:
             app.logger.exception('Unable to record player sighting')
     if fight and mode_select == 'Invasion':
@@ -1674,15 +1795,9 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
             except Exception:
                 app.logger.exception('Unable to associate arena Steam participants')
             original_image = cv2.imread(path_video_simple)
-            height, width, channels = original_image.shape
-            left = int(width / 4)
-            top = 0
-            right = int(width - (width / 4))
-            bottom = int(height / 3)
             apply_score(0, 0, 0, 1, 0, 0, 1, 0, 0)
          
-            croppedImage = original_image[top:bottom, left:right]
-            start_fight = cv2.imwrite(path_start_fight, croppedImage)
+            start_fight = cv2.imwrite(path_start_fight, original_image)
             emit_tracking_event(correspondly_active[9])
  
         elif (kmp_search(detect_text_active[1], text_simple) != -1 or kmp_search(detect_text_active[2], text_simple) != -1) and fight == True and time.time() - time_start >= 8 :
@@ -1696,12 +1811,13 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
            
             if stape >= 1:
                 now = datetime.now()
+                steam_name = _arena_steam_display_name()
                 # 
                 
                 with open(path_start_fight, "rb") as f:
                     image_binary = f.read()
                     image = b64encode(image_binary).decode("utf-8")
-                    add_capture("", 1, 0, 0, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image)
+                    add_capture("", 1, 0, 0, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image, steam_name=steam_name)
                 apply_score(1, 0, 0, 0, 0, 0, 0, 0, 0)
                 try:
                     if steam_history.finish_arena('victory', now.strftime('%Y-%m-%d %H:%M:%S')):
@@ -1709,11 +1825,15 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
                 except Exception:
                     app.logger.exception('Unable to save arena Steam result')
                 stape = 0
-                captures_stats.append([True, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S"))])
+                captures_stats.append([True, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, '', image, steam_name])
                 
                 
                 finish_fight = cv2.imwrite(path_finish_fight, original_grey)
-                emit_tracking_event(correspondly_active[10]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+                result_message = correspondly_active[10]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s"
+                if steam_name:
+                    emit_tracking_event(result_message, opponent=steam_name, opponent_source='steam', outcome='victory')
+                else:
+                    emit_tracking_event(result_message)
             else:
                 
                 emit_tracking_event(correspondly_active[11]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
@@ -1733,12 +1853,13 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
           
             if stape >= 2:
                 now = datetime.now()
+                steam_name = _arena_steam_display_name()
                 
                 
                 with open(path_start_fight, "rb") as f:
                     image_binary = f.read()
                     image = b64encode(image_binary).decode("utf-8")
-                    add_capture("", 0, 1, 0, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image)
+                    add_capture("", 0, 1, 0, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image, steam_name=steam_name)
                 apply_score(0, 1, 0, 0, 0, 0, 0, 0, 0)
                 try:
                     if steam_history.finish_arena('defeat', now.strftime('%Y-%m-%d %H:%M:%S')):
@@ -1746,11 +1867,15 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
                 except Exception:
                     app.logger.exception('Unable to save arena Steam result')
                 stape = 0
-                captures_stats.append([False, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S"))])
+                captures_stats.append([False, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, '', image, steam_name])
                 
             
                 finish_fight = cv2.imwrite(path_finish_fight, original_grey)
-                emit_tracking_event(correspondly_active[12]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+                result_message = correspondly_active[12]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s"
+                if steam_name:
+                    emit_tracking_event(result_message, opponent=steam_name, opponent_source='steam', outcome='defeat')
+                else:
+                    emit_tracking_event(result_message)
             time_start = time.time()
             time_end = time.time()
         elif kmp_search(detect_text_active[15], text_simple) != -1  and fight == True :    
@@ -1765,12 +1890,13 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
       
             if stape >= 2:
                 now = datetime.now()
+                steam_name = _arena_steam_display_name()
                 
                 
                 with open(path_start_fight, "rb") as f:
                     image_binary = f.read()
                     image = b64encode(image_binary).decode("utf-8")
-                    add_capture("", 0, 0, 1, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image)
+                    add_capture("", 0, 0, 1, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, image, steam_name=steam_name)
                 apply_score(0, 0, 1, 0, 0, 0, 0, 0, 0)
                 try:
                     if steam_history.finish_arena('draw', now.strftime('%Y-%m-%d %H:%M:%S')):
@@ -1778,7 +1904,7 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
                 except Exception:
                     app.logger.exception('Unable to save arena Steam result')
                 stape = 0
-                captures_stats.append([None, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S"))])
+                captures_stats.append([None, str(math.ceil(time_result - 5)), str(now.strftime("%Y-%m-%d %H:%M:%S")), mode_select, '', image, steam_name])
                 
             
                 finish_fight = cv2.imwrite(path_finish_fight, original_grey)
@@ -1871,6 +1997,8 @@ def monitor(ocr_executor):
     path_logo_steam = os.path.join(RESOURCE_DIR, 'steam_logo.png')
     logo = cv2.imread(path_logo_steam, cv2.IMREAD_GRAYSCALE)
     monitor_ready = bool(run_monitor)
+    with preview_condition:
+        preview_condition.notify_all()
     
     # path__runes = os.path.join(base_dir, 'runes.jpg') 
     # path_icon_runes = os.path.join(base_dir, 'icon_runes.png')  
@@ -1910,6 +2038,8 @@ def monitor(ocr_executor):
             
                  
             if (fight == True and mode_select == 'Arena' and (time.time() - time_start) - 1 >= 190) or (fight == True and elden_find == False):
+                    if mode_select in ('Invasion', 'Defense'):
+                        _seal_pvp_participant()
                     fight = False
                     mod_launch = 0
                     connexion_error = True

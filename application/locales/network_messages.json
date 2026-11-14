@@ -59,7 +59,11 @@
     "2602250": "ﻗﺎم <?joinName?> اﻹﺻﺑﻊ اﻟﺩﻣﻭﻳﺔ ﺑﺎﻟﻐﺯو",
     "2602260": "ﻗﺎم <?joinName?> اﻟﻣﺗﻣﺭد ﺑﺎﻟﻐﺯو",
     "2460000": "ﻳﺗﻌﺫر اﺳﺗﺩﻋﺎء اﻟﻣﺗﻌﺎون ﺑﺳﺑﺏ\nاﻧﺗﻬﺎء اﻟﻣﻬﻠﺔ",
-    "2490000": "ﻳﺗﻌﺫر اﺳﺗﺩﻋﺎء اﻟﻣﺗﻌﺎون"
+    "2490000": "ﻳﺗﻌﺫر اﺳﺗﺩﻋﺎء اﻟﻣﺗﻌﺎون",
+    "2611010": "ﺣﻘﻖ ﻣﺿﻳﻑ اﻷﺻﺎﺑﻊ ﻫﺩﻓﻪ ﻓﻲ ﻣﻭﻗﻊ ﺑﻌﻳﺩ.\nﺟﺎر اﻟﻌﻭدة إﻟﻰ ﻋﺎﻟﻣﻙ.",
+    "2661210": "ﺣﻘﻖ ﻣﺿﻳﻑ اﻷﺻﺎﺑﻊ ﻫﺩﻓﻪ.\nﺟﺎر اﻟﻌﻭدة إﻟﻰ ﻋﺎﻟﻣﻙ.",
+    "2661220": "ﺣﻘﻖ ﻣﺿﻳﻑ اﻷﺻﺎﺑﻊ ﻫﺩﻓﻪ.\nﺟﺎر اﻟﻌﻭدة إﻟﻰ ﻋﺎﻟﻣﻙ.",
+    "2661225": "ﺣﻘﻖ ﻣﺿﻳﻑ اﻷﺻﺎﺑﻊ ﻫﺩﻓﻪ.\nﺟﺎر اﻟﻌﻭدة إﻟﻰ ﻋﺎﻟﻣﻙ."
   },
   "deude": {
     "2300000": "Gast wird herbeigerufen ...",
@@ -121,7 +125,11 @@
     "2602250": "Blutiger Finger <?joinName?> ist eingedrungen.",
     "2602260": "Rekusant <?joinName?> ist eingedrungen.",
     "2460000": "Der Gast lässt sich nicht herbeirufen.\nGrund: Zeitüberschreitung",
-    "2490000": "Der Gast lässt sich nicht herbeirufen."
+    "2490000": "Der Gast lässt sich nicht herbeirufen.",
+    "2611010": "Der Wirt der Finger hat das Ziel an einem fernen Ort erreicht.\nIhr kehrt in Eure Welt zurück.",
+    "2661210": "Der Wirt der Finger hat sein Ziel erreicht.\nIhr kehrt in Eure Welt zurück.",
+    "2661220": "Der Wirt der Finger hat sein Ziel erreicht.\nIhr kehrt in Eure Welt zurück.",
+    "2661225": "Der Wirt der Finger hat sein Ziel erreicht.\nIhr kehrt in Eure Welt zurück."
   },
   "engus": {
     "2300000": "Summoning cooperator...",
@@ -183,7 +191,11 @@
     "2602250": "Bloody Finger <?joinName?> has invaded",
     "2602260": "Recusant <?joinName?> has invaded",
     "2460000": "Unable to summon cooperator due to\ntime out",
-    "2490000": "Unable to summon cooperator"
+    "2490000": "Unable to summon cooperator",
+    "2611010": "The Host of Fingers accomplished their objective in a distant location.\nReturning to your world.",
+    "2661210": "The Host of Fingers has accomplished their objective.\nReturning to your world.",
+    "2661220": "The Host of Fingers has accomplished their objective.\nReturning to your world.",
+    "2661225": "The Host of Fingers has accomplished their objective.\nReturning to your world."
   },
   "frafr": {
     "2300000": "Invocation de l'allié…",
@@ -245,7 +257,11 @@
     "2602250": "Invasion par le Doigt sanglant <?joinName?>.",
     "2602260": "Invasion par le Réfractaire <?joinName?>.",
     "2460000": "Impossible d'invoquer l'allié.\nDélai expiré.",
-    "2490000": "Impossible d'invoquer l'allié."
+    "2490000": "Impossible d'invoquer l'allié.",
+    "2611010": "L'Hôte des Doigts a accompli son objectif.\nRetour dans votre monde.",
+    "2661210": "L'Hôte des Doigts a accompli son objectif.\nRetour dans votre monde…",
+    "2661220": "L'Hôte des Doigts a accompli son objectif.\nRetour dans votre monde…",
+    "2661225": "L'Hôte des Doigts a accompli son objectif.\nRetour dans votre monde…"
   },
   "itait": {
     "2300000": "Evocazione alleato in corso...",
@@ -307,7 +323,11 @@
     "2602250": "Invasione del Dito sanguinante <?joinName?>",
     "2602260": "Invasione del dissidente <?joinName?>",
     "2460000": "Impossibile evocare un alleato.\nTempo scaduto.",
-    "2490000": "Impossibile evocare un alleato"
+    "2490000": "Impossibile evocare un alleato",
+    "2611010": "L'ospite di Dita ha raggiunto l'obiettivo in un luogo remoto.\nTornerai nel tuo mondo.",
+    "2661210": "L'ospite di Dita ha completato il suo obiettivo.\nTornerai nel tuo mondo...",
+    "2661220": "L'ospite di Dita ha completato il suo obiettivo.\nTornerai nel tuo mondo...",
+    "2661225": "L'ospite di Dita ha completato il suo obiettivo.\nTornerai nel tuo mondo..."
   },
   "jpnjp": {
     "2300000": "協力者を召喚しています",
@@ -369,7 +389,11 @@
     "2602250": "血の指<?joinName?>が侵入しました",
     "2602260": "背律者<?joinName?>が侵入しました",
     "2460000": "協力者を召喚できませんでした\n一定時間応答がありませんでした",
-    "2490000": "協力者を召喚できませんでした"
+    "2490000": "協力者を召喚できませんでした",
+    "2611010": "遠い場所で、鉤指の主が目的を達成しました\n元の世界に戻ります",
+    "2661210": "鉤指の主が目的を達成しました。元の世界に戻ります",
+    "2661220": "鉤指の主が目的を達成しました。元の世界に戻ります",
+    "2661225": "鉤指の主が目的を達成しました。元の世界に戻ります"
   },
   "korkr": {
     "2300000": "협력자를 소환하고 있습니다.",
@@ -431,7 +455,11 @@
     "2602250": "피 묻은 손가락 <?joinName?>이(가) 침입했습니다.",
     "2602260": "배율자 <?joinName?>이(가) 침입했습니다.",
     "2460000": "협력자를 소환하지 못했습니다.\n일정 시간 응답이 없었습니다.",
-    "2490000": "협력자를 소환하지 못했습니다."
+    "2490000": "협력자를 소환하지 못했습니다.",
+    "2611010": "먼 곳에서 손가락의 주인이 목적을 달성했습니다.\n원래 세계로 돌아갑니다.",
+    "2661210": "손가락의 주인이 목표를 달성했습니다.\n원래 세계로 돌아갑니다.",
+    "2661220": "손가락의 주인이 목표를 달성했습니다.\n원래 세계로 돌아갑니다.",
+    "2661225": "손가락의 주인이 목표를 달성했습니다.\n원래 세계로 돌아갑니다."
   },
   "polpl": {
     "2300000": "Przyzywanie sojusznika…",
@@ -493,7 +521,11 @@
     "2602250": "Najazd krwawego palca imieniem <?joinName?>",
     "2602260": "Odszczepieniec imieniem <?joinName?> dokonuje najazdu",
     "2460000": "Nie udało się przyzwać sojusznika.\nPrzekroczono czas oczekiwania.",
-    "2490000": "Nie udało się przyzwać sojusznika"
+    "2490000": "Nie udało się przyzwać sojusznika",
+    "2611010": "Gospodarz palców osiągnął cel w odległym miejscu.\nWracasz do swojego świata.",
+    "2661210": "Gospodarz palców osiągnął swój cel.\nWracasz do swojego świata.",
+    "2661220": "Gospodarz palców osiągnął swój cel.\nWracasz do swojego świata.",
+    "2661225": "Gospodarz palców osiągnął swój cel.\nWracasz do swojego świata."
   },
   "porbr": {
     "2300000": "Invocando cooperador...",
@@ -555,7 +587,11 @@
     "2602250": "Dedo Sangrento <?joinName?> invadiu",
     "2602260": "Não Conformista <?joinName?> invadiu",
     "2460000": "Não foi possível invocar o cooperador\ndevido ao tempo expirado.",
-    "2490000": "Não foi possível invocar o cooperador."
+    "2490000": "Não foi possível invocar o cooperador.",
+    "2611010": "O Anfitrião de Dedos cumpriu seu objetivo num local distante.\nRetornando ao seu mundo.",
+    "2661210": "O Anfitrião de Dedos cumpriu seu objetivo.\nRetornando ao seu mundo.",
+    "2661220": "O Anfitrião de Dedos cumpriu seu objetivo.\nRetornando ao seu mundo.",
+    "2661225": "O Anfitrião de Dedos cumpriu seu objetivo.\nRetornando ao seu mundo."
   },
   "rusru": {
     "2300000": "Призыв помощника...",
@@ -617,7 +653,11 @@
     "2602250": "Окровавленный палец <?joinName?> вторгся в чужой мир",
     "2602260": "Мятежник <?joinName?> вторгся в чужой мир",
     "2460000": "Нельзя призвать помощника,\nтак как время истекло.",
-    "2490000": "Призвать помощника нельзя"
+    "2490000": "Призвать помощника нельзя",
+    "2611010": "Хозяин Пальцев достиг цели в далёком месте.\nВы возвращаетесь в свой мир.",
+    "2661210": "Хозяин Пальцев достиг своей цели.\nВозвращение в ваш мир.",
+    "2661220": "Хозяин Пальцев достиг своей цели.\nВозвращение в ваш мир.",
+    "2661225": "Хозяин Пальцев достиг своей цели.\nВозвращение в ваш мир."
   },
   "spaar": {
     "2300000": "Invocando ayudante…",
@@ -679,7 +719,11 @@
     "2602250": "El dedo sangriento <?joinName?> invadió",
     "2602260": "El recusante <?joinName?> invadió",
     "2460000": "No se pudo invocar al ayudante\nporque se excedió el tiempo de espera.",
-    "2490000": "No se pudo invocar al ayudante."
+    "2490000": "No se pudo invocar al ayudante.",
+    "2611010": "El Anfitrión de Dedos alcanzó su objetivo en una ubicación lejana.\nRegresando a tu mundo…",
+    "2661210": "El Anfitrión de Dedos ha alcanzado su objetivo.\nRegresarás a tu mundo.",
+    "2661220": "El Anfitrión de Dedos ha alcanzado su objetivo.\nRegresarás a tu mundo.",
+    "2661225": "El Anfitrión de Dedos ha alcanzado su objetivo.\nRegresarás a tu mundo."
   },
   "spaes": {
     "2300000": "Invocando al cooperador...",
@@ -741,7 +785,11 @@
     "2602250": "Invadido por el Dedo Sangriento <?joinName?>.",
     "2602260": "Invadido por el recusante <?joinName?>.",
     "2460000": "No se puede invocar al cooperador\nal haberse superado el tiempo de espera.",
-    "2490000": "No se puede invocar al cooperador."
+    "2490000": "No se puede invocar al cooperador.",
+    "2611010": "El Poseedor de Dedos ha cumplido su objetivo en una ubicación lejana.\nRegresando a tu mundo.",
+    "2661210": "El Poseedor de Dedos ha cumplido su objetivo.\nRegresando a tu mundo.",
+    "2661220": "El Poseedor de Dedos ha cumplido su objetivo.\nRegresando a tu mundo.",
+    "2661225": "El Poseedor de Dedos ha cumplido su objetivo.\nRegresando a tu mundo."
   },
   "thath": {
     "2300000": "กําลัง​อัญเชิญ​พันธมิตร",
@@ -803,7 +851,11 @@
     "2602250": "นิว​โลหิต <?joinName?> ​บุกรุก​เข้า​มา​แล้ว",
     "2602260": "ผู้​ตระบัด​บัญญัติ <?joinName?> ​บุกรุก​เข้า​มา​แล้ว",
     "2460000": "ไม่​สามารถ​อัญเชิญ​พันธมิตร​ได้\n​เพราะ​ไม่มี​การ​ตอบ​กลับ​ใน​เวลา​ที​กําหนด",
-    "2490000": "ไม่​สามารถ​อัญเชิญ​พันธมิตร​ได้"
+    "2490000": "ไม่​สามารถ​อัญเชิญ​พันธมิตร​ได้",
+    "2611010": "ณ ​สถาน​ที​ห่าง​ไกล ​นิว​งอ​ผู้​เปน​นาย​ได้​บรรลุ​เปา​หมาย​แล้ว\n​กําลัง​กลับ​สู่​โลก​เดิม",
+    "2661210": "นิว​งอ​ผู้​เปน​นาย​บรรลุ​เปา​หมาย​แล้ว ​กําลัง​กลับ​สู่​โลก​เดิม",
+    "2661220": "นิว​งอ​ผู้​เปน​นาย​บรรลุ​เปา​หมาย​แล้ว ​กําลัง​กลับ​สู่​โลก​เดิม",
+    "2661225": "นิว​งอ​ผู้​เปน​นาย​บรรลุ​เปา​หมาย​แล้ว ​กําลัง​กลับ​สู่​โลก​เดิม"
   },
   "zhocn": {
     "2300000": "正在召唤协助者。",
@@ -865,7 +917,11 @@
     "2602250": "血指<?joinName?>已入侵。",
     "2602260": "叛律者<?joinName?>已入侵。",
     "2460000": "一定时间内联机没有回应，\n因此无法召唤协助者。",
-    "2490000": "无法召唤协助者。"
+    "2490000": "无法召唤协助者。",
+    "2611010": "勾指主人已在远方达成目标。\n将返回原本的世界。",
+    "2661210": "勾指主人已达成目标。\n将返回原本的世界。",
+    "2661220": "勾指主人已达成目标。\n将返回原本的世界。",
+    "2661225": "勾指主人已达成目标。\n将返回原本的世界。"
   },
   "zhotw": {
     "2300000": "正在召喚協助者。",
@@ -927,6 +983,10 @@
     "2602250": "血指<?joinName?>已入侵。",
     "2602260": "叛律者<?joinName?>已入侵。",
     "2460000": "一定時間內連線沒有回應，\n因此無法召喚協助者。",
-    "2490000": "無法召喚協助者。"
+    "2490000": "無法召喚協助者。",
+    "2611010": "勾指主人已在遠方達成目標。\n將返回原本的世界。",
+    "2661210": "勾指主人已達成目標。\n將返回原本的世界。",
+    "2661220": "勾指主人已達成目標。\n將返回原本的世界。",
+    "2661225": "勾指主人已達成目標。\n將返回原本的世界。"
   }
 }

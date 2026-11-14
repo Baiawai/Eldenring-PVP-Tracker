@@ -1,6 +1,5 @@
 (function () {
     'use strict';
-    const tr = (key, fallback) => window.uiT ? window.uiT(key, fallback) : fallback;
     const formatBytes = value => {
         if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return '—';
         const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
@@ -21,7 +20,7 @@
                 section.querySelectorAll('[data-environment]').forEach(node => {
                     node.textContent = data.environment[node.dataset.environment] || '—';
                 });
-                section.querySelector('[data-details-status]').textContent = '';
+                window.uiSetStatus(section.querySelector('[data-details-status]'));
                 section.querySelector('[data-details-environment]').hidden = false;
             });
             document.getElementById('storage_database_total').textContent = formatBytes(data.storage.database_bytes);
@@ -35,14 +34,14 @@
                 });
                 if (!data.storage.databases.length) list.textContent = '—';
             } else list.textContent = '—';
-            document.getElementById('storage_status').textContent = '';
+            window.uiSetStatus(document.getElementById('storage_status'));
             document.getElementById('storage_content').hidden = false;
         } catch (_) {
             document.querySelectorAll('.environment-details').forEach(section => {
-                section.querySelector('[data-details-status]').textContent = tr('stats_unavailable', 'Statistiques indisponibles.');
+                window.uiSetStatus(section.querySelector('[data-details-status]'), 'stats_unavailable', 'Statistiques indisponibles.');
                 section.querySelector('[data-details-environment]').hidden = true;
             });
-            document.getElementById('storage_status').textContent = tr('stats_unavailable', 'Statistiques indisponibles.');
+            window.uiSetStatus(document.getElementById('storage_status'), 'stats_unavailable', 'Statistiques indisponibles.');
             document.getElementById('storage_content').hidden = true;
         }
     }

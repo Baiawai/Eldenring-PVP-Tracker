@@ -28,12 +28,12 @@
                 const response = await fetch('/retention-settings', {method:'POST', body:new URLSearchParams({kind, days:String(days)})});
                 const data = await response.json();
                 if (!response.ok) {
-                    if (data.reason === 'monitor_active') { field.status.textContent = tr('retention_stop', 'Arrêtez le suivi avant de modifier la conservation.'); render(); return; }
+                    if (data.reason === 'monitor_active') { window.uiSetStatus(field.status, 'retention_stop', 'Arrêtez le suivi avant de modifier la conservation.'); render(); return; }
                     throw new Error('request');
                 }
                 saved = data.settings; render();
-                field.status.textContent = tr('retention_saved', 'Réglage enregistré.');
-            } catch (_) { render(); field.status.textContent = tr('retention_error', 'Impossible de modifier la conservation.'); }
+                window.uiSetStatus(field.status, 'retention_saved', 'Réglage enregistré.');
+            } catch (_) { render(); window.uiSetStatus(field.status, 'retention_error', 'Impossible de modifier la conservation.'); }
             finally { busy(false); }
         });
     });
@@ -42,5 +42,5 @@
         if (!response.ok) throw new Error('request');
         return response.json();
     }).then(data => { saved = data.settings; render(); busy(false); })
-      .catch(() => { Object.values(fields).forEach(field => { field.status.textContent = tr('retention_error', 'Impossible de modifier la conservation.'); }); });
+      .catch(() => { Object.values(fields).forEach(field => { window.uiSetStatus(field.status, 'retention_error', 'Impossible de modifier la conservation.'); }); });
 })();

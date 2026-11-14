@@ -536,13 +536,19 @@
                         <p id="profile_capture_instructions" data-i18n="profile_step_menu">Lance Elden Ring et charge ta partie. Une fois dans le monde du jeu, ouvre le menu principal, puis Configuration. Va dans l’onglet tout à droite, « Quitter la partie », sans quitter la partie. L’application y récupérera automatiquement ton pseudo, ton niveau et ton image. Attends quelques secondes (environ 2 à 5 secondes), puis reviens ici pour vérifier les informations récupérées et les enregistrer.</p>
                         <p id="profile_capture_success" data-i18n="profile_capture_success" hidden>Tous les éléments ont été récupérés avec succès.</p>
                         <p id="profile_capture_status" role="status" aria-live="polite"></p>
-                        <button type="button" id="profile_capture_cancel" data-i18n="profile_capture_cancel">Annuler</button>
                         <div id="profile_capture_preview" hidden>
-                            <img id="profile_capture_avatar" alt="">
-                            <p><span class="vt_pseudo_tr">Votre pseudo</span> : <strong id="profile_capture_name"></strong></p>
-                            <p><span class="vt_niveau_tr">Votre niveau</span> : <strong id="profile_capture_level"></strong></p>
+                            <div class="profile-capture-content">
+                                <img id="profile_capture_avatar" alt="">
+                                <div class="profile-capture-fields">
+                                    <p><span class="vt_pseudo_tr">Votre pseudo</span> : <strong id="profile_capture_name"></strong></p>
+                                    <p><span class="vt_niveau_tr">Votre niveau</span> : <strong id="profile_capture_level"></strong></p>
+                                </div>
+                            </div>
                             <p data-i18n="profile_capture_review">Vérifie les informations avant de les enregistrer.</p>
-                            <button type="button" id="profile_capture_save" data-i18n="profile_legend_save">Enregistrer</button>
+                        </div>
+                        <div class="profile-capture-actions">
+                            <button type="button" id="profile_capture_cancel" data-i18n="profile_capture_cancel">Annuler</button>
+                            <button type="button" id="profile_capture_save" data-i18n="profile_legend_save" hidden>Enregistrer</button>
                         </div>
                     </div>
                     <div class="form_single legend-setting">
@@ -697,10 +703,10 @@
             <div class="profile-card ">
                 <div class="profile-card-header img_user">
                     <div class="fakeImageuser" aria-hidden="true"></div>
-                <h5><span class="userName">???</span> <span class="niv_tr"><br>niveau: </span> <span class="userLvl_count">0</span></h5> 
+                <h5><span class="sidebar-profile-name">Profil à compléter</span><span class="sidebar-profile-level"><span class="sidebar-profile-level-label" hidden></span><span class="sidebar-profile-level-value">Niveau non renseigné</span></span></h5>
                 </div>
                 <p id="sidebar_legend" class="sidebar-legend" hidden></p>
-                <div class="scoreboard sidebar-scoreboard" role="group" aria-label="Statistiques" data-i18n-aria="stats_title">
+                <div class="scoreboard sidebar-scoreboard" role="group" aria-label="Statistiques" data-i18n-aria="stats_title" hidden>
                     <ul>
                         <li>
                             <span class="victory" >Victory</span><span class="victory_count">0</span>
@@ -713,11 +719,11 @@
                         </li>
                     </ul>
                 </div>
-                <section class="sidebar-last" aria-labelledby="sidebar_last_title">
+                <section class="sidebar-last" aria-labelledby="sidebar_last_title" hidden>
                     <h2 id="sidebar_last_title" data-i18n="last_combat">Dernier combat</h2>
                     <p id="sidebar_last_combat">Aucun combat enregistré.</p>
                 </section>
-                <div class="sidebar-summary">
+                <div class="sidebar-summary" hidden>
                     <div class="sidebar-summary-row"><span data-i18n="sidebar_tracking">Suivi</span><strong id="sidebar_tracking">Détection désactivée</strong></div>
                     <div class="sidebar-summary-row"><span data-i18n="mode">Mode</span><strong id="sidebar_mode">Mode non déterminé</strong></div>
                 </div>

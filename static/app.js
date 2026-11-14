@@ -38,12 +38,44 @@ if (captureContainer && !captureContainer.querySelector('.capture-scroll')) {
 }
 
 // Keep the home prompt available when the running server has an older template cached.
-const homeLogo = document.querySelector('.presentation .img_eldenring');
-if (homeLogo && !homeLogo.querySelector('.home-start-prompt')) {
-    const prompt = document.createElement('button');
-    prompt.type = 'button'; prompt.className = 'home-start-prompt'; prompt.hidden = true;
-    prompt.dataset.i18n = 'home_start_prompt'; prompt.textContent = 'Appuyer sur Start pour commencer';
-    homeLogo.appendChild(prompt);
+// Do not retain the home screen after it is removed when tracking starts.
+{
+    const homeLogo = document.querySelector('.presentation .img_eldenring');
+    // Create decorative embers here so they also work with a cached HTML template.
+    if (homeLogo && document.body.dataset.storeBuild === 'false' && !homeLogo.querySelector('.home-embers')) {
+        const embers = document.createElement('div');
+        embers.className = 'home-embers';
+        embers.setAttribute('aria-hidden', 'true');
+        function varyEmber(ember) {
+            ember.style.setProperty('--ember-x', (Math.random() * 100).toFixed(2) + '%');
+            ember.style.setProperty('--ember-sway', ((5 + Math.random() * 13) * (Math.random() < .5 ? -1 : 1)).toFixed(1) + 'px');
+            ember.style.setProperty('--ember-size', (2 + Math.random() * 1.5).toFixed(1) + 'px');
+        }
+        for (let index = 0; index < 16; index++) {
+            const ember = document.createElement('span');
+            const duration = 13 + Math.random() * 9;
+            const swayDuration = 2.8 + Math.random() * 2.8;
+            ember.className = 'home-ember';
+            varyEmber(ember);
+            ember.style.setProperty('--ember-duration', duration.toFixed(2) + 's');
+            ember.style.setProperty('--ember-delay', (-Math.random() * duration).toFixed(2) + 's');
+            ember.style.setProperty('--ember-sway-duration', swayDuration.toFixed(2) + 's');
+            ember.style.setProperty('--ember-sway-delay', (-Math.random() * swayDuration).toFixed(2) + 's');
+            embers.appendChild(ember);
+        }
+        embers.addEventListener('animationiteration', function (event) {
+            if (event.animationName === 'home-ember-rise' && event.target.classList.contains('home-ember')) {
+                varyEmber(event.target);
+            }
+        });
+        homeLogo.appendChild(embers);
+    }
+    if (homeLogo && !homeLogo.querySelector('.home-start-prompt')) {
+        const prompt = document.createElement('button');
+        prompt.type = 'button'; prompt.className = 'home-start-prompt'; prompt.hidden = true;
+        prompt.dataset.i18n = 'home_start_prompt'; prompt.textContent = 'Appuyer sur Start pour commencer';
+        homeLogo.appendChild(prompt);
+    }
 }
 document.querySelector('.presentation')?.addEventListener('click', function () {
     const start = document.getElementById('start');
@@ -224,10 +256,17 @@ function startPreviewPolling() {
             const params = new URLSearchParams({after:String(revision), wait:'1'});
             if (lastDetected !== null) params.set('detected', lastDetected ? '1' : '0');
             if (lastBoxVersion !== null) params.set('boxAfter', String(lastBoxVersion));
+            if (!sidebarMonitorReady) params.set('ready', '0');
             const response = await fetch('/live-preview?' + params.toString(), {cache:'no-store'});
             if (!response.ok) throw new Error('request');
             const data = await response.json();
             if (generation !== previewPollGeneration) return;
+            if (data.monitorRunning === true && data.monitorReady === true && sidebarTracking) {
+                sidebarMonitorReady = true;
+                if (typeof data.gameRunning === 'boolean') sidebarGameRunning = data.gameRunning;
+                renderSidebar();
+                renderMonitorStatus();
+            }
             const detected = data.gameDetected === true;
             const changed = data.revision !== revision || detected !== lastDetected ||
                 (typeof data.boxVersion === 'number' && data.boxVersion !== lastBoxVersion);
@@ -435,17 +474,31 @@ function launchLanguages(language){
     $(".btn-chart button[mode='7j']").text(interface_active[27]);
     $(".btn-chart button[mode='30j']").text(interface_active[28]);
     $(".btn-chart button[mode='all']").not('[data-i18n]').text(interface_active[29]);
-    $(".panel_user table .tb-1").text(interface_active[30]);
-    $(".panel_user table .tb-2").text(interface_active[31]);
-    $(".panel_user table .tb-3").text(interface_active[32]);
-    $(".panel_user table .tb-4").text(interface_active[33]);
-    $(".panel_user table .tb-5").text(interface_active[34]);
-    $(".panel_user table .tb-6").text(interface_active[35]);
-    $(".panel_user table .tb-7").text(interface_active[36]);
-    $(".panel_user table .tb-8").text(interface_active[37]);
-    $(".panel_user table .tb-9").text(interface_active[38]);
-    $(".panel_user table .tb-10").text(interface_active[39]);
-    $(".panel_user table .tb-11").text(interface_active[40]);
+    // Upgrade cached leaderboard headers as well as the current template.
+    // Modern labels avoid ambiguous legacy translations (e.g. draws as drawings).
+    const rankingHeadings = [
+        ['tb-1', 'leaderboard_rank', 'Rang', 30],
+        ['tb-2', 'leaderboard_avatar', 'Avatar', 31],
+        ['tb-3', 'online_name', 'Pseudo', 32],
+        ['tb-4', 'leaderboard_level', 'Niveau', 33],
+        ['tb-5', 'stats_score', 'Score', 34],
+        ['tb-6', 'victories', 'Victoires', 35],
+        ['tb-7', 'defeats', 'Défaites', 36],
+        ['tb-8', 'draw', 'Égalité', 37],
+        ['tb-9', 'stats_win_rate', 'Taux de victoire', 38],
+        ['tb-10', 'fights', 'Combats', 39],
+        ['tb-11', 'game_language', 'Langue du jeu', 40]
+    ];
+    rankingHeadings.forEach(function(entry) {
+        document.querySelectorAll('.panel_user table .' + entry[0]).forEach(function(header) {
+            if (window.uiApplyLanguage) {
+                header.dataset.i18n = entry[1];
+                header.dataset.i18nFr = entry[2];
+            } else {
+                header.textContent = interface_active[entry[3]];
+            }
+        });
+    });
     $("#start").text($("#start").hasClass("active") ? text_active[2] : text_active[0]);
     $(".monitor-starting").text(text_active[4]);
     $(".language_tr").text(interface_active[42]);
@@ -505,6 +558,64 @@ list_lang = ["eng", "fra", "deu", "ita", "spaes", "spaar", "por", "pol", "rus", 
 
 
 let start_ready = true;
+// Keep the sidebar independent from the editable profile fields, including
+// when an older HTML template is still cached by the running server.
+(function () {
+    const heading = document.querySelector('#profile_sidebar .profile-card-header h5');
+    if (!heading) return;
+    const profileCard = heading.closest('.profile-card');
+    const guidance = document.querySelector('#profile_sidebar .sidebar-guidance');
+    if (!heading.querySelector('.sidebar-profile-name')) {
+        heading.innerHTML = '<span class="sidebar-profile-name"></span><span class="sidebar-profile-level"><span class="sidebar-profile-level-label" hidden></span><span class="sidebar-profile-level-value"></span></span>';
+    }
+    let name = '', level = '';
+    function render() {
+        const t = (key, fallback) => window.uiT ? window.uiT(key, fallback) : fallback;
+        const hasName = typeof name === 'string' && name.trim().length > 0;
+        const hasLevel = Number.isFinite(Number(level)) && Number(level) > 0;
+        heading.querySelector('.sidebar-profile-name').textContent = hasName ? name : t('sidebar_profile_missing', 'Profil à compléter');
+        const label = heading.querySelector('.sidebar-profile-level-label');
+        label.hidden = !hasLevel;
+        label.textContent = String(interface_active[74] || 'Niveau :').replace(/<br\s*\/?\s*>/gi, '').trim() + ' ';
+        heading.querySelector('.sidebar-profile-level-value').textContent = hasLevel ? String(level) : t('sidebar_level_missing', 'Niveau non renseigné');
+    }
+    window.updateSidebarProfile = function(nextName, nextLevel) {
+        if (nextName !== undefined) name = nextName;
+        if (nextLevel !== undefined) level = nextLevel;
+        render();
+    };
+    document.addEventListener('ui-language-change', render);
+    render();
+    function updateAction() {
+        const notice = guidance && guidance.querySelector('.carde_info[info="profile"]');
+        const enabled = !!notice && !notice.hidden && getComputedStyle(notice).display !== 'none';
+        profileCard.classList.toggle('profile-actionable', enabled);
+        if (enabled) {
+            profileCard.setAttribute('role', 'button');
+            profileCard.tabIndex = 0;
+            profileCard.setAttribute('aria-label', window.uiT ? window.uiT('profile_capture_start', 'Récupérer mon profil') : 'Récupérer mon profil');
+        } else {
+            profileCard.removeAttribute('role');
+            profileCard.removeAttribute('tabindex');
+            profileCard.removeAttribute('aria-label');
+        }
+    }
+    function activateProfile(event) {
+        if (!profileCard.classList.contains('profile-actionable') || event.target.closest('a, button, input, select, textarea')) return;
+        const notice = guidance && guidance.querySelector('.carde_info[info="profile"]');
+        if (notice) notice.click();
+    }
+    profileCard.addEventListener('click', activateProfile);
+    profileCard.addEventListener('keydown', function(event) {
+        if ((event.key === 'Enter' || event.key === ' ') && profileCard.classList.contains('profile-actionable')) {
+            event.preventDefault();
+            activateProfile(event);
+        }
+    });
+    if (guidance) new MutationObserver(updateAction).observe(guidance, {childList:true, subtree:true});
+    document.addEventListener('ui-language-change', updateAction);
+    updateAction();
+})();
 // Frames are prepared once so background tabs only swap small cached data URLs.
 const trackingFavicon = (function () {
     const links = Array.from(document.querySelectorAll('link[rel~="icon"]'));
@@ -763,6 +874,11 @@ var stats_request_version = 0;
 var stats_last_chart_snapshot = null;
 
 function appT(key, french) { return window.uiT ? window.uiT(key, french) : french; }
+function appStatus(node, key, french) {
+    if (!node) return;
+    if (window.uiSetStatus) window.uiSetStatus(node, key, french);
+    else node.textContent = key ? appT(key, french) : '';
+}
 function statsModeLabel(mode) {
     return mode === 'Invasion' ? appT('invasion', 'Invasions') : mode === 'Defense' ? appT('defense', 'Monde envahi') : appT('arena', 'Arène 1v1');
 }
@@ -785,6 +901,7 @@ function renderInfoStats(user) {
         launchChart(mode_chart, mode_window);
     }
     stats_last_chart_snapshot = snapshot;
+    appStatus(document.getElementById('stats_mode_error'), '');
     $('#stats_mode_error').hide();
 }
 
@@ -800,7 +917,10 @@ function refreshInfoStats() {
             renderInfoStats(response.user);
         }
     }).fail(function() {
-        if (version === stats_request_version) $('#stats_mode_error').text(appT('stats_unavailable', 'Statistiques indisponibles.')).show();
+        if (version === stats_request_version) {
+            appStatus(document.getElementById('stats_mode_error'), 'stats_unavailable', 'Statistiques indisponibles.');
+            $('#stats_mode_error').show();
+        }
     });
 }
 
@@ -852,7 +972,7 @@ function intervall(){
             detected_stats_mode = detectedMode;
             sidebarTracking = response.monitor_running === true;
             sidebarGameRunning = response.game_running;
-            sidebarMonitorReady = response.monitor_ready === true;
+            sidebarMonitorReady = response.monitor_running === true && (sidebarMonitorReady || response.monitor_ready === true);
             renderSidebar();
             renderMonitorStatus();
             renderSessionSummary(response.session_summary);
@@ -926,6 +1046,7 @@ function intervall(){
                 refreshInfoStats();
             }
             $(".userLvl_count").text(userLvl);
+            if (window.updateSidebarProfile) window.updateSidebarProfile(response.user[1], userLvl);
             var tampo_text = ""
             var victory_res = false;
             var defeat_res = false;
@@ -1071,7 +1192,86 @@ function intervall(){
 var status_capture = "";
 let captureFilterGeneration = 0;
 var captures_posted = 0;
+function captureResultKey(resultClass) {
+    return {victory_text:'victory', defeat_text:'defeat', egality_text:'draw'}[resultClass] || '';
+}
+function renderCaptureCaption(card) {
+    const title = card.querySelector(':scope > span > b');
+    if (!title) return;
+    const parts = [];
+    if (card.dataset.captureMode === 'Arena') {
+        parts.push(appT('capture_duel', 'Duel'));
+    } else {
+        parts.push(card.dataset.captureMode === 'Defense' ? appT('defense', 'Monde envahi') : appT('invasion', 'Invasions'));
+    }
+    const result = {
+        victory: ['victory', 'Victoire'], defeat: ['defeat', 'Défaite'], draw: ['draw', 'Égalité']
+    }[card.dataset.captureResult];
+    if (result) parts.push(appT(result[0], result[1]));
+    if (card.dataset.captureOpponent) parts.push(card.dataset.captureOpponent);
+    else if (card.dataset.captureSteamName) {
+        parts.push(card.dataset.captureMode === 'Arena' ? card.dataset.captureSteamName : appT('steam_profile', 'Profil Steam') + ' : ' + card.dataset.captureSteamName);
+    }
+    title.textContent = parts.join(' · ');
+    card.querySelectorAll('.capture-duration-label').forEach(function(label) {
+        label.textContent = appT('time', 'Temps');
+    });
+}
+function captureSteamName(names, id) {
+    if (!names || typeof names !== 'object' || !Object.prototype.hasOwnProperty.call(names, id)) return '';
+    return typeof names[id] === 'string' ? names[id].trim() : '';
+}
+function rememberCaptureCaption(card, mode, resultClass, opponent, steamName) {
+    card.dataset.captureCaption = '1';
+    card.dataset.captureMode = mode;
+    card.dataset.captureResult = captureResultKey(resultClass);
+    card.dataset.captureOpponent = typeof opponent === 'string' ? opponent.trim() : '';
+    card.dataset.captureSteamName = typeof steamName === 'string' ? steamName.trim() : '';
+    renderCaptureCaption(card);
+}
+// Live capture messages may contain markup; mark only their duration label,
+// preserving the existing message and the recorded time exactly.
+function markLiveCaptureTime(card, originalLabel) {
+    const caption = card.querySelector(':scope > span');
+    if (!caption) return;
+    const walker = document.createTreeWalker(caption, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (node.parentElement && node.parentElement.closest('b')) continue;
+        const index = node.data.indexOf(originalLabel + ':');
+        if (index < 0) continue;
+        const word = node.splitText(index);
+        word.splitText(originalLabel.length);
+        const label = document.createElement('em');
+        label.className = 'capture-duration-label';
+        label.style.fontStyle = 'normal';
+        label.textContent = originalLabel;
+        word.replaceWith(label);
+        return;
+    }
+}
+document.addEventListener('ui-language-change', function() {
+    document.querySelectorAll('.para_capture[data-capture-caption]').forEach(renderCaptureCaption);
+});
+// The event journal shows this detail; the capture title already renders it.
+function captureTimeWithoutOpponentDetail(value) {
+    if (typeof value !== 'string' || (!value.includes('victory-opponent-detail') && !value.includes('combat-result-text'))) return value;
+    const fragment = document.createElement('template');
+    fragment.innerHTML = value;
+    fragment.content.querySelectorAll('.victory-opponent-detail').forEach(function(detail) {
+        const previous = detail.previousSibling;
+        if (previous && previous.nodeType === Node.ELEMENT_NODE && previous.tagName === 'BR') previous.remove();
+        detail.remove();
+    });
+    fragment.content.querySelectorAll('.combat-result-text').forEach(function(result) {
+        const previous = result.previousSibling;
+        if (previous && previous.nodeType === Node.COMMENT_NODE) previous.remove();
+        result.remove();
+    });
+    return fragment.innerHTML;
+}
 function getCapture(result, Time){
+    const originalTimeLabel = appT('time', 'Temps');
 
     $.ajax({
         url: "/capture",
@@ -1111,8 +1311,11 @@ function getCapture(result, Time){
                 }
                 let captureMode = response.mode === 'Invasion' ? appT('invasion', 'Invasions') + ' · ' : response.mode === 'Defense' ? appT('defense', 'Monde envahi') + ' · ' : '';
                 let opponent = response.opponent ? ' · ' + $('<span>').text(response.opponent).html() : '';
-                let visibleResult = result === 'Victory' ? appT('victory', 'Victory') : result === 'Defeat' ? appT('defeat', 'Defeat') : appT('draw', 'Egality');
-                $(".capture-scroll").prepend("<div class='para_capture "+class_text+" add_para'><span><b>"+captureMode+visibleResult+opponent+"</b> "+Time+"</span><div class='img'><img src='data:image/jpg;base64,"+response["datas"]+"'/> </div><div class='posted'>"+last_id_find+"</div><div class='datePosted'>"+date_select+"</div></div>");
+                let visibleResult = result === 'Victory' ? appT('victory', 'Victoire') : result === 'Defeat' ? appT('defeat', 'Défaite') : appT('draw', 'Égalité');
+                const card = $("<div class='para_capture "+class_text+" add_para'><span><b>"+captureMode+visibleResult+opponent+"</b> "+captureTimeWithoutOpponentDetail(Time)+"</span><div class='img'><img src='data:image/jpg;base64,"+response["datas"]+"'/> </div><div class='posted'>"+last_id_find+"</div><div class='datePosted'>"+date_select+"</div></div>");
+                markLiveCaptureTime(card[0], originalTimeLabel);
+                rememberCaptureCaption(card[0], response.mode, class_text, response.opponent, response.steam_name);
+                $(".capture-scroll").prepend(card);
                 
             }
            
@@ -1149,9 +1352,9 @@ document.getElementById('sidebar_peers')?.closest('.sidebar-summary-row')?.remov
 let sidebarSession = null;
 function renderSessionSummary(data) {
     if (data) sidebarSession = data;
-    if (!sidebarSession) return;
-    const last = sidebarSession.last;
     const label = document.getElementById('sidebar_last_combat');
+    if (!label) return;
+    const last = sidebarSession && sidebarSession.last;
     if (!last) {
         label.textContent = appT('last_combat_empty', 'Aucun combat enregistré.');
         return;
@@ -1198,7 +1401,7 @@ function saveProfileLegend() {
         }
     }).fail(function() {
         if (legendVersion === version) {
-            $('#profile_legend_status').text(appT('profile_legend_error', 'Impossible d’enregistrer la légende.'));
+            appStatus(document.getElementById('profile_legend_status'), 'profile_legend_error', 'Impossible d’enregistrer la légende.');
         }
     }).always(function() {
         legendSaving = false;
@@ -1208,7 +1411,7 @@ function saveProfileLegend() {
 $('#profile_legend').on('input', function() {
     legendVersion++;
     renderProfileLegend(this.value);
-    $('#profile_legend_status').text('');
+    appStatus(document.getElementById('profile_legend_status'), '');
     clearTimeout(legendSaveTimer);
     legendSaveTimer = setTimeout(saveProfileLegend, 500);
 }).on('blur', saveProfileLegend);
@@ -1243,14 +1446,14 @@ function renderSidebar() {
     }
     mode.textContent = detected_stats_mode ? statsModeLabel(detected_stats_mode) : appT('unknown_mode', 'Mode non déterminé');
 }
-function setSidebarOpen(open) {
+function setSidebarOpen(open, persist = true) {
     document.body.classList.toggle('profile-sidebar-open', open);
     const button = document.getElementById('sidebar_toggle');
     button.setAttribute('aria-expanded', String(open));
     button.dataset.i18nAria = open ? 'sidebar_close' : 'sidebar_open';
     button.dataset.i18nAriaFr = open ? 'Fermer le panneau de profil' : 'Ouvrir le panneau de profil';
     button.setAttribute('aria-label', appT(button.dataset.i18nAria, button.dataset.i18nAriaFr));
-    try { localStorage.setItem('trackerProfileSidebarOpen', open ? '1' : '0'); } catch (_) {}
+    if (persist) { try { localStorage.setItem('trackerProfileSidebarOpen', open ? '1' : '0'); } catch (_) {} }
     if (myChart && typeof myChart.resize === 'function') setTimeout(() => myChart.resize(), 670);
 }
 let initialSidebarOpen = !window.matchMedia('(max-width: 760px)').matches;
@@ -1266,6 +1469,7 @@ document.addEventListener('ui-language-change', function() {
     renderSidebar();
     renderMonitorStatus();
     renderSessionSummary();
+    $('#stats_mode_choice option[value="auto"]').text(detected_stats_mode ? appT('automatic', 'Automatique') + ' · ' + statsModeLabel(detected_stats_mode) : appT('automatic_detection', 'Détection automatique'));
     const button = document.getElementById('sidebar_toggle');
     button.setAttribute('aria-label', appT(button.dataset.i18nAria, button.dataset.i18nAriaFr));
     if (!document.getElementById('stats_panel').hidden && typeof mode_chart !== 'undefined') launchChart(mode_chart, mode_window);
@@ -1434,8 +1638,8 @@ $("#menu_button_captures").click(function(){
 $(function() {
     const content = $('#capture_viewer_overlay .capture-viewer-content');
     if (content.length && !content.find('.capture-viewer-nav').length) {
-        content.append($('<button type="button" class="capture-viewer-nav capture-viewer-prev">‹</button>').attr('aria-label', appT('previous_capture', 'Capture précédente')));
-        content.append($('<button type="button" class="capture-viewer-nav capture-viewer-next">›</button>').attr('aria-label', appT('next_capture', 'Capture suivante')));
+        content.append($('<button type="button" class="capture-viewer-nav capture-viewer-prev">‹</button>').attr({'aria-label':appT('previous_capture', 'Capture précédente'), 'data-i18n-aria':'previous_capture', 'data-i18n-aria-fr':'Capture précédente'}));
+        content.append($('<button type="button" class="capture-viewer-nav capture-viewer-next">›</button>').attr({'aria-label':appT('next_capture', 'Capture suivante'), 'data-i18n-aria':'next_capture', 'data-i18n-aria-fr':'Capture suivante'}));
     }
 });
 
@@ -1577,6 +1781,7 @@ function init(){
             $(".connexionError_count").text(connexionError);
             $(".gameExit_count").text(gameExit);
             $(".userLvl_count").text(userLvl);
+            if (window.updateSidebarProfile) window.updateSidebarProfile(user[1], userLvl);
             if(autoStart == "true"){
                 $(".auto_start span").addClass("hide");
                 $(".auto_start span[auto_start=true]").removeClass("hide");
@@ -1634,15 +1839,15 @@ function init(){
                 
                     
                         if(victory_cp == 1){
-                            result = appT('victory', 'Victory')
+                            result = appT('victory', 'Victoire')
                             class_text = "victory_text";
                         }
                         if(defeat_cp == 1){
-                            result = appT('defeat', 'Defeat')
+                            result = appT('defeat', 'Défaite')
                             class_text = "defeat_text";
                         }
                         if(egality_cp == 1){
-                            result = appT('draw', 'Egality')
+                            result = appT('draw', 'Égalité')
                             class_text = "egality_text";
                         }
                         if (response["captures"][0][i][7] !== "Arena") result = (response['captures'][0][i][7] === 'Defense' ? appT('defense', 'Monde envahi') : appT('invasion', 'Invasions')) + " · " + result;
@@ -1652,7 +1857,9 @@ function init(){
                         let Time = response["captures"][0][i][5];
                         let base64 = response["captures"][0][i][8];
                         let capture_ID = response["captures"][0][i][0] ;
-                        $(".capture-scroll").prepend("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> "+appT('time', 'Temps')+": "+Time+" s</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
+                        const card = $("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> <em class='capture-duration-label' style='font-style:normal'></em>: "+Time+" s</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
+                        rememberCaptureCaption(card[0], response['captures'][0][i][7], class_text, response['captures'][0][i][1], captureSteamName(response.steam_names, capture_ID));
+                        $(".capture-scroll").prepend(card);
                     
                 }
                 loaderInit();
@@ -1693,15 +1900,15 @@ $('.capture-scroll').on('scroll', function() {
                 
                     
                         if(victory_cp == 1){
-                            result = appT('victory', 'Victory')
+                            result = appT('victory', 'Victoire')
                             class_text = "victory_text";
                         }
                         if(defeat_cp == 1){
-                            result = appT('defeat', 'Defeat')
+                            result = appT('defeat', 'Défaite')
                             class_text = "defeat_text";
                         }
                         if(egality_cp == 1){
-                            result = appT('draw', 'Egality')
+                            result = appT('draw', 'Égalité')
                             class_text = "egality_text";
                         }
                         if (array_capture[i][7] !== "Arena") result = (array_capture[i][7] === 'Defense' ? appT('defense', 'Monde envahi') : appT('invasion', 'Invasions')) + " · " + result;
@@ -1711,7 +1918,9 @@ $('.capture-scroll').on('scroll', function() {
                         let Time = array_capture[i][5];
                         let base64 = array_capture[i][8];
                         let capture_ID = array_capture[i][0] ;
-                        $(".capture-scroll").append("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> "+appT('time', 'Temps')+": "+Time+" s</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
+                        const card = $("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> <em class='capture-duration-label' style='font-style:normal'></em>: "+Time+" s</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
+                        rememberCaptureCaption(card[0], array_capture[i][7], class_text, array_capture[i][1], captureSteamName(response.steam_names, capture_ID));
+                        $(".capture-scroll").append(card);
                        
                         
                 }
@@ -1777,6 +1986,7 @@ $("input[type=text]#pseudo").keyup(function () {
                         if (response["pseudo"] != ''){
                             $(".carde_info[info=pseudo]").fadeOut();
                             $(".userName").text(response["pseudo"]);
+                            if (window.updateSidebarProfile) window.updateSidebarProfile(response["pseudo"]);
                             $(".panel_pseudo").remove();
                             $(".panel_img").removeClass("hide");
                             $("#save_pseudo").addClass("hide");
@@ -2001,9 +2211,10 @@ function reloadFilteredCaptures() {
                 if (capture[7] !== 'Arena') result = (capture[7] === 'Defense' ? appT('defense', 'Monde envahi') : appT('invasion', 'Invasions')) + ' · ' + result;
                 if (capture[1]) result += ' · ' + capture[1];
                 const card = $('<div>').addClass('para_capture').addClass(resultClass);
-                const caption = $('<span>').append($('<b>').text(result), $('<br>'), document.createTextNode(' ' + appT('time', 'Temps') + ': ' + capture[5] + ' s'));
+                const caption = $('<span>').append($('<b>').text(result), $('<br>'), document.createTextNode(' '), $('<em>').addClass('capture-duration-label').css('font-style', 'normal'), document.createTextNode(': ' + capture[5] + ' s'));
                 card.append(caption, $('<div>').addClass('img').append($('<img>').attr('src', 'data:image/jpg;base64,' + capture[8])),
                     $('<div>').addClass('posted').text(capture[0]), $('<div>').addClass('datePosted').text(capture[6]));
+                rememberCaptureCaption(card[0], capture[7], resultClass, capture[1], captureSteamName(response.steam_names, capture[0]));
                 $('.capture-scroll').append(card);
             });
         })
@@ -2035,6 +2246,19 @@ $("#close_nav").click(function(){
 });
 
 
+// Share the profile capture route with the sidebar and leaderboard notice.
+window.openProfileCapture = function () {
+    if ($(".settings-panel").is(":hidden")) $("#menu_button_settings").click();
+    $(".btn_menu_settings[menu=3]").click();
+    const panel = document.getElementById('profile_capture_panel');
+    if (!panel || panel.hidden) $("#profile_capture_start").trigger("click");
+    if (window.matchMedia('(max-width: 760px)').matches && document.body.classList.contains('profile-sidebar-open')) {
+        setSidebarOpen(false, false);
+    }
+    const start = document.getElementById('profile_capture_start');
+    if (start) start.focus({preventScroll:true});
+};
+
 $(".carde_info").click(function(){
     let info_selected = $(this).attr("info");
 
@@ -2046,13 +2270,7 @@ $(".carde_info").click(function(){
         }
     }
     if(info_selected == "profile" || info_selected == "niveau"){
-        if($(".settings-panel").is(":hidden")){
-            $("#menu_button_settings").click();
-            $(".btn_menu_settings[menu=3]").click();
-        } else {
-            $(".btn_menu_settings[menu=3]").click();
-        }
-        $("#profile_capture_start").trigger("click");
+        window.openProfileCapture();
     }
     if(info_selected == "pseudo" || info_selected == "avatar"){
         if($(".settings-panel").is(":hidden")){
@@ -2141,13 +2359,15 @@ function launchChart(period, windowSize) {
     $('.btn-chart button[mode]').not('.chartResize').each(function() {
         $(this).attr('aria-pressed', String($(this).attr('mode') === period));
     });
-    status.prop('hidden', true).text('');
+    appStatus(status[0], '');
+    status.prop('hidden', true);
     loader.show().html("<div class='next_captures_loader'><span></span><span></span><span></span></div>");
     $.get('/allCapturesChart', {mode: chartMode}).done(function(response) {
         if (version !== chart_request_version || chartMode !== selected_stats_mode || windowSize !== mode_window) return;
         loader.hide().empty();
         if (response.request !== 'success' || !Array.isArray(response.captures)) {
-            status.text(appT('stats_chart_error', 'Impossible de charger le graphique.')).prop('hidden', false);
+            appStatus(status[0], 'stats_chart_error', 'Impossible de charger le graphique.');
+            status.prop('hidden', false);
             return;
         }
         const data = window.TrackerStats.aggregate(response.captures, period, new Date(), document.documentElement.lang);
@@ -2156,7 +2376,8 @@ function launchChart(period, windowSize) {
         chart_loaded = false;
         if (!data.total) {
             myChart = 0;
-            status.text(appT('stats_chart_empty', 'Aucune capture de résultat sur cette période.')).prop('hidden', false);
+            appStatus(status[0], 'stats_chart_empty', 'Aucune capture de résultat sur cette période.');
+            status.prop('hidden', false);
             return;
         }
         const canvas = $('<canvas id="stats_user" role="img">').attr('aria-label', appT('stats_evolution', 'Évolution des résultats'));
@@ -2184,7 +2405,8 @@ function launchChart(period, windowSize) {
     }).fail(function() {
         if (version !== chart_request_version) return;
         loader.hide().empty();
-        status.text(appT('stats_chart_error', 'Impossible de charger le graphique.')).prop('hidden', false);
+        appStatus(status[0], 'stats_chart_error', 'Impossible de charger le graphique.');
+        status.prop('hidden', false);
     });
 }
 
@@ -2231,6 +2453,51 @@ function openShortcutSection() {
     if (button && !button.classList.contains('active')) button.click();
 }
 $(window).on('load hashchange', openShortcutSection);
+
+// The server offers this notice only for a newly initialized data directory.
+$(window).on('load', function() {
+    fetch('/initialization-notice', {method:'POST', credentials:'same-origin'}).then(function(response) {
+        if (!response.ok) throw new Error('Initialization notice unavailable');
+        return response.json();
+    }).then(function(data) {
+        const notice = data && data.notice;
+        if (!notice || !['ready', 'failed'].includes(notice.state)) return;
+        if (notice.state === 'ready') {
+            window.pendingInitializationSuccess = true;
+            window.dispatchEvent(new Event('tracker-initialization-success'));
+            return;
+        }
+        const panel = document.createElement('div');
+        panel.className = 'initialization-notice';
+        panel.setAttribute('role', 'alert');
+        const message = document.createElement('p');
+        panel.appendChild(message);
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.addEventListener('click', function() { panel.remove(); });
+        let logButton = null;
+        if (notice.state === 'failed' && notice.log_available) {
+            logButton = document.createElement('button');
+            logButton.type = 'button';
+            logButton.addEventListener('click', function() {
+                fetch('/initialization-error-log', {method:'POST', credentials:'same-origin'})
+                    .then(function(response) { return response.ok ? response.json() : {opened:false}; })
+                    .then(function(result) { if (!result.opened) message.textContent = appT('initialization_log_unavailable', 'Impossible d’ouvrir le journal d’erreurs.'); })
+                    .catch(function() { message.textContent = appT('initialization_log_unavailable', 'Impossible d’ouvrir le journal d’erreurs.'); });
+            });
+            panel.appendChild(logButton);
+        }
+        panel.appendChild(close);
+        function translate() {
+            message.textContent = appT('initialization_failed', 'L’initialisation des données a échoué. Consulte le journal d’erreurs s’il est disponible.');
+            if (logButton) logButton.textContent = appT('initialization_open_log', 'Ouvrir le journal d’erreurs');
+            close.textContent = appT('initialization_close', 'Fermer');
+        }
+        document.addEventListener('ui-language-change', translate);
+        translate();
+        document.body.appendChild(panel);
+    }).catch(function() {});
+});
 
 // Reuse one live tracker tab when a notification-area shortcut is selected.
 (function () {
@@ -2314,4 +2581,127 @@ $(window).on('load hashchange', openShortcutSection);
     if (document.querySelector('script[data-online-leaderboard]')) return;
     const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/static/online-leaderboard.css'; document.head.appendChild(css);
     const script = document.createElement('script'); script.src = '/static/online-leaderboard.js'; script.dataset.onlineLeaderboard = '1'; document.body.appendChild(script);
+})();
+
+// Introductory guide: the previews are cropped copies of the current UI,
+// so their labels follow the selected language without exposing profile data.
+(function () {
+    const container = document.querySelector('.profile-sidebar .cadreInfo');
+    if (!container) return;
+    const sidebarDetails = Array.from(container.querySelectorAll('.sidebar-scoreboard, .sidebar-last, .sidebar-summary'));
+    sidebarDetails.forEach(function(node) { node.hidden = true; });
+    const t = (key, fallback) => window.uiT ? window.uiT(key, fallback) : fallback;
+    const card = document.createElement('button');
+    card.type = 'button'; card.className = 'onboarding-card'; card.hidden = true;
+    card.innerHTML = '<strong></strong><span></span>';
+    container.appendChild(card);
+    const dialog = document.createElement('dialog');
+    dialog.className = 'onboarding-dialog';
+    dialog.setAttribute('aria-labelledby', 'onboarding-dialog-title');
+    dialog.innerHTML = '<div class="onboarding-dialog-inner"><header><p class="onboarding-progress" aria-live="polite"></p><button type="button" class="onboarding-close" aria-label="Fermer">×</button></header><div class="onboarding-body"><h3 id="onboarding-dialog-title"></h3><p class="onboarding-description"></p><div class="onboarding-visual" aria-hidden="true"></div></div><nav><button type="button" class="onboarding-previous"></button><button type="button" class="onboarding-next"></button></nav></div>';
+    document.body.appendChild(dialog);
+    const descriptions = [
+        ['onboarding_profile', 'Choisis la langue du jeu, démarre le suivi et charge ta partie. Dans Configuration → Profil, lance la récupération, puis ouvre dans le jeu l’onglet « Quitter la partie » sans quitter. Vérifie et enregistre ton pseudo, ton niveau et ton image.'],
+        ['onboarding_steam', 'Pour participer au classement en ligne, active la participation et accepte les conditions. Connecte ton compte Steam et saisis le code de confirmation. La participation est facultative.'],
+        ['onboarding_duel', 'Avec le suivi activé et le jeu au premier plan, commence par un duel d’arène 1 contre 1 pour aider le tracker à repérer les notifications. Le rappel disparaîtra après ta première victoire ou défaite enregistrée en arène, invasion ou défense.'],
+        ['onboarding_lock', 'Dans Configuration → Capture, attends un aperçu reconnu à deux lignes. Vérifie que la zone encadre correctement le message : nous te conseillons fortement de la verrouiller pour stabiliser la détection. Déverrouille-la si l’affichage change.']
+    ];
+    const headings = [['profile_capture_title','Profil du personnage'], ['online_title','Classement en ligne'],
+        ['arena','Arène 1v1'], ['notification_lock','Verrouiller la zone détectée']];
+    let step = 0;
+    const previous = dialog.querySelector('.onboarding-previous');
+    const next = dialog.querySelector('.onboarding-next');
+    const close = dialog.querySelector('.onboarding-close');
+    const visual = dialog.querySelector('.onboarding-visual');
+    function crop(selector) {
+        const source = document.querySelector(selector);
+        if (!source) return;
+        const clone = source.cloneNode(true);
+        [clone, ...clone.querySelectorAll('*')].forEach(function(node) {
+            node.removeAttribute('id'); node.removeAttribute('name'); node.removeAttribute('for');
+            node.removeAttribute('data-i18n'); node.removeAttribute('data-online');
+            node.removeAttribute('data-i18n-aria'); node.removeAttribute('data-i18n-title');
+            if (node.matches('input')) { node.checked = false; node.value = ''; node.disabled = true; }
+            if (node.matches('button,select,a')) { node.tabIndex = -1; node.setAttribute('disabled', ''); }
+        });
+        clone.hidden = false;
+        visual.appendChild(clone);
+    }
+    function render() {
+        const language = window.uiCurrentLanguage ? window.uiCurrentLanguage() : 'fra';
+        card.dir = dialog.dir = language === 'ara' ? 'rtl' : 'ltr';
+        card.querySelector('strong').textContent = t('onboarding_title', 'Bien démarrer');
+        card.querySelector('span').textContent = t('onboarding_hint', 'Découvre comment préparer ta première capture.');
+        dialog.querySelector('h3').textContent = t(headings[step][0], headings[step][1]);
+        dialog.querySelector('.onboarding-description').textContent = t(descriptions[step][0], descriptions[step][1]);
+        dialog.querySelector('.onboarding-progress').textContent = (step + 1) + ' / ' + descriptions.length;
+        previous.textContent = t('online_previous', 'Précédent');
+        next.textContent = step === descriptions.length - 1 ? t('initialization_close', 'Fermer') : t('online_next', 'Suivant');
+        close.setAttribute('aria-label', t('initialization_close', 'Fermer'));
+        previous.disabled = step === 0;
+        visual.replaceChildren();
+        if (step === 0) crop('.setting_user .form_single:has(#profile_capture_start)');
+        if (step === 1) { crop('.online-settings .form_single:has(#online_enabled)'); crop('.online-settings .online-steam-state-row'); }
+        if (step === 2) {
+            crop('.main-menu #start');
+            const start = visual.querySelector('li');
+            if (start) start.textContent = text_active[0] || 'Start';
+        }
+        if (step === 3) crop('#notification_lock_settings .form_single');
+    }
+    card.addEventListener('click', function() { step = 0; render(); dialog.showModal(); close.focus(); });
+    close.addEventListener('click', function() { dialog.close(); });
+    previous.addEventListener('click', function() { if (step > 0) { step--; render(); } });
+    next.addEventListener('click', function() { if (step < descriptions.length - 1) { step++; render(); } else dialog.close(); });
+    // Other sections translate their controls during this event as well.
+    document.addEventListener('ui-language-change', function() { setTimeout(render, 0); });
+    render();
+    let timer;
+    let legacy = false;
+    let lastLegacyPoll = 0;
+    function hasResult(captures) {
+        const truthy = value => ['1', 'true'].includes(String(value).trim().toLowerCase());
+        return Array.isArray(captures) && captures.some(function(row) {
+            return Array.isArray(row) && ['arena', 'invasion', 'defense'].includes(String(row[7]).trim().toLowerCase()) && truthy(row[2]) !== truthy(row[3]);
+        });
+    }
+    function refresh() {
+        if (legacy && Date.now() - lastLegacyPoll < 15000) return;
+        fetch('/onboarding-status', {credentials:'same-origin'}).then(function(response) {
+            if (response.status === 404) {
+                legacy = true;
+                lastLegacyPoll = Date.now();
+                return fetch('/allCapturesChart', {credentials:'same-origin'}).then(function(oldResponse) {
+                    if (!oldResponse.ok) throw new Error('Capture state unavailable');
+                    return oldResponse.json();
+                }).then(function(data) {
+                    if (!data || !Array.isArray(data.captures)) throw new Error('Invalid capture state');
+                    const result = hasResult(data.captures);
+                    if (result) return {first_capture:true, first_event:true};
+                    return Promise.all(['Arena', 'Invasion', 'Defense', 'Unknown'].map(function(mode) {
+                        return fetch('/detection-history?mode=' + mode, {credentials:'same-origin'})
+                            .then(function(r) { return r.ok ? r.json() : {events:[]}; })
+                            .catch(function() { return {events:[]}; });
+                    })).then(function(histories) {
+                        const found = histories.some(function(history) {
+                            return Array.isArray(history.events) && history.events.some(function(event) {
+                                return event.kind === 'detection' && event.mode !== 'System';
+                            });
+                        });
+                        return {first_capture:false, first_event:found || data.captures.length > 0};
+                    });
+                });
+            }
+            if (!response.ok) throw new Error('Onboarding state unavailable');
+            legacy = false;
+            return response.json();
+        }).then(function(state) {
+            if (typeof state.first_capture !== 'boolean') return;
+            card.hidden = state.first_capture;
+            if (typeof state.first_event === 'boolean') sidebarDetails.forEach(function(node) { node.hidden = !state.first_event; });
+            if (state.first_capture) clearInterval(timer);
+        }).catch(function() {});
+    }
+    timer = setInterval(refresh, 5000);
+    refresh();
 })();

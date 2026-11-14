@@ -59,4 +59,16 @@ class CoinvaderTests(unittest.TestCase):
         self.assertEqual(observed[0]['relation'], 'coinvader')
         self.assertEqual(observed[0]['name'], 'G')
 
+    def test_death_without_a_known_combat_is_confirmed_without_assuming_a_win(self):
+        for language, catalog in messages().items():
+            for identifier in ('2620200', '2620210'):
+                with self.subTest(language=language, identifier=identifier):
+                    text = catalog[identifier].replace('<?deadName?>', 'G')
+                    adapted = '\n'.join(tracker_notifications(text, language))
+                    tracker = self.sightings.SightingTracker()
+                    observed = tracker.observe(adapted, adapted, 'Arena', False, now=1, in_combat=False)
+                    self.assertEqual(observed, [{'name':'G', 'role':'invader', 'relation':'unknown',
+                                                 'mode':'Unknown', 'event':'died'}])
+        self.assertFalse(self.sightings.parse_sightings('Le Doigt sanglant G est mort.', 'Arena', True, in_combat=True))
+
 if __name__ == '__main__': unittest.main()

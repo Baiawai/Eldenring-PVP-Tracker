@@ -1,6 +1,6 @@
 # Notes de version 1.0.5.0
 
-Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; leur validation dans le paquet final reste nécessaire.
+Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0.
 
 ## Français (fr-FR)
 
@@ -10,6 +10,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - Le détail technique apparaît lorsque le suivi s’arrête sur une erreur, même si le journal ne peut pas être enregistré.
 - Le dossier de données utilisé par la version Microsoft Store est plus facile à retrouver depuis l’icône du tracker et la page Information.
 - La FAQ précise où trouver et sauvegarder les données.
+- Un tutoriel de démarrage accompagne la préparation du profil et de la première capture ; il recommande de verrouiller la zone de notification après vérification.
+- Les événements de victoire et de défaite affichent le nom de l’adversaire lorsqu’il est identifié. Les messages de retour plus précis et les morts d’envahisseurs sont mieux reconnus.
+- Pendant une invasion, la carte Steam indique le premier joueur détecté comme hôte ; les connexions Steam restent distinctes des noms de personnages.
+- Présentation du profil, des captures et des paramètres améliorée, avec des traductions et des messages d’initialisation et de suivi plus clairs.
 
 ## English (en-US)
 
@@ -19,6 +23,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - Technical error details are shown when tracking stops because of an error, even if the log cannot be saved.
 - Find the Microsoft Store data folders more easily from the tracker’s tray icon and Information page.
 - The FAQ now explains where to find and back up your data.
+- A getting-started tutorial helps set up your profile and first capture, and recommends locking the notification area after checking it.
+- Victory and defeat events show the opponent when identified. More specific return messages and invader deaths are better recognized.
+- During an invasion, the Steam card marks the first detected player as the host; Steam connections remain separate from character names.
+- Improved profile, capture and settings layouts, translations, and initialization and tracking messages.
 
 ## Deutsch (de-DE)
 
@@ -28,6 +36,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - Technische Fehlerdetails werden beim Abbruch der Überwachung angezeigt, auch wenn das Protokoll nicht gespeichert werden kann.
 - Die Datenordner der Microsoft-Store-Version lassen sich über das Taskleistensymbol und die Informationsseite leichter finden.
 - Die FAQ erklärt, wo die Daten liegen und wie sie gesichert werden.
+- Eine Starthilfe begleitet die Einrichtung des Profils und der ersten Aufnahme und empfiehlt, den geprüften Benachrichtigungsbereich zu sperren.
+- Sieg- und Niederlageereignisse zeigen erkannte Gegnernamen. Genauere Rückkehrmeldungen und der Tod von Eindringlingen werden besser erkannt.
+- Bei einer Invasion markiert die Steam-Karte den zuerst erkannten Spieler als Host; Steam-Verbindungen bleiben von Charakternamen getrennt.
+- Profil, Aufnahmen, Einstellungen, Übersetzungen sowie Initialisierungs- und Überwachungsmeldungen wurden verbessert.
 
 ## Italiano (it-IT)
 
@@ -37,6 +49,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - I dettagli tecnici vengono mostrati quando il monitoraggio si interrompe per un errore, anche se non è possibile salvare il registro.
 - Le cartelle dei dati della versione Microsoft Store sono più facili da trovare tramite l’icona nell’area di notifica e la pagina Informazioni.
 - La FAQ spiega dove trovare i dati e come eseguirne il backup.
+- Un tutorial iniziale aiuta a preparare il profilo e la prima acquisizione e consiglia di bloccare l’area delle notifiche dopo averla verificata.
+- Gli eventi di vittoria e sconfitta mostrano il nome dell’avversario quando è identificato. Migliorato il riconoscimento dei messaggi di ritorno e delle morti degli invasori.
+- Durante un’invasione la scheda Steam indica il primo giocatore rilevato come host; le connessioni Steam restano distinte dai nomi dei personaggi.
+- Migliorati profilo, acquisizioni, impostazioni, traduzioni e messaggi di inizializzazione e monitoraggio.
 
 ## Español de España (es-ES)
 
@@ -46,6 +62,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - Se muestran los detalles técnicos cuando el seguimiento se detiene por un error, aunque no se pueda guardar el registro.
 - Es más fácil encontrar las carpetas de datos de la versión de Microsoft Store desde el icono de la bandeja y la página Información.
 - La FAQ explica dónde encontrar los datos y cómo hacer una copia de seguridad.
+- Un tutorial inicial ayuda a preparar el perfil y la primera captura y recomienda bloquear el área de notificaciones después de comprobarla.
+- Los eventos de victoria y derrota muestran al rival cuando se identifica. Mejora el reconocimiento de mensajes de regreso y muertes de invasores.
+- Durante una invasión, la tarjeta de Steam señala al primer jugador detectado como anfitrión; las conexiones Steam se mantienen separadas de los nombres de personaje.
+- Mejoras en perfil, capturas, configuración, traducciones y mensajes de inicialización y seguimiento.
 
 ## Español de Latinoamérica (es-419)
 
@@ -55,6 +75,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - Se muestran los detalles técnicos cuando el seguimiento se detiene por un error, aunque no se pueda guardar el registro.
 - Es más fácil encontrar las carpetas de datos de la versión de Microsoft Store desde el ícono de la bandeja y la página Información.
 - La FAQ explica dónde encontrar los datos y cómo hacer una copia de seguridad.
+- Un tutorial inicial ayuda a preparar el perfil y la primera captura, y recomienda bloquear el área de notificaciones después de comprobarla.
+- Los eventos de victoria y derrota muestran al rival cuando se identifica. Mejoró el reconocimiento de mensajes de regreso y muertes de invasores.
+- Durante una invasión, la tarjeta de Steam señala al primer jugador detectado como anfitrión; las conexiones Steam se mantienen separadas de los nombres de personaje.
+- Mejoras en perfil, capturas, configuración, traducciones y mensajes de inicialización y seguimiento.
 
 ## Português (pt-BR)
 
@@ -64,6 +88,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - Os detalhes técnicos são exibidos quando o acompanhamento para por um erro, mesmo que o registro não possa ser salvo.
 - Encontre as pastas de dados da versão Microsoft Store pelo ícone na bandeja e pela página Informações.
 - A FAQ explica onde encontrar os dados e como fazer backup.
+- Um tutorial inicial ajuda a preparar o perfil e a primeira captura e recomenda bloquear a área de notificações após conferi-la.
+- Eventos de vitória e derrota exibem o adversário quando identificado. Melhor reconhecimento de mensagens de retorno e mortes de invasores.
+- Durante uma invasão, o cartão Steam indica o primeiro jogador detectado como anfitrião; conexões Steam continuam separadas dos nomes de personagem.
+- Melhorias no perfil, capturas, configurações, traduções e mensagens de inicialização e acompanhamento.
 
 ## Polski (pl-PL)
 
@@ -73,6 +101,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - Szczegóły techniczne błędu są wyświetlane po zatrzymaniu śledzenia, nawet jeśli nie można zapisać dziennika.
 - Foldery danych wersji Microsoft Store łatwiej znaleźć za pomocą ikony w zasobniku i strony Informacje.
 - FAQ wyjaśnia, gdzie znaleźć dane i jak wykonać kopię zapasową.
+- Poradnik pomaga skonfigurować profil i pierwszy zapis oraz zaleca zablokowanie obszaru powiadomień po jego sprawdzeniu.
+- Zdarzenia zwycięstwa i porażki pokazują rozpoznanego przeciwnika. Ulepszono rozpoznawanie komunikatów powrotu i śmierci najeźdźców.
+- Podczas inwazji karta Steam oznacza pierwszego wykrytego gracza jako gospodarza; połączenia Steam pozostają oddzielone od nazw postaci.
+- Ulepszono profil, zapisy, ustawienia, tłumaczenia oraz komunikaty inicjalizacji i śledzenia.
 
 ## Русский (ru-RU)
 
@@ -82,6 +114,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - При остановке отслеживания из-за ошибки показываются технические сведения, даже если журнал не удалось сохранить.
 - Папки данных версии Microsoft Store проще найти через значок в области уведомлений и страницу «Информация».
 - В FAQ объясняется, где найти данные и как создать их резервную копию.
+- Руководство помогает настроить профиль и первое сохранение и рекомендует закрепить область уведомлений после проверки.
+- События победы и поражения показывают имя противника, если оно известно. Улучшено распознавание сообщений о возвращении и смерти захватчиков.
+- Во время вторжения карточка Steam отмечает первого обнаруженного игрока как хозяина; подключения Steam не отождествляются с именами персонажей.
+- Улучшены профиль, записи, настройки, переводы и сообщения инициализации и отслеживания.
 
 ## 日本語 (ja-JP)
 
@@ -91,6 +127,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - エラーで追跡が停止したとき、ログを保存できない場合でも技術的な詳細を表示します。
 - 通知領域のアイコンと「情報」ページから、Microsoft Store版のデータフォルダーを見つけやすくしました。
 - FAQにデータの場所とバックアップ方法を記載しました。
+- スタートガイドでプロフィールと初回キャプチャーの準備を案内し、確認後に通知領域を固定することを推奨します。
+- 勝敗イベントに判明した対戦相手の名前を表示し、帰還メッセージと侵入者の死亡の認識を改善しました。
+- 侵入中は最初に検出されたSteamプレイヤーをホストとして表示します。Steam接続とキャラクター名は別々に扱います。
+- プロフィール、キャプチャー、設定、翻訳、初期化と追跡のメッセージを改善しました。
 
 ## 한국어 (ko-KR)
 
@@ -100,6 +140,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - 오류로 추적이 중지되면 로그를 저장할 수 없는 경우에도 기술적 세부 정보를 표시합니다.
 - 알림 영역 아이콘과 정보 페이지에서 Microsoft Store 버전의 데이터 폴더를 더 쉽게 찾을 수 있습니다.
 - FAQ에 데이터 위치와 백업 방법을 설명했습니다.
+- 시작 안내가 프로필과 첫 캡처 준비를 돕고, 확인 후 알림 영역을 잠그도록 권장합니다.
+- 승패 이벤트에 식별된 상대 이름을 표시하며 귀환 메시지와 침입자 사망 인식을 개선했습니다.
+- 침입 중 Steam 카드에서 처음 감지된 플레이어를 호스트로 표시합니다. Steam 연결과 캐릭터 이름은 별도로 관리합니다.
+- 프로필, 캡처, 설정, 번역과 초기화 및 추적 메시지를 개선했습니다.
 
 ## 简体中文 (zh-CN)
 
@@ -109,6 +153,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - 因错误停止追踪时，即使无法保存日志，也会显示技术错误详情。
 - 可通过通知区域图标和信息页面更方便地找到 Microsoft Store 版本的数据文件夹。
 - 常见问题说明了数据的位置和备份方法。
+- 入门教程帮助设置个人资料和首次捕获，并建议检查后锁定通知区域。
+- 胜负事件会显示已识别的对手，并改进了对返回消息和入侵者死亡的识别。
+- 入侵期间，Steam 卡片将首次检测到的玩家标为房主；Steam 连接与角色名称分开处理。
+- 改进了个人资料、捕获、设置、翻译以及初始化和追踪提示。
 
 ## 繁體中文 (zh-TW)
 
@@ -118,6 +166,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - 因錯誤停止追蹤時，即使無法儲存記錄，也會顯示技術錯誤詳情。
 - 可透過通知區域圖示和資訊頁面更方便地找到 Microsoft Store 版本的資料資料夾。
 - 常見問題說明了資料的位置和備份方式。
+- 入門教學協助設定個人資料和首次擷取，並建議檢查後鎖定通知區域。
+- 勝負事件會顯示已辨識的對手，並改善返回訊息與入侵者死亡的辨識。
+- 入侵期間，Steam 卡片將首先偵測到的玩家標為房主；Steam 連線與角色名稱分開處理。
+- 改善個人資料、擷取、設定、翻譯，以及初始化和追蹤提示。
 
 ## ไทย (th-TH)
 
@@ -127,6 +179,10 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - เมื่อการติดตามหยุดเพราะข้อผิดพลาด จะแสดงรายละเอียดทางเทคนิคแม้บันทึกล็อกไม่ได้
 - ค้นหาโฟลเดอร์ข้อมูลของเวอร์ชัน Microsoft Store ได้ง่ายขึ้นจากไอคอนในถาดระบบและหน้าข้อมูล
 - FAQ อธิบายตำแหน่งข้อมูลและวิธีสำรองข้อมูล
+- บทแนะนำช่วยตั้งค่าโปรไฟล์และการจับภาพครั้งแรก และแนะนำให้ล็อกพื้นที่แจ้งเตือนหลังตรวจสอบ
+- เหตุการณ์ชนะและแพ้แสดงชื่อคู่ต่อสู้เมื่อระบุได้ และปรับปรุงการตรวจจับข้อความกลับโลกและการตายของผู้บุกรุก
+- ระหว่างบุกรุก การ์ด Steam ระบุผู้เล่นที่ตรวจพบคนแรกเป็นโฮสต์ โดยแยกการเชื่อมต่อ Steam จากชื่อตัวละคร
+- ปรับปรุงโปรไฟล์ ภาพที่จับ การตั้งค่า คำแปล และข้อความเริ่มต้นและติดตาม
 
 ## العربية (ar-SA)
 
@@ -136,3 +192,7 @@ Les points ci-dessous couvrent les changements depuis le paquet Store 1.0.4.0 ; 
 - تظهر التفاصيل التقنية عند توقف التتبع بسبب خطأ، حتى إذا تعذر حفظ السجل.
 - يمكن العثور على مجلدات بيانات إصدار Microsoft Store بسهولة أكبر من أيقونة منطقة الإعلام وصفحة المعلومات.
 - توضح الأسئلة الشائعة مكان البيانات وطريقة نسخها احتياطياً.
+- يساعد دليل البدء في إعداد الملف الشخصي وأول التقاط، ويوصي بقفل منطقة الإشعارات بعد التحقق منها.
+- تعرض أحداث الفوز والخسارة اسم الخصم عند التعرف عليه، مع تحسين التعرف على رسائل العودة وموت الغزاة.
+- أثناء الغزو، تميز بطاقة Steam أول لاعب يتم اكتشافه بوصفه المضيف، وتظل اتصالات Steam منفصلة عن أسماء الشخصيات.
+- تحسين عرض الملف الشخصي واللقطات والإعدادات والترجمات ورسائل التهيئة والتتبع.

@@ -118,7 +118,7 @@ _EVENTS = {
     'invasion_defeat': ('2621200','2621210'),
     'cooperator_left': ('2630000','2632000'),
     'hunter_left': ('2630304','2632304'),
-    'returned_to_world': ('2631200','2631210'),
+    'returned_to_world': ('2631200','2631210','2611010','2661210','2661220','2661225'),
     'cooperator_dismissed': ('2640000','2642000'),
     'hunter_dismissed': ('2640304','2642304'),
     'connection_error': ('2701200',),
@@ -188,8 +188,8 @@ def classify(text, language):
 def tracker_notifications(text, language):
     """Produce internal French compatibility messages for existing detectors.
 
-    This adapter is deliberately side-effect free. It is not connected to the
-    active tracker until language selection, persistence and UI are integrated.
+    This adapter is deliberately side-effect free. The tracker uses these
+    messages with its existing event detectors for non-French game languages.
     """
     result = []
     for item in classify(text, language):

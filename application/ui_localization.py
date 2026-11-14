@@ -5,7 +5,12 @@ import re
 from functools import lru_cache
 from pathlib import Path
 from application.game_language import UI_TO_GAME
-from application.locale_catalog import messages
+from application.locale_catalog import messages, _THAI_GAME_GLYPHS
+
+
+def display_game_text(text):
+    """Convert game-font glyph variants in a catalog template for the UI."""
+    return text.translate(_THAI_GAME_GLYPHS)
 
 @lru_cache(maxsize=1)
 def packs():
@@ -28,7 +33,16 @@ def localize_counter(text, language):
     }
     if text in exact:
         kind, key = exact[text]
-        return html.escape((game if kind == 'game' else modern)[key], quote=False).replace('\n', '<br>')
+        value = display_game_text(game[key]) if kind == 'game' else modern[key]
+        return html.escape(value, quote=False).replace('\n', '<br>')
+    if text == 'Vous avez envahi un autre monde':
+        # The second line of this game notification contains the host name.
+        # When OCR cannot recover it, use only the complete introductory line.
+        return html.escape(display_game_text(game['2601200'].split('\n', 1)[0]), quote=False)
+    mode_prefix = 'MODE : DUEL - '
+    if text.startswith(mode_prefix):
+        prefix = html.escape(modern['online_mode'], quote=False) + ' : ' + html.escape(modern['capture_duel'], quote=False) + ' - '
+        return prefix + text[len(mode_prefix):]
     search_prefix = "Vous tentez d'envahir un autre monde"
     if text.startswith(search_prefix):
         if 'proches uniquement' in text:
@@ -37,19 +51,19 @@ def localize_counter(text, language):
             result = game['2331201']
         else:
             result = re.split(r'\s*[(（]', game['2331200'], maxsplit=1)[0].strip()
-        return html.escape(result, quote=False).replace('\n', '<br>')
+        return html.escape(display_game_text(result), quote=False).replace('\n', '<br>')
     named = (("Vous avez envahi le monde de ", '2601200', 'hostName'),
              ('Monde envahi : combat contre ', '2600200', 'joinName'))
     for prefix, ident, field in named:
         if text.startswith(prefix):
             # The captured name was escaped by the caller; never unescape it.
             value = text[len(prefix):]
-            template = html.escape(game[ident], quote=False)
+            template = html.escape(display_game_text(game[ident]), quote=False)
             return template.replace(html.escape('<?' + field + '?>', quote=False), value).replace('\n', '<br>')
     if text.startswith('Impossible d’acquérir ') and '<br>' in text:
         first = text.split('<br>', 1)[0]
         item = first[len('Impossible d’acquérir '):].rstrip('.')
-        template = html.escape(game['dialogue:334510'], quote=False)
+        template = html.escape(display_game_text(game['dialogue:334510']), quote=False)
         translated = template.replace(html.escape('<?itemName?>', quote=False), item).replace('\n', '<br>')
         return translated + '<br><span class="inventory-warning">' + html.escape(modern['inventory_warning'], quote=False) + '</span>'
     role_prefixes = {

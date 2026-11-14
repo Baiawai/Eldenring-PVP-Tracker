@@ -7,7 +7,6 @@
     };
     const status = document.getElementById('tracking_notifications_status');
     if (!status || Object.values(fields).some(node => !node)) return;
-    const tr = (key, fallback) => window.uiT ? window.uiT(key, fallback) : fallback;
     function busy(value) { Object.values(fields).forEach(node => { node.disabled = value; node.dispatchEvent(new Event('tracker-setting-render')); }); }
     function apply(settings) { Object.entries(fields).forEach(([kind, node]) => { node.checked = settings[kind] === true; node.dispatchEvent(new Event('tracker-setting-render')); }); }
     Object.entries(fields).forEach(([kind, node]) => {
@@ -18,8 +17,8 @@
                 const response = await fetch('/tracking-notifications', {method:'POST', body:new URLSearchParams({kind, enabled:String(requested)})});
                 if (!response.ok) throw new Error('request');
                 apply((await response.json()).settings);
-                status.textContent = '';
-            } catch (_) { node.checked = !requested; status.textContent = tr('notification_settings_error', 'Impossible de modifier les notifications.'); }
+                window.uiSetStatus(status);
+            } catch (_) { node.checked = !requested; window.uiSetStatus(status, 'notification_settings_error', 'Impossible de modifier les notifications.'); }
             finally { busy(false); }
         });
     });
@@ -27,5 +26,5 @@
         if (!response.ok) throw new Error('request');
         return response.json();
     }).then(data => { apply(data.settings); busy(false); })
-      .catch(() => { status.textContent = tr('notification_settings_error', 'Impossible de modifier les notifications.'); });
+      .catch(() => { window.uiSetStatus(status, 'notification_settings_error', 'Impossible de modifier les notifications.'); });
 })();

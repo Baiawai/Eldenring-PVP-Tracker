@@ -76,7 +76,8 @@
         }
         const stopped = !storage.monitor_running;
         purge.disabled = archive.disabled = mutationPending || !stopped || storage.history.events === 0;
-        monitorNote.textContent = stopped ? '' : tr('history_stop_required', 'Arrête le suivi pour archiver ou purger l’historique.');
+        if (stopped) window.uiSetStatus(monitorNote);
+        else window.uiSetStatus(monitorNote, 'history_stop_required', 'Arrête le suivi pour archiver ou purger l’historique.');
         archiveList.replaceChildren();
         if (!storage.archives.length) {
             archiveList.appendChild(element('p', 'history-archives-empty', tr('history_archives_empty', 'Aucune archive pour le moment.')));
@@ -108,7 +109,7 @@
         } catch (_) {
             if (version !== storageRequest) return;
             storage = null; storageSize.textContent = '—'; purge.disabled = archive.disabled = true;
-            monitorNote.textContent = tr('history_storage_error', 'Impossible de charger les informations de l’historique.');
+            window.uiSetStatus(monitorNote, 'history_storage_error', 'Impossible de charger les informations de l’historique.');
         }
     }
     async function mutate(url, kind) {
@@ -119,7 +120,7 @@
                 ? tr('history_archive_confirm', 'Archiver tout l’historique actif et le retirer de cette liste ? Les rencontres Steam seront aussi archivées. Les captures et statistiques sont conservées.')
                 : tr('history_restore_confirm', 'Restaurer les événements absents de cette archive dans l’historique actif ? L’archive sera conservée.');
         if (!window.confirm(confirmation)) return;
-        mutationPending = true; renderStorage(); actionStatus.textContent = '';
+        mutationPending = true; renderStorage(); window.uiSetStatus(actionStatus);
         try {
             const response = await fetch(url, {method:'POST'});
             const result = await response.json();
@@ -128,14 +129,16 @@
                 if (result.reason === 'empty') throw new Error('empty');
                 throw new Error('request');
             }
-            actionStatus.textContent = kind === 'purge' ? tr('history_purge_done', 'Historique actif purgé.') :
-                kind === 'archive' ? tr('history_archive_done', 'Historique archivé et retiré de la liste active.') :
-                result.restored ? tr('history_restore_done', 'Les événements absents ont été restaurés.') : tr('history_restore_none', 'Tous les événements de cette archive sont déjà présents.');
+            if (kind === 'purge') window.uiSetStatus(actionStatus, 'history_purge_done', 'Historique actif purgé.');
+            else if (kind === 'archive') window.uiSetStatus(actionStatus, 'history_archive_done', 'Historique archivé et retiré de la liste active.');
+            else if (result.restored) window.uiSetStatus(actionStatus, 'history_restore_done', 'Les événements absents ont été restaurés.');
+            else window.uiSetStatus(actionStatus, 'history_restore_none', 'Tous les événements de cette archive sont déjà présents.');
             generation++; entries = []; hasMore = false; render();
             load('initial');
         } catch (error) {
-            actionStatus.textContent = error.message === 'monitor_running' ? tr('history_stop_required', 'Arrête le suivi pour archiver ou purger l’historique.') :
-                error.message === 'empty' ? tr('history_archive_empty_error', 'Il n’y a aucun événement à archiver.') : tr('history_action_error', 'L’opération a échoué. Réessaie.');
+            if (error.message === 'monitor_running') window.uiSetStatus(actionStatus, 'history_stop_required', 'Arrête le suivi pour archiver ou purger l’historique.');
+            else if (error.message === 'empty') window.uiSetStatus(actionStatus, 'history_archive_empty_error', 'Il n’y a aucun événement à archiver.');
+            else window.uiSetStatus(actionStatus, 'history_action_error', 'L’opération a échoué. Réessaie.');
         } finally { mutationPending = false; await refreshStorage(); }
     }
     if (purge && archive) {

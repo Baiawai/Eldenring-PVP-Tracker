@@ -5,10 +5,10 @@
     if (!input || !status) return;
     let saved = false;
     const render = () => input.dispatchEvent(new Event('tracker-setting-render'));
-    const error = () => { status.textContent = window.uiT ? window.uiT('auto_game_start_error', 'Impossible d’enregistrer ce réglage.') : 'Impossible d’enregistrer ce réglage.'; };
+    const error = () => { window.uiSetStatus(status, 'auto_game_start_error', 'Impossible d’enregistrer ce réglage.'); };
     input.addEventListener('change', async () => {
         const desired = input.checked;
-        input.disabled = true; render(); status.textContent = '';
+        input.disabled = true; render(); window.uiSetStatus(status);
         try {
             const response = await fetch('/steam-log-auto', {method:'POST', body:new URLSearchParams({enabled:String(desired)})});
             if (!response.ok) throw new Error('save');

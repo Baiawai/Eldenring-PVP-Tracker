@@ -50,6 +50,13 @@ body .settings-panel .contente_header_settings button.online-ranking-tab.active_
 .online-main-status { position:absolute; z-index:1900; top:12px; left:20px; right:20px; margin:0; color:#e8d3a6; font-size:18px; line-height:1.3; text-align:center; pointer-events:none; text-shadow:0 1px 4px #000; opacity:1; transition:opacity .4s ease; }
 .online-main-status.is-leaving { opacity:0; }
 .online-main-status:empty { display:none; }
+body .app-content p.online-main-status button.online-profile-action {
+  display:inline; width:auto; min-height:0; margin:0; padding:0; border:0; border-radius:0;
+  color:#f4d594; background:transparent !important; box-shadow:none; font:inherit; text-decoration:underline;
+  text-underline-offset:3px; pointer-events:auto; cursor:pointer !important;
+}
+body .app-content p.online-main-status button.online-profile-action:hover { color:#fff0c8; background:transparent !important; }
+body .app-content p.online-main-status button.online-profile-action:focus-visible { outline:2px solid #e1c487; outline-offset:3px; }
 
 /* Mode switching keeps the existing leaderboard table and its controls. */
 .cadre_multi .ranking-mode-tabs { display:flex; gap:10px; flex-wrap:wrap; margin-top:20px; }

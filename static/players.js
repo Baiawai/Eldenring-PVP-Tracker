@@ -96,9 +96,9 @@
         summary.appendChild(identity);
         const record = element('span', 'player-record');
         if (player.total) {
-            record.appendChild(element('span', 'win', player.victories + ' V'));
-            record.appendChild(element('span', 'loss', player.defeats + ' D'));
-            if (player.draws > 0 || player.history.some(match => match.mode === 'Arena')) record.appendChild(element('span', 'draw', player.draws + ' E'));
+            record.appendChild(element('span', 'win', player.victories + ' ' + tr('victories', 'Victoires')));
+            record.appendChild(element('span', 'loss', player.defeats + ' ' + tr('defeats', 'Défaites')));
+            if (player.draws > 0 || player.history.some(match => match.mode === 'Arena')) record.appendChild(element('span', 'draw', player.draws + ' ' + tr('draw', 'Égalités')));
         } else {
             record.appendChild(element('span', 'none', sightingLabel(player)));
         }

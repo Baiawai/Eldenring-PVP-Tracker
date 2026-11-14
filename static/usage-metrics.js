@@ -48,8 +48,8 @@
             const total = values.reduce((sum, n) => sum + (n || 0), 0);
             const target = document.getElementById('usage_modes'); target.replaceChildren();
             Object.keys(modes).forEach((mode, index) => row(target, tr(...modes[mode]), values[index] === null ? '—' : number(values[index]) + (total && values.every(value => value !== null) ? ' · ' + number(100 * values[index] / total) + ' %' : '')));
-            put('usage_status', ''); content.hidden = false;
-        } catch (_) { content.hidden = true; put('usage_status', tr('stats_unavailable', 'Statistiques indisponibles.')); }
+            window.uiSetStatus(document.getElementById('usage_status')); content.hidden = false;
+        } catch (_) { content.hidden = true; window.uiSetStatus(document.getElementById('usage_status'), 'stats_unavailable', 'Statistiques indisponibles.'); }
     }
     async function refreshDiagnostics() {
         try {
@@ -64,8 +64,8 @@
             const syncCount = d.sync_ok + d.sync_failed;
             put('diag_sync', number(d.sync_ok) + ' / ' + number(d.sync_failed));
             put('diag_sync_time', syncCount ? number(1000 * d.sync_seconds / syncCount) + ' ms' : '—');
-            put('diag_version', d.version); put('diagnostics_status', ''); document.getElementById('diagnostics_content').hidden = false;
-        } catch (_) { document.getElementById('diagnostics_content').hidden = true; put('diagnostics_status', tr('stats_unavailable', 'Statistiques indisponibles.')); }
+            put('diag_version', d.version); window.uiSetStatus(document.getElementById('diagnostics_status')); document.getElementById('diagnostics_content').hidden = false;
+        } catch (_) { document.getElementById('diagnostics_content').hidden = true; window.uiSetStatus(document.getElementById('diagnostics_status'), 'stats_unavailable', 'Statistiques indisponibles.'); }
     }
     const menu = {menu_button_info:'statistics', menu_button_captures:'captures', menu_button_players:'players', menu_button_history:'history', menu_button_settings:'settings', menu_button_multi:'leaderboard', menu_button_information:'information'};
     Object.entries(menu).forEach(([id, feature]) => {

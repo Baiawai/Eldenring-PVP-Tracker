@@ -60,6 +60,13 @@ def _connect():
     _consolidate_legacy_steam(con)
     _migrate_system_events(con)
     _remove_steam_addresses(con)
+    if not con.execute('SELECT 1 FROM tracker_first_game_event WHERE id=1').fetchone():
+        found = con.execute('SELECT 1 FROM detection_history WHERE kind=? AND mode!=? LIMIT 1', ('detection', 'System')).fetchone()
+        if not found and con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='history_archive_events'").fetchone():
+            found = con.execute('SELECT 1 FROM history_archive_events WHERE kind=? AND mode!=? LIMIT 1', ('detection', 'System')).fetchone()
+        if found:
+            con.execute('INSERT OR IGNORE INTO tracker_first_game_event(id) VALUES(1)')
+            con.commit()
     return con
 
 
@@ -175,6 +182,8 @@ def record_detection(message, mode, kind='detection', metadata=None):
         con.execute('UPDATE detection_history_sequence SET last_id=? WHERE id=1', (next_id,))
         con.execute('INSERT INTO detection_history(id,recorded_at,mode,message,kind,metadata) VALUES (?,?,?,?,?,?)',
                     (next_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), mode, encrypt_value(text), kind, encoded))
+        if kind == 'detection' and mode != 'System':
+            con.execute('INSERT OR IGNORE INTO tracker_first_game_event(id) VALUES(1)')
         con.commit()
         return next_id
 

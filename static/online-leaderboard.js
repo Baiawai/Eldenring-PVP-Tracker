@@ -54,6 +54,11 @@
   if (window.initSettingsYesNo) window.initSettingsYesNo(section);
   const mainStatus = document.createElement('p'); mainStatus.className = 'online-main-status'; mainStatus.setAttribute('role', 'status');
   const content = document.querySelector('.app-content'); if (content) content.prepend(mainStatus);
+  const profileAction = document.createElement('button');
+  profileAction.type = 'button'; profileAction.className = 'online-profile-action';
+  profileAction.addEventListener('click', () => {
+    if (window.openProfileCapture) window.openProfileCapture();
+  });
   let enabled = false, pending = false, busy = false, timer, steamConnection = 'disconnected', steamCheckGeneration = 0, lastSteamCheckAt = 0, loginGeneration = 0, loginPopup = null, startedParticipation = false, languageAllowed = false, supportsObservation = false, recoveryMode = false, transitionNonce = '', settingsGeneration = 0;
   const fallbacks = {online_title:'Classement en ligne', online_participate:'Participer au classement', online_invitation_action:'Rejoins le classement en ligne et compare tes résultats avec les autres joueurs.', sidebar_guidance_hint:'Clique dans le cadre pour accéder à cette option.', online_steam_status_label:'Compte Steam', online_steam_login:'Connecter mon compte Steam', online_steam_share:'Partager mon profil Steam', online_explain:'La participation est facultative. Le tracker reste utilisable hors ligne.', online_mode:'Mode', online_refresh:'Actualiser', online_name:'Pseudo', online_level:'Niveau', online_wins:'Victoires', online_losses:'Défaites', arena:'Arène 1v1', invasion:'Invasion', defense:'Monde envahi', online_previous:'Précédent', online_next:'Suivant'};
   // Build this card in JavaScript too, so it works with an already cached template.
@@ -115,6 +120,7 @@
   };
   let successMessageTimer, noticeFadeTimer, refreshCountdownTimer, syncNotice = '', rankingLoading = false, activeState = '';
   let noticeAllowed = true, noticeEpoch = 0;
+  let initializationNoticeUntil = 0, initializationNoticeFading = false, initializationNoticeTimer, initializationWaitObserver;
   let serverCooldownUntil = 0, refreshNoticeUntil = 0;
   function updateServerCooldown(result) {
     if (result && Number.isFinite(result.retry_after_ms) && result.retry_after_ms >= 0) {
@@ -122,13 +128,25 @@
     }
   }
   function renderNotice() {
+    if (initializationNoticeFading) return;
     const remaining = Math.max(0, Math.ceil((refreshNoticeUntil - Date.now()) / 1000));
     const countdown = remaining ? t('online_refresh_countdown', 'Prochaine actualisation dans {seconds} s.').replace('{seconds}', String(remaining)) : '';
-    const value = noticeAllowed ? (countdown || syncNotice || (rankingLoading ? t('leaderboard_loading', 'Chargement du classement…') : '')) : '';
+    const initializing = Date.now() < initializationNoticeUntil;
+    const value = initializing ? t('initialization_success', 'Initialisation terminée : les dossiers et les bases de données nécessaires sont prêts.') :
+      (noticeAllowed ? (countdown || syncNotice || (rankingLoading ? t('leaderboard_loading', 'Chargement du classement…') : '')) : '');
     if (value) {
       clearTimeout(noticeFadeTimer);
       mainStatus.classList.remove('is-leaving');
-      mainStatus.textContent = value;
+      const showProfileAction = !initializing && activeState === 'profile_required' && !countdown && !!syncNotice;
+      if (showProfileAction) {
+        const label = t('profile_capture_start', 'Récupérer mon profil');
+        if (profileAction.textContent !== label) profileAction.textContent = label;
+        if (profileAction.parentNode !== mainStatus || !mainStatus.firstChild || mainStatus.firstChild.nodeValue !== value + ' ') {
+          mainStatus.replaceChildren(document.createTextNode(value + ' '), profileAction);
+        }
+      } else if (mainStatus.textContent !== value || mainStatus.contains(profileAction)) {
+        mainStatus.textContent = value;
+      }
     } else if (mainStatus.textContent && !mainStatus.classList.contains('is-leaving')) {
       mainStatus.classList.add('is-leaving');
       noticeFadeTimer = setTimeout(() => {
@@ -137,6 +155,41 @@
       }, 400);
     }
   }
+  function showInitializationSuccess() {
+    if (!window.pendingInitializationSuccess) return;
+    if (document.querySelector('.sprit')) {
+      if (!initializationWaitObserver) {
+        initializationWaitObserver = new MutationObserver(() => {
+          if (!document.querySelector('.sprit')) {
+            initializationWaitObserver.disconnect();
+            initializationWaitObserver = null;
+            showInitializationSuccess();
+          }
+        });
+        initializationWaitObserver.observe(document.body, {childList:true, subtree:true});
+      }
+      return;
+    }
+    window.pendingInitializationSuccess = false;
+    clearTimeout(initializationNoticeTimer);
+    clearTimeout(noticeFadeTimer);
+    initializationNoticeFading = false;
+    initializationNoticeUntil = Date.now() + 5000;
+    renderNotice();
+    initializationNoticeTimer = setTimeout(() => {
+      initializationNoticeUntil = 0;
+      initializationNoticeFading = true;
+      mainStatus.classList.add('is-leaving');
+      noticeFadeTimer = setTimeout(() => {
+        mainStatus.textContent = '';
+        mainStatus.classList.remove('is-leaving');
+        initializationNoticeFading = false;
+        renderNotice();
+      }, 400);
+    }, 5000);
+  }
+  window.addEventListener('tracker-initialization-success', showInitializationSuccess);
+  showInitializationSuccess();
   function showRefreshCountdown(deadline, onComplete) {
     clearInterval(refreshCountdownTimer);
     refreshNoticeUntil = deadline;
@@ -172,8 +225,7 @@
     }
     return r.json();
   }
-  function steamStep(step) {
-    dialog.dataset.action = 'steam'; dialog.dataset.step = step;
+  function renderSteamStepText(step) {
     document.getElementById('online_dialog_title').textContent = step === 'success' ? t('online_steam_connected', 'Connecté') : t('online_steam_waiting', 'Connexion à Steam');
     const messages = {
       ready: ['online_steam_login_required', 'Connecte ton compte Steam pour participer au classement.'],
@@ -193,17 +245,27 @@
     const message = messages[step] || messages.offline;
     document.getElementById('online_dialog_text').textContent = t(message[0], message[1]);
     const keep = document.getElementById('online_keep');
-    keep.hidden = step !== 'ready' || startedParticipation;
-    if (!keep.hidden) keep.textContent = t('online_disable_title', 'Désactiver la participation');
-    const cancel = document.getElementById('online_cancel'); cancel.hidden = step === 'success'; cancel.textContent = t('online_cancel', 'Annuler');
-    const input = document.getElementById('online_steam_code'); input.hidden = !['waiting', 'code', 'invalid_code'].includes(step);
+    keep.textContent = t('online_disable_title', 'Désactiver la participation');
+    const cancel = document.getElementById('online_cancel'); cancel.textContent = t('online_cancel', 'Annuler');
+    const input = document.getElementById('online_steam_code');
     const recoverySelect = document.getElementById('online_recovery_select');
-    recoverySelect.hidden = step !== 'recovery_choose';
     recoverySelect.setAttribute('aria-label', t('online_recovery_placeholder', 'Choisir une installation'));
+    const placeholder = recoverySelect.querySelector('option[value=""]');
+    if (placeholder) placeholder.textContent = t('online_recovery_placeholder', 'Choisir une installation');
     input.setAttribute('aria-label', t('online_steam_code_label', 'Code de confirmation Steam'));
+    const accept = document.getElementById('online_accept');
+    accept.textContent = ['success','recovery_empty','recovery_done'].includes(step) ? t('online_steam_finish', 'Terminer') : (step === 'recovery_choose' ? t('online_recovery_start', 'Récupérer') : (step === 'ready' ? t('online_steam_login', 'Connecter mon compte Steam') : (['waiting','code','invalid_code'].includes(step) ? t('online_steam_code_confirm', 'Confirmer') : t('online_steam_retry', 'Réessayer'))));
+  }
+  function steamStep(step) {
+    dialog.dataset.action = 'steam'; dialog.dataset.step = step;
+    const keep = document.getElementById('online_keep');
+    keep.hidden = step !== 'ready' || startedParticipation;
+    const cancel = document.getElementById('online_cancel'); cancel.hidden = step === 'success';
+    const input = document.getElementById('online_steam_code'); input.hidden = !['waiting', 'code', 'invalid_code'].includes(step);
+    const recoverySelect = document.getElementById('online_recovery_select'); recoverySelect.hidden = step !== 'recovery_choose';
     const accept = document.getElementById('online_accept'); accept.hidden = false;
     accept.disabled = step === 'waiting' && !/^[0-9]{8}$/.test(input.value.trim());
-    accept.textContent = ['success','recovery_empty','recovery_done'].includes(step) ? t('online_steam_finish', 'Terminer') : (step === 'recovery_choose' ? t('online_recovery_start', 'Récupérer') : (step === 'ready' ? t('online_steam_login', 'Connecter mon compte Steam') : (['waiting','code','invalid_code'].includes(step) ? t('online_steam_code_confirm', 'Confirmer') : t('online_steam_retry', 'Réessayer'))));
+    renderSteamStepText(step);
   }
   document.getElementById('online_steam_code').addEventListener('input', () => {
     if (dialog.dataset.step === 'waiting') document.getElementById('online_accept').disabled = !/^[0-9]{8}$/.test(document.getElementById('online_steam_code').value.trim());
@@ -337,12 +399,7 @@
       return {state:'offline'};
     } finally { busy = false; }
   }
-  function showDialog(disabling, revalidate = false) {
-    startedParticipation = false;
-    recoveryMode = false;
-    document.getElementById('online_steam_code').hidden = true;
-    document.getElementById('online_steam_code').value = '';
-    document.getElementById('online_recovery_select').hidden = true;
+  function renderConsentText(disabling) {
     document.getElementById('online_dialog_title').textContent = disabling ? t('online_disable_title','Désactiver la participation') : t('online_consent_title','Participer au classement');
     document.getElementById('online_dialog_text').textContent = disabling ? t('online_disable_text','Veux-tu conserver tes données déjà publiées dans le classement ou demander leur suppression ? La suppression sera réessayée si le serveur est indisponible.') : t('online_consent_text','La participation au classement PvP est facultative. Si tu acceptes, ton pseudo, ton niveau, ton avatar et la langue de jeu sélectionnée sont envoyés au serveur et peuvent être publiés. Un drapeau représente la langue, pas la nationalité. Tu peux arrêter de participer à tout moment.');
     if (!disabling && document.body.dataset.storeBuild === 'true') document.getElementById('online_dialog_text').textContent += ' ' + t('online_server_consent_domain', 'Le classement public est hébergé sur https://eldenringpvp.com.');
@@ -350,9 +407,20 @@
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_notice', 'Les débuts et résultats des combats, leur mode et leur date sont envoyés au serveur pour calculer le classement. Les anciens scores déjà publiés ne sont pas vérifiés. Les événements sont conservés jusqu’au retrait du profil.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_new_only', 'Pour une nouvelle inscription, seuls les combats détectés après accord comptent ; les anciennes statistiques locales ne sont pas importées.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_player_content_risk', 'Les pseudonymes et avatars sont fournis par les joueurs. Malgré une modération manuelle, des contenus choquants ou inappropriés peuvent apparaître. La nudité et la violence explicite sont interdites ; signale tout contenu sur Discord.');
-    const cancel = document.getElementById('online_cancel'); cancel.hidden = false; cancel.textContent = t('online_cancel','Annuler');
-    const keep = document.getElementById('online_keep'); keep.hidden = !disabling; keep.textContent = t('online_keep','Conserver les données');
-    const accept = document.getElementById('online_accept'); accept.hidden = false; accept.disabled = false; accept.textContent = disabling ? t('online_remove','Retirer les données') : t('online_accept','J’accepte');
+    document.getElementById('online_cancel').textContent = t('online_cancel','Annuler');
+    document.getElementById('online_keep').textContent = t('online_keep','Conserver les données');
+    document.getElementById('online_accept').textContent = disabling ? t('online_remove','Retirer les données') : t('online_accept','J’accepte');
+  }
+  function showDialog(disabling, revalidate = false) {
+    startedParticipation = false;
+    recoveryMode = false;
+    document.getElementById('online_steam_code').hidden = true;
+    document.getElementById('online_steam_code').value = '';
+    document.getElementById('online_recovery_select').hidden = true;
+    const cancel = document.getElementById('online_cancel'); cancel.hidden = false;
+    const keep = document.getElementById('online_keep'); keep.hidden = !disabling;
+    const accept = document.getElementById('online_accept'); accept.hidden = false; accept.disabled = false;
+    renderConsentText(disabling);
     dialog.dataset.action = revalidate ? 'revalidate' : 'participation'; dialog.dataset.disabling = disabling ? '1' : '0'; dialog.dataset.transitionNonce = transitionNonce; dialog.showModal();
   }
   serverMove.querySelector('button').addEventListener('click', async event => {
@@ -745,7 +813,7 @@
       initialSettings.then(synchronizeOpening).finally(() => { rankingSyncOperations--; updateRefreshButton(); });
     }
   });
-  document.addEventListener('ui-language-change', () => { if (activeState) show(activeState); if (dialog.open && dialog.dataset.action === 'steam') steamStep(dialog.dataset.step); updateRankingModeLabels(); if (rankingStatusKey) rankingMessage(rankingStatusKey, rankingStatusKey === 'leaderboard_loading' ? 'Chargement du classement…' : rankingStatusKey === 'leaderboard_participation_required' ? 'Pour voir les joueurs, active la participation dans Configuration → Classement en ligne et accepte les conditions.' : 'Impossible de charger le classement.', rankingLoading); else renderNotice(); });
+  document.addEventListener('ui-language-change', () => { if (activeState) show(activeState); if (dialog.open && dialog.dataset.action === 'steam') renderSteamStepText(dialog.dataset.step); else if (dialog.open && ['participation', 'revalidate'].includes(dialog.dataset.action)) renderConsentText(dialog.dataset.disabling === '1'); updateRankingModeLabels(); if (rankingStatusKey) rankingMessage(rankingStatusKey, rankingStatusKey === 'leaderboard_loading' ? 'Chargement du classement…' : rankingStatusKey === 'leaderboard_participation_required' ? 'Pour voir les joueurs, active la participation dans Configuration → Classement en ligne et accepte les conditions.' : 'Impossible de charger le classement.', rankingLoading); else renderNotice(); });
   window.addEventListener('focus', () => { if (supportsObservation && enabled && !(dialog.open && dialog.dataset.action === 'steam')) refreshSteamConnection(); });
   const initialSettings = settings(false);
   initialSettings.then(s => {

@@ -35,7 +35,7 @@
 .players-list-heading h2 { margin:0; padding:0 0 10px; color:#d4bd8f; font-size:23px; line-height:1.2; text-align:left; }
 .players-list-heading span { color:#8f887a; font:18px Arial, sans-serif; }
 .players-list { display:grid; gap:10px; }
-.player-card summary { display:grid; grid-template-columns:44px minmax(0,1fr) auto 22px; gap:15px; align-items:center; padding:15px 10%; cursor:pointer; list-style:none; }
+.player-card summary { display:grid; grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) 22px; gap:15px; align-items:center; padding:15px 10%; cursor:pointer; list-style:none; }
 .player-card summary::-webkit-details-marker { display:none; }
 .player-emblem { display:grid; place-items:center; width:42px; height:42px; border:1px solid #7a6747; border-radius:50%; background:#272217; color:#ead4a4; font-size:21px; }
 .player-identity { min-width:0; }
@@ -43,8 +43,8 @@
 .player-roles { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; color:#f6e6c3; text-shadow:0 1px 3px #000; font:18px Arial, sans-serif; }
 .player-role + .player-role::before { content:'·'; margin-right:8px; color:#9d8c70; }
 .player-meta { display:block; margin-top:3px; color:#e3dbce; text-shadow:0 1px 3px #000; font:18px/1.4 Arial, sans-serif; }
-.player-record { display:flex; gap:12px; flex-wrap:wrap; justify-content:flex-end; text-shadow:0 1px 3px #000; font:18px Arial, sans-serif; }
-.player-record span { white-space:nowrap; }
+.player-record { display:flex; min-width:0; gap:12px; flex-wrap:wrap; justify-content:flex-end; text-shadow:0 1px 3px #000; font:18px Arial, sans-serif; }
+.player-record span { overflow-wrap:anywhere; }
 .player-record .win { color:#c5edc2; }
 .player-record .loss { color:#ffd1c8; }
 .player-record .draw { color:#e6e0d3; }
