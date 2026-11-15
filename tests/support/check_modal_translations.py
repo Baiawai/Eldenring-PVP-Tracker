@@ -132,8 +132,8 @@ def check_guide(page):
     page.evaluate("() => document.querySelector('.onboarding-card').click()")
     dialog = page.locator('.onboarding-dialog')
     dialog.wait_for(state='visible')
-    keys = ['onboarding_profile', 'onboarding_steam', 'onboarding_duel', 'onboarding_lock']
-    titles = ['profile_capture_title', 'online_title', 'arena', 'notification_lock']
+    keys = ['onboarding_profile', 'onboarding_steam', 'onboarding_duel']
+    titles = ['profile_capture_title', 'online_title', 'arena']
     for index, key in enumerate(keys):
         change_language(page, 'fra')
         french = {
@@ -157,11 +157,11 @@ def check_guide(page):
                     const words = ELDEN_UI_PACKS[language].modern;
                     return [words[key], words[title], words.online_previous,
                             words[last ? 'initialization_close' : 'online_next'], words.initialization_close];
-                }''', [language, key, titles[index], index == 3])
+                }''', [language, key, titles[index], index == 2])
             assert actual == expected, (index, language, actual, expected)
             assert dialog.is_visible()
             assert dialog.get_attribute('dir') == ('rtl' if language == 'ara' else 'ltr')
-        if index < 3:
+        if index < 2:
             page.evaluate("() => document.querySelector('.onboarding-next').click()")
     page.evaluate("() => document.querySelector('.onboarding-close').click()")
 

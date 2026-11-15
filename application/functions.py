@@ -73,6 +73,8 @@ except (OSError, ValueError):
 notification_bounds = notification_region.load((settings[4], settings[5]), _legacy_height)
 notification_manual_mode = notification_region.manual_mode()
 notification_locked_bounds = notification_region.load_locked_bounds()
+notification_lock_context = notification_region.load_lock_context()
+current_game_geometry = None
 game_detected = True
 game_running = None  # Unknown until the monitor checks the game window.
 steam_overlay_open = False
@@ -650,7 +652,7 @@ def _usable_sample_bounds(sample):
 
 @app.route('/notification-region', methods={'GET', 'POST'})
 def notification_region_setting():
-    global notification_bounds, notification_manual_mode, notification_locked_bounds
+    global notification_bounds, notification_manual_mode, notification_locked_bounds, notification_lock_context
     if request.method == 'POST':
         manual = request.form.get('manual')
         lock = request.form.get('locked')
@@ -673,8 +675,9 @@ def notification_region_setting():
                 next_bounds = tuple(sample['bounds'])
             else:
                 next_bounds = None
-            notification_region.set_locked_bounds(next_bounds)
+            notification_region.set_locked_bounds(next_bounds, current_game_geometry if next_bounds else None)
             notification_locked_bounds = next_bounds
+            notification_lock_context = current_game_geometry if next_bounds else None
         else:
             if not notification_manual_mode:
                 return jsonify(request='error', reason='automatic_mode'), 409
@@ -688,7 +691,7 @@ def notification_region_setting():
             notification_region.save(top, bottom)
             notification_bounds = (top, bottom)
     sample = _notification_preview()
-    effective = notification_bounds if notification_manual_mode else (notification_locked_bounds or (sample or {}).get('bounds') or (0.0, 1.0))
+    effective = notification_bounds if notification_manual_mode else (notification_locked_bounds or (0.0, 1.0))
     return jsonify({'request':'success', 'top':effective[0], 'bottom':effective[1],
                     'manual':notification_manual_mode, 'locked':notification_locked_bounds is not None,
                     'can_lock':_usable_sample_bounds(sample), 'preview':sample['image'] if sample else '',
@@ -700,7 +703,7 @@ def notification_ocr_test():
     # The test uses the same event image displayed by the settings page and
     # never sends its result to the tracking state machine.
     sample = _notification_preview()
-    bounds = notification_bounds if notification_manual_mode else (notification_locked_bounds or (sample or {}).get('bounds') or (0.0, 1.0))
+    bounds = notification_bounds if notification_manual_mode else (notification_locked_bounds or (0.0, 1.0))
     if not sample:
         return jsonify(request='error', reason='no_preview'), 409
     if request.form.get('preview_id') != str(sample['id']):
@@ -927,10 +930,34 @@ def screenshot_with_retry(*args, **kwargs):
 def update_game_display():
     """Refresh capture geometry when the game window has a usable monitor."""
     global active_capture_display, width_screen, height_screen
+    global current_game_geometry, notification_locked_bounds, notification_lock_context
     detected_display = capture_display.game_display()
+    current_game_geometry = None
     if detected_display is not None:
         active_capture_display = detected_display
         width_screen, height_screen = detected_display['width'], detected_display['height']
+        geometry = capture_display.game_geometry(detected_display)
+        if geometry is not None:
+            current_game_geometry = geometry
+            if notification_locked_bounds is not None and notification_lock_context != geometry:
+                notification_region.set_locked_bounds(None)
+                notification_locked_bounds = None
+                notification_lock_context = None
+
+
+def _auto_lock_notification(located, crop_recognized):
+    """Fix only a verified two-line event in a known display context."""
+    global notification_locked_bounds, notification_lock_context
+    if (notification_manual_mode or notification_locked_bounds is not None or
+            current_game_geometry is None or not crop_recognized or
+            not located or located.get('lines', 0) < 2 or
+            not _usable_sample_bounds(located)):
+        return False
+    bounds = tuple(located['bounds'])
+    notification_region.set_locked_bounds(bounds, current_game_geometry)
+    notification_locked_bounds = bounds
+    notification_lock_context = current_game_geometry
+    return True
 
 
 def _run_monitor():
@@ -2154,8 +2181,10 @@ def monitor(ocr_executor):
                                     crop_text = measured_game_ocr(crop_grey, lang=game_model, config="--psm 6 --oem 1" + ocr_data)
                                     # Never replace a recognized full-image message with an
                                     # unreadable crop: preserve the broad fallback.
-                                    if classify(crop_text, game_locale):
+                                    crop_recognized = bool(classify(crop_text, game_locale))
+                                    if crop_recognized:
                                         notification_text = crop_text
+                                    _auto_lock_notification(located, crop_recognized)
                                 _remember_notification_event(image_b64, combined, game_locale, located['bounds'], located['lines'])
                             else:
                                 last_preview_key, last_preview_box, last_preview_pixels = None, None, None

@@ -278,9 +278,32 @@ with patch.object(functions, 'capture', 'live-non-event'), \
     auto = client.post('/notification-region', data={'manual':'false'}).get_json()
     assert (auto['top'], auto['bottom']) == (.2,.7) and auto['locked']
     unlocked = client.post('/notification-region', data={'locked':'false'}).get_json()
-    assert not unlocked['locked'] and (unlocked['top'], unlocked['bottom']) == (.1,.9)
+    assert not unlocked['locked'] and (unlocked['top'], unlocked['bottom']) == (0.0,1.0)
     relocked = client.post('/notification-region', data={'locked':'true', 'preview_id':'2'}).get_json()
     assert relocked['locked'] and (relocked['top'], relocked['bottom']) == (.1,.9)
+    # A two-line, readable event is required; temporary window loss must not
+    # discard the lock, while a real window or display change must do so.
+    functions.notification_region.set_locked_bounds(None)
+    functions.notification_locked_bounds = None
+    geometry = ['DISPLAY1', 0, 0, 1920, 1080, 0, 0, 1920, 1080, 0]
+    functions.current_game_geometry = geometry
+    assert not functions._auto_lock_notification({'bounds':(.2,.7), 'lines':1}, True)
+    assert not functions._auto_lock_notification({'bounds':(.2,.7), 'lines':2}, False)
+    assert functions._auto_lock_notification({'bounds':(.2,.7), 'lines':2}, True)
+    assert functions.notification_region.load_lock_context() == geometry
+    display = {'name':'DISPLAY1','x':0,'y':0,'width':1920,'height':1080}
+    with patch.object(functions.capture_display, 'game_display', side_effect=[None, display, display]), \
+         patch.object(functions.capture_display, 'game_geometry', side_effect=[geometry, geometry[:-1] + [1]]):
+        functions.update_game_display()
+        assert functions.notification_locked_bounds == (.2,.7)
+        functions.update_game_display()
+        assert functions.notification_locked_bounds == (.2,.7)
+        functions.update_game_display()
+        assert functions.notification_locked_bounds is None
+        assert functions.notification_region.load_locked_bounds() is None
+    # Keep the existing persistence assertion for the encrypted sample.
+    functions.notification_region.set_locked_bounds((.1,.9))
+    functions.notification_locked_bounds = (.1,.9)
     assert functions.flush_notification_sample(timeout=5)
 # Positioned game messages localize the zone; missing or malformed OCR is safe.
 for locale, catalog in messages().items():

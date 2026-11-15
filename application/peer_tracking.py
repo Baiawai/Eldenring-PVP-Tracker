@@ -21,7 +21,6 @@ from contextlib import closing
 from pathlib import Path
 from application.init import database_setting
 from application.geoip_country import country_code
-from application.runtime_paths import FROZEN
 
 HELPER = Path(__file__).with_name('steam_peers') / 'TrackerSteamPeersV4.exe'
 _lock = threading.Lock()
@@ -32,6 +31,7 @@ _command_lock = threading.Lock()
 _snapshot = {'status': 'starting', 'ping_mode': 'admin_required', 'peers': []}
 _ask_elevation = False
 _auto_ping_pending = False
+_last_elevation_failure = None
 _seed_ids = []
 _observer = None
 
@@ -76,9 +76,7 @@ def _publish(status, peers=None, ping_mode='admin_required'):
             logging.getLogger(__name__).exception('Unable to record Steam observations')
 
 def activate_ping():
-    global _ask_elevation, _auto_ping_pending, _seed_ids
-    if FROZEN:
-        return False
+    global _ask_elevation, _auto_ping_pending, _seed_ids, _last_elevation_failure
     if not enabled() or not ctypes.windll.user32.FindWindowW(None, 'ELDEN RING™'):
         return False
     with _lock:
@@ -86,6 +84,7 @@ def activate_ping():
             return True
         _ask_elevation = True
         _auto_ping_pending = False
+        _last_elevation_failure = None
         _seed_ids = [p['id'] for p in _snapshot.get('peers', []) if p.get('id', '').isdigit()][:16]
         process = _process
     if process and process.poll() is None:
@@ -98,17 +97,16 @@ def activate_ping():
 
 def request_auto_ping():
     """Queue one UAC request when tracking starts, even if the game opens later."""
-    global _ask_elevation, _auto_ping_pending, _seed_ids
+    global _ask_elevation, _auto_ping_pending, _seed_ids, _last_elevation_failure
     if not enabled():
         return False
     snapshot()  # Start the supervisor even if the page has not requested its status.
-    if FROZEN:
-        return True
     with _lock:
         if _snapshot.get('ping_mode') in ('active', 'requesting') or _ask_elevation:
             return True
         _ask_elevation = True
         _auto_ping_pending = True
+        _last_elevation_failure = None
         _seed_ids = [p['id'] for p in _snapshot.get('peers', []) if p.get('id', '').isdigit()][:16]
         process = _process
     if process and process.poll() is None:
@@ -144,8 +142,6 @@ def open_profile(steam_id, allow_historical=False):
 
 
 def _elevated_stream(log_path, seeds=()):
-    if FROZEN:
-        raise RuntimeError('Elevation is unavailable in the Store build')
     # A random local-only pipe carries results from the elevated helper.
     name = 'EldenTracker-' + uuid.uuid4().hex
     def make_pipe(pipe_name):
@@ -190,7 +186,7 @@ def _elevated_stream(log_path, seeds=()):
 
 
 def _worker():
-    global _process, _ask_elevation, _auto_ping_pending, _command_writer
+    global _process, _ask_elevation, _auto_ping_pending, _command_writer, _last_elevation_failure
     while True:
         if not enabled():
             _publish('disabled')
@@ -206,11 +202,11 @@ def _worker():
             time.sleep(5)
             continue
         with _lock:
-            elevated = _ask_elevation and not FROZEN
+            elevated = _ask_elevation
             seeds = list(_seed_ids)
             _ask_elevation = False
             _auto_ping_pending = False
-        _publish('starting', ping_mode='requesting' if elevated else 'admin_required')
+        _publish('starting', ping_mode='requesting' if elevated else (_last_elevation_failure or 'admin_required'))
         stream = None
         elevated_process = None
         write_handle = None
@@ -241,15 +237,22 @@ def _worker():
                         peers = []
                     safe = [{'id':str(p.get('id', '')), 'name':str(p.get('name', '')), 'ping':p.get('ping'), 'country_code':country_code(p.get('ip'))}
                             for p in peers if isinstance(p, dict)][:16]
-                    _publish(str(data.get('status', 'helper_error')), safe, str(data.get('ping_mode', 'admin_required')))
+                    ping_mode = str(data.get('ping_mode', 'admin_required'))
+                    if elevated and ping_mode == 'active':
+                        _last_elevation_failure = None
+                    elif not elevated and _last_elevation_failure and ping_mode == 'admin_required':
+                        ping_mode = _last_elevation_failure
+                    _publish(str(data.get('status', 'helper_error')), safe, ping_mode)
                 except (ValueError, TypeError):
                     _publish('helper_error')
             if _process:
                 _process.wait(timeout=3)
-        except (OSError, subprocess.TimeoutExpired, pywintypes.error):
+        except (OSError, subprocess.TimeoutExpired, pywintypes.error) as error:
             if _process and _process.poll() is None:
                 _process.kill()
-            _publish('helper_error', ping_mode='denied' if elevated else 'admin_required')
+            if elevated:
+                _last_elevation_failure = 'denied' if getattr(error, 'winerror', None) == 1223 else 'unavailable'
+            _publish('helper_error', ping_mode=_last_elevation_failure or 'admin_required')
         finally:
             with _command_lock:
                 _command_writer = None
@@ -270,7 +273,5 @@ def snapshot():
             threading.Thread(target=_worker, name='steam-peers', daemon=True).start()
         result = dict(_snapshot)
     result['enabled'] = enabled()
-    if FROZEN:
-        result['ping_mode'] = 'steam_only'
     return result
 

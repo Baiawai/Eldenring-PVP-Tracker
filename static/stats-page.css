@@ -16,22 +16,22 @@ body :is(button, input, select, textarea):disabled { cursor:not-allowed !importa
 .presentation .img_eldenring.logo-ready > img { animation:home-logo-fade-in 2.5s ease-in-out forwards; }
 @keyframes home-logo-fade-in { from { opacity:0; } to { opacity:1; } }
 /* Decorative embers stay behind the logo and do not intercept clicks. */
-body[data-store-build="false"] .presentation .home-embers {
+body .presentation .home-embers {
     position:absolute; inset:3% 0; z-index:0; overflow:hidden;
     pointer-events:none; opacity:0;
     -webkit-mask-image:linear-gradient(transparent, #000 18%, #000 80%, transparent);
     mask-image:linear-gradient(transparent, #000 18%, #000 80%, transparent);
 }
-body[data-store-build="false"] .presentation .img_eldenring > img { position:relative; z-index:1; }
-body[data-store-build="false"] .presentation .img_eldenring.logo-ready .home-embers {
+body .presentation .img_eldenring > img { position:relative; z-index:1; }
+body .presentation .img_eldenring.logo-ready .home-embers {
     animation:home-embers-appear 1.8s ease 2.5s both;
 }
-body[data-store-build="false"] .presentation .home-ember {
+body .presentation .home-ember {
     position:absolute; left:var(--ember-x); top:0;
     width:var(--ember-size); height:100%;
     animation:home-ember-rise var(--ember-duration) linear var(--ember-delay) infinite;
 }
-body[data-store-build="false"] .presentation .home-ember::before {
+body .presentation .home-ember::before {
     content:""; display:block; width:100%; height:var(--ember-size); border-radius:50%;
     background:radial-gradient(circle, #fffde8 0, #ffd76a 42%, #f5a900 72%, transparent 100%);
     filter:drop-shadow(0 0 3px #ffd35c) drop-shadow(0 0 7px #f5a900);
@@ -46,22 +46,22 @@ body[data-store-build="false"] .presentation .home-ember::before {
 @keyframes home-ember-sway { from { transform:translateX(calc(var(--ember-sway) * -1)); } to { transform:translateX(var(--ember-sway)); } }
 /* Animate both axes on one element when individual transforms are supported. */
 @supports (translate: 1px) {
-    body[data-store-build="false"] .presentation .home-ember {
+    body .presentation .home-ember {
         animation:home-ember-rise var(--ember-duration) linear var(--ember-delay) infinite,
                   home-ember-sway var(--ember-sway-duration) ease-in-out var(--ember-sway-delay) infinite alternate;
     }
-    body[data-store-build="false"] .presentation .home-ember::before { animation:none; }
+    body .presentation .home-ember::before { animation:none; }
     @keyframes home-ember-sway {
         from { translate:calc(var(--ember-sway) * -1) 0; }
         to { translate:var(--ember-sway) 0; }
     }
 }
-body.reduce-motion[data-store-build="false"] .presentation .home-embers { display:none; }
+body.reduce-motion .presentation .home-embers { display:none; }
 /* Covered home screens need no particle animation until the panel closes. */
-body[data-store-build="false"] .app-content:has(> :is(#stats_panel, #history_panel, #players_panel, #information_panel):not([hidden])) .home-ember,
-body[data-store-build="false"] .app-content:has(> :is(#stats_panel, #history_panel, #players_panel, #information_panel):not([hidden])) .home-ember::before,
-body[data-store-build="false"]:has(#menu_button_multi.active) .presentation .home-ember,
-body[data-store-build="false"]:has(#menu_button_multi.active) .presentation .home-ember::before {
+body .app-content:has(> :is(#stats_panel, #history_panel, #players_panel, #information_panel):not([hidden])) .home-ember,
+body .app-content:has(> :is(#stats_panel, #history_panel, #players_panel, #information_panel):not([hidden])) .home-ember::before,
+body:has(#menu_button_multi.active) .presentation .home-ember,
+body:has(#menu_button_multi.active) .presentation .home-ember::before {
     animation-play-state:paused;
 }
 body .app-content .presentation .img_eldenring button.home-start-prompt {

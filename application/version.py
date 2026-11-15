@@ -1,3 +1,3 @@
 """Version shared by the tracker interface and diagnostics."""
 
-APP_VERSION = '1.0.6.0'
+APP_VERSION = '1.0.7.0'

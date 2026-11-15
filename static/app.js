@@ -42,7 +42,7 @@ if (captureContainer && !captureContainer.querySelector('.capture-scroll')) {
 {
     const homeLogo = document.querySelector('.presentation .img_eldenring');
     // Create decorative embers here so they also work with a cached HTML template.
-    if (homeLogo && document.body.dataset.storeBuild === 'false' && !homeLogo.querySelector('.home-embers')) {
+    if (homeLogo && !homeLogo.querySelector('.home-embers')) {
         const embers = document.createElement('div');
         embers.className = 'home-embers';
         embers.setAttribute('aria-hidden', 'true');
@@ -2603,11 +2603,10 @@ $(window).on('load', function() {
     const descriptions = [
         ['onboarding_profile', 'Choisis la langue du jeu, démarre le suivi et charge ta partie. Dans Configuration → Profil, lance la récupération, puis ouvre dans le jeu l’onglet « Quitter la partie » sans quitter. Vérifie et enregistre ton pseudo, ton niveau et ton image.'],
         ['onboarding_steam', 'Pour participer au classement en ligne, active la participation et accepte les conditions. Connecte ton compte Steam et saisis le code de confirmation. La participation est facultative.'],
-        ['onboarding_duel', 'Avec le suivi activé et le jeu au premier plan, commence par un duel d’arène 1 contre 1 pour aider le tracker à repérer les notifications. Le rappel disparaîtra après ta première victoire ou défaite enregistrée en arène, invasion ou défense.'],
-        ['onboarding_lock', 'Dans Configuration → Capture, attends un aperçu reconnu à deux lignes. Vérifie que la zone encadre correctement le message : nous te conseillons fortement de la verrouiller pour stabiliser la détection. Déverrouille-la si l’affichage change.']
+        ['onboarding_duel', 'Avec le suivi activé et le jeu au premier plan, commence par un duel d’arène 1 contre 1 pour aider le tracker à repérer les notifications. Le rappel disparaîtra après ta première victoire ou défaite enregistrée en arène, invasion ou défense.']
     ];
     const headings = [['profile_capture_title','Profil du personnage'], ['online_title','Classement en ligne'],
-        ['arena','Arène 1v1'], ['notification_lock','Verrouiller la zone détectée']];
+        ['arena','Arène 1v1']];
     let step = 0;
     const previous = dialog.querySelector('.onboarding-previous');
     const next = dialog.querySelector('.onboarding-next');
@@ -2647,7 +2646,6 @@ $(window).on('load', function() {
             const start = visual.querySelector('li');
             if (start) start.textContent = text_active[0] || 'Start';
         }
-        if (step === 3) crop('#notification_lock_settings .form_single');
     }
     card.addEventListener('click', function() { step = 0; render(); dialog.showModal(); close.focus(); });
     close.addEventListener('click', function() { dialog.close(); });

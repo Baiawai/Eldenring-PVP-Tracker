@@ -117,7 +117,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-onboarding-browser-', ignore_cl
                     if os.environ.get('TRACKER_GUIDE_SCREENSHOT_DIR'):
                         page.screenshot(path=str(Path(os.environ['TRACKER_GUIDE_SCREENSHOT_DIR']) / 'page-before.png'))
                     page.locator('.onboarding-card').click(timeout=10000)
-                    for index, key in enumerate(['onboarding_profile','onboarding_steam','onboarding_duel','onboarding_lock']):
+                    for index, key in enumerate(['onboarding_profile','onboarding_steam','onboarding_duel']):
                         dialog = page.locator('.onboarding-dialog')
                         assert dialog.is_visible(), (width, code, index)
                         assert dialog.locator('h2').count() == 0
@@ -137,7 +137,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-onboarding-browser-', ignore_cl
                         if code != 'fra':
                             expected = page.evaluate('(key) => window.ELDEN_UI_PACKS[window.uiCurrentLanguage()].modern[key]', key)
                             assert dialog.locator('.onboarding-description').text_content() == expected, (width, code, index)
-                            visual_key = ['profile_capture_title', 'online_participate', None, 'notification_lock'][index]
+                            visual_key = ['profile_capture_title', 'online_participate', None][index]
                             if visual_key:
                                 visual_text = page.evaluate('(key) => window.ELDEN_UI_PACKS[window.uiCurrentLanguage()].modern[key]', visual_key)
                                 assert visual_text in dialog.locator('.onboarding-visual').inner_text(), (width, code, index, visual_text)
@@ -146,7 +146,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-onboarding-browser-', ignore_cl
                         screenshot_dir = os.environ.get('TRACKER_GUIDE_SCREENSHOT_DIR')
                         if screenshot_dir and width == 1440 and code == 'fra':
                             dialog.screenshot(path=str(Path(screenshot_dir) / ('guide-' + str(index) + '.png')))
-                        if index < 3:
+                        if index < 2:
                             dialog.locator('.onboarding-next').click()
                     page.locator('.onboarding-close').click()
                 state['first_event'] = True

@@ -1,5 +1,6 @@
 """Notification region as fractions of the captured central game image."""
 import math
+import json
 import sqlite3
 from contextlib import closing
 from application.init import database_setting
@@ -68,15 +69,31 @@ def load_locked_bounds():
     return tuple(row) if row and valid(*row) and row[1] - row[0] < .95 else None
 
 
-def set_locked_bounds(bounds):
+def load_lock_context():
+    with closing(sqlite3.connect(database_setting, timeout=10)) as con:
+        table = con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='notification_region_context'").fetchone()
+        row = con.execute('SELECT geometry FROM notification_region_context WHERE id=1').fetchone() if table else None
+    try:
+        return json.loads(row[0]) if row else None
+    except (TypeError, ValueError):
+        return None
+
+
+def set_locked_bounds(bounds, geometry=None):
     if bounds is not None and (len(bounds) != 2 or not valid(*bounds) or bounds[1] - bounds[0] >= .95):
         raise ValueError('Invalid automatic region')
     with closing(sqlite3.connect(database_setting, timeout=10)) as con, con:
         con.execute('CREATE TABLE IF NOT EXISTS notification_region_lock (id INTEGER PRIMARY KEY CHECK(id=1), top REAL NOT NULL, bottom REAL NOT NULL)')
+        con.execute('CREATE TABLE IF NOT EXISTS notification_region_context (id INTEGER PRIMARY KEY CHECK(id=1), geometry TEXT NOT NULL)')
         if bounds is None:
             con.execute('DELETE FROM notification_region_lock WHERE id=1')
+            con.execute('DELETE FROM notification_region_context WHERE id=1')
         else:
             con.execute('INSERT INTO notification_region_lock(id,top,bottom) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET top=excluded.top,bottom=excluded.bottom', bounds)
+            if geometry is None:
+                con.execute('DELETE FROM notification_region_context WHERE id=1')
+            else:
+                con.execute('INSERT INTO notification_region_context(id,geometry) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET geometry=excluded.geometry', (json.dumps(geometry),))
 
 
 def _banner_edges(image, first_top, last_bottom, line_height):

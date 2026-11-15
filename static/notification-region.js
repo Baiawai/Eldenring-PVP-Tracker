@@ -46,46 +46,16 @@
     }
     // Keep the preview, mode choice and manual sliders adjacent, including on
     // a page served from the previous cached template.
-    let lockSettings = document.getElementById('notification_lock_settings');
-    if (!lockSettings) {
-        lockSettings = document.createElement('div');
-        lockSettings.id = 'notification_lock_settings';
-        lockSettings.hidden = true;
-        lockSettings.innerHTML = '<div class="form_single"><label class="form_single_left" for="notification_lock" data-i18n="notification_lock">Verrouiller la zone détectée</label><div class="form_single_right"><input type="checkbox" id="notification_lock" disabled></div></div>' +
-            '<p id="notification_lock_help" class="notification-region-intro" data-i18n="notification_lock_help">Lorsque l’aperçu montre la bonne zone de notification, verrouille ses limites pour éviter qu’une détection incorrecte les modifie. Déverrouille-la pour reprendre la détection automatique, notamment si l’affichage du jeu ou la position des notifications change.</p>' +
-            '<p id="notification_lock_active" class="notification-region-intro" data-i18n="notification_lock_active" hidden>La zone est verrouillée : ses limites restent fixes jusqu’au déverrouillage.</p>' +
-            '<p id="notification_lock_unavailable" class="notification-region-intro" data-i18n="notification_lock_unavailable" hidden>Attends qu’une zone soit détectée sur l’aperçu avant de la verrouiller.</p>';
-    }
-    lockSettings.querySelectorAll('[data-i18n]').forEach(function (node) {
-        if (!node.dataset.i18nFr) node.dataset.i18nFr = node.textContent;
-        if (window.uiT) node.textContent = window.uiT(node.dataset.i18n, node.dataset.i18nFr);
-    });
+    const oldLockSettings = document.getElementById('notification_lock_settings');
+    if (oldLockSettings) oldLockSettings.remove();
     const actions = testButton.closest('.notification-actions');
     const resetActions = reset.closest('.notification-actions');
     if (actions !== resetActions) { actions.prepend(reset); resetActions.remove(); }
     purpose.after(sample); sample.after(manualRow); manualRow.after(manualIntro);
-    manualIntro.after(autoIntro); autoIntro.after(controls); controls.after(lockSettings);
-    lockSettings.after(status); status.after(actions); actions.after(testStatus); testStatus.after(testResult);
+    manualIntro.after(autoIntro); autoIntro.after(controls); controls.after(status); status.after(actions); actions.after(testStatus); testStatus.after(testResult);
     if (window.initSettingsYesNo) window.initSettingsYesNo(document);
-    const lock = document.getElementById('notification_lock');
-    const lockUnavailable = document.getElementById('notification_lock_unavailable');
-    const lockHelp = document.getElementById('notification_lock_help');
-    const lockActive = document.getElementById('notification_lock_active');
-    lockHelp.dataset.i18nFr = 'Lorsque l’aperçu montre la bonne zone de notification, verrouille ses limites pour éviter qu’une détection incorrecte les modifie. Déverrouille-la pour reprendre la détection automatique, notamment si l’affichage du jeu ou la position des notifications change.';
-    lockHelp.textContent = window.uiT ? window.uiT('notification_lock_help', lockHelp.dataset.i18nFr) : lockHelp.dataset.i18nFr;
     const attachInfo = window.attachSettingsInfo;
-    let autoLockedIntro = document.getElementById('notification_auto_locked_intro');
-    if (!autoLockedIntro) {
-        autoLockedIntro = document.createElement('p');
-        autoLockedIntro.id = 'notification_auto_locked_intro';
-        autoLockedIntro.className = 'notification-region-intro';
-        autoLockedIntro.dataset.i18n = 'notification_auto_locked_intro';
-        autoLockedIntro.dataset.i18nFr = 'La détection automatique est active. La zone reste fixe tant que son verrouillage est activé.';
-        autoLockedIntro.textContent = window.uiT ? window.uiT('notification_auto_locked_intro', autoLockedIntro.dataset.i18nFr) : autoLockedIntro.dataset.i18nFr;
-        autoLockedIntro.hidden = true;
-    }
-    attachInfo(manualRow, [manualIntro, autoIntro, autoLockedIntro], 'notification_mode_info');
-    attachInfo(lock.closest('.form_single'), [lockHelp, lockActive, lockUnavailable], 'notification_lock_info');
+    attachInfo(manualRow, [manualIntro, autoIntro], 'notification_mode_info');
     const retentionHelp = section.querySelector('[data-i18n="retention_captures_help"]');
     if (retentionHelp) attachInfo(retentionHelp.closest('.form_single'), [retentionHelp], 'notification_retention_info');
     let saved = [40, 100], previewId = null, testing = false, loading = false, editing = false, modeUpdating = false, modeEpoch = 0;
@@ -115,15 +85,6 @@
         controls.hidden = !isManual; reset.hidden = !isManual;
         manualIntro.hidden = !isManual;
         autoIntro.hidden = false;
-        autoLockedIntro.hidden = isManual || data.locked !== true;
-        const supportsLock = typeof data.locked === 'boolean';
-        lockSettings.hidden = isManual || !supportsLock;
-        lock.checked = data.locked === true;
-        lock.disabled = isManual || !supportsLock || !(data.locked || data.can_lock);
-        lockUnavailable.hidden = !!(data.locked || data.can_lock);
-        lockHelp.hidden = false;
-        lockActive.hidden = data.locked !== true;
-        lock.dispatchEvent(new Event('tracker-setting-render'));
         if (initial || (!isManual && !editing)) {
             const bounds = [Math.round(data.top * 100), Math.round(data.bottom * 100)];
             if (isManual) saved = bounds;
@@ -144,32 +105,6 @@
             manual.checked = !selected; manual.disabled = false;
             manual.dispatchEvent(new Event('tracker-setting-render'));
             window.uiSetStatus(status, 'notification_error', 'Impossible d’enregistrer la zone.');
-        } finally { modeUpdating = false; testButton.disabled = previewId === null || testing || editing; }
-    });
-    lock.addEventListener('change', async function () {
-        const selected = lock.checked;
-        modeEpoch++;
-        modeUpdating = true; lock.disabled = manual.disabled = true; testButton.disabled = true;
-        lock.dispatchEvent(new Event('tracker-setting-render'));
-        manual.dispatchEvent(new Event('tracker-setting-render'));
-        try {
-            const body = new URLSearchParams({locked:String(selected), preview_id:String(previewId ?? '')});
-            const response = await fetch('/notification-region', {method:'POST', body});
-            const data = await response.json();
-            if (!response.ok) {
-                if (data.reason === 'preview_changed') throw new Error('preview_changed');
-                throw new Error('lock');
-            }
-            renderMode(data, true); showSample(data); clearResult(); window.uiSetStatus(status);
-        } catch (error) {
-            lock.checked = !selected; lock.disabled = manual.disabled = false;
-            lock.dispatchEvent(new Event('tracker-setting-render'));
-            manual.dispatchEvent(new Event('tracker-setting-render'));
-            if (error.message === 'preview_changed') {
-                window.uiSetStatus(status, 'notification_lock_changed', 'Un nouvel exemple est disponible. Vérifie-le avant de verrouiller.');
-            } else {
-                window.uiSetStatus(status, 'notification_error', 'Impossible d’enregistrer la zone.');
-            }
         } finally { modeUpdating = false; testButton.disabled = previewId === null || testing || editing; }
     });
     async function fetchSettings(initial) {

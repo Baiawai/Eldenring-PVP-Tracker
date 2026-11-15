@@ -1,6 +1,6 @@
 # Elden Ring PvP Tracker
 
-Elden Ring PvP Tracker est une application Windows locale qui suit les combats PvP à partir des notifications affichées dans le jeu. Son interface s'ouvre dans le navigateur et les données sont conservées sur le PC. Version actuelle : **1.0.6.0**.
+Elden Ring PvP Tracker est une application Windows locale qui suit les combats PvP à partir des notifications affichées dans le jeu. Son interface s'ouvre dans le navigateur et les données sont conservées sur le PC. Version actuelle : **1.0.7.0**.
 
 ## Fonctionnalités
 
@@ -65,7 +65,7 @@ Après accord, les débuts et résultats détectés, leur mode et leur date sont
 
 Si l'accès à une ancienne installation est perdu, active la participation puis utilise **Récupérer une installation** dans cette même section. Confirme à nouveau le compte Steam avec le code affiché et choisis l'installation publiée à récupérer. Son ancien jeton sera révoqué, son score sera conservé et les combats en attente seront envoyés à la prochaine synchronisation.
 
-En développement, la mesure avancée du ping peut demander une autorisation administrateur Windows. Le ping Steam est utilisé lorsqu'il est disponible ; certaines connexions ne fournissent aucune mesure. Une adresse affichée peut être celle d'un relais et sa géolocalisation est indicative.
+La mesure avancée du ping peut demander une autorisation administrateur Windows, en développement comme dans la version Store. Le ping Steam est utilisé lorsqu'il est disponible ; certaines connexions ne fournissent aucune mesure. Une adresse affichée peut être celle d'un relais et sa géolocalisation est indicative.
 
 ### Historique et archives
 
@@ -99,7 +99,7 @@ Les statistiques d'utilisation sont enregistrées localement dans `usage_metrics
 
 ## Version Microsoft Store
 
-La construction et les vérifications du package sont décrites dans [store/README.md](store/README.md). L'ancien classement distant reste désactivé. Dans le code Store en préparation, le nouveau classement utilise exclusivement `https://eldenringpvp.com`, même si un ancien fichier de configuration contient une autre adresse ; la participation nécessite un consentement et une connexion Steam vérifiée. Les profils du classement s'affichent dans l'application après acceptation des conditions. Les packages Store existants et le tag GitHub `v1.0.3.0` peuvent différer de ce code : vérifier le contenu du package soumis avant d'en décrire les fonctionnalités. La version compilée désactive la mesure du ping nécessitant une élévation et affiche le ping Steam lorsqu'il est disponible. Les données et l'installation du package doivent être testées séparément de la version de développement.
+La construction et les vérifications du package sont décrites dans [store/README.md](store/README.md). L'ancien classement distant reste désactivé. Dans le code Store en préparation, le nouveau classement utilise exclusivement `https://eldenringpvp.com`, même si un ancien fichier de configuration contient une autre adresse ; la participation nécessite un consentement et une connexion Steam vérifiée. Les profils du classement s'affichent dans l'application après acceptation des conditions. Les packages Store existants et le tag GitHub `v1.0.3.0` peuvent différer de ce code : vérifier le contenu du package soumis avant d'en décrire les fonctionnalités. La mesure avancée du ping peut demander une autorisation administrateur ; le ping Steam reste utilisé lorsqu'il est disponible. Les données et l'installation du package doivent être testées séparément de la version de développement.
 
 ## Structure du projet
 

@@ -47,6 +47,25 @@ def game_display():
         return None
 
 
+def game_geometry(display):
+    """Stable capture context; ignore minimized or temporarily unavailable windows."""
+    if not display:
+        return None
+    try:
+        hwnd = win32gui.FindWindow(None, 'ELDEN RING™')
+        if not hwnd or win32gui.IsIconic(hwnd):
+            return None
+        rect = tuple(win32gui.GetWindowRect(hwnd))
+        if rect[2] <= rect[0] or rect[3] <= rect[1]:
+            return None
+        style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+        style &= win32con.WS_POPUP | win32con.WS_CAPTION | win32con.WS_THICKFRAME
+        return [display['name'], display['x'], display['y'], display['width'],
+                display['height'], *rect, style]
+    except (OSError, win32api.error, ValueError, KeyError):
+        return None
+
+
 def capture(display, filename=None, region=None):
     x, y, width, height = (display[key] for key in ('x', 'y', 'width', 'height'))
     if region is not None:
