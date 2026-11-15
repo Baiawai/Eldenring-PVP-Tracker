@@ -4,6 +4,7 @@ The running tracker never migrates data automatically.  The output folder is a
 separate copy and can only be used by versions that understand v2 values.
 """
 import base64
+import errno
 import getpass
 import hashlib
 import hmac
@@ -135,7 +136,20 @@ def restore_key(folder, password):
             raise ValueError('La clé temporaire est illisible.') from error
     else:
         _write_new(temporary, protected)
-    os.replace(temporary, target)
+    try:
+        os.replace(temporary, target)
+    except OSError as error:
+        if error.errno != errno.EXDEV and getattr(error, 'winerror', None) != 17:
+            raise
+        # The prior key is already preserved in .previous and the candidate
+        # remains in .new if the write or verification fails.
+        with target.open('wb') as output:
+            output.write(protected)
+            output.flush()
+            os.fsync(output.fileno())
+        if target.read_bytes() != protected:
+            raise OSError('La clé restaurée ne correspond pas à la copie préparée.')
+        temporary.unlink()
 
 
 def _quote(name):

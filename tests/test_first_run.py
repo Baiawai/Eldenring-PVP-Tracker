@@ -1,4 +1,5 @@
 import os
+import errno
 import sqlite3
 import tempfile
 import unittest
@@ -35,6 +36,20 @@ class FirstRunTests(unittest.TestCase):
         self.assertEqual(first_run.claim(), {'state':'ready', 'log_available':False})
         self.assertIsNone(first_run.claim())
         self.assertFalse(first_run.begin())
+
+    def test_store_redirected_marker_works_when_replace_crosses_volumes(self):
+        with patch.object(first_run.os, 'replace', side_effect=OSError(errno.EXDEV, 'cross-device link')):
+            self.assertTrue(first_run.begin())
+            self.create_databases()
+            first_run.finish()
+            self.assertEqual(first_run.claim(), {'state':'ready', 'log_available':False})
+            self.assertIsNone(first_run.claim())
+        self.assertFalse((runtime_paths.data_dir() / 'initialization-status.tmp').exists())
+
+    def test_marker_does_not_hide_unrelated_replace_errors(self):
+        with patch.object(first_run.os, 'replace', side_effect=PermissionError('denied')):
+            with self.assertRaises(PermissionError):
+                first_run.begin()
 
     def test_multiple_tabs_receive_only_one_notice(self):
         self.assertTrue(first_run.begin())

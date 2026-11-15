@@ -1,4 +1,5 @@
 import hashlib
+import errno
 import hmac
 import os
 import sqlite3
@@ -89,9 +90,11 @@ class DataProtectionTests(unittest.TestCase):
                     protection.restore_key(destination, 'mauvais mot de passe')
                 self.assertEqual((destination / protection.KEY_FILE).read_bytes(), b'not available on this PC')
                 self.assertFalse((destination / (protection.KEY_FILE + '.previous')).exists())
-                protection.restore_key(destination, 'mot de passe robuste')
+                with patch.object(protection.os, 'replace', side_effect=OSError(errno.EXDEV, 'cross-device link')):
+                    protection.restore_key(destination, 'mot de passe robuste')
                 self.assertEqual(protection.active_data_key(), key)
                 self.assertEqual((destination / (protection.KEY_FILE + '.previous')).read_bytes(), b'not available on this PC')
+                self.assertFalse((destination / (protection.KEY_FILE + '.new')).exists())
 
     def test_refuses_existing_or_nested_destination(self):
         with tempfile.TemporaryDirectory(prefix='tracker-key-test-') as temporary:

@@ -1,5 +1,6 @@
 """First-install verification and diagnostic reporting, without touching existing profiles."""
 import ctypes
+import errno
 import json
 import locale
 import os
@@ -40,8 +41,20 @@ def read_status():
 def _save(value):
     path = _marker()
     temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(value, ensure_ascii=False), encoding='utf-8')
-    os.replace(temporary, path)
+    content = json.dumps(value, ensure_ascii=False)
+    temporary.write_text(content, encoding='utf-8')
+    try:
+        os.replace(temporary, path)
+    except OSError as error:
+        # MSIX may redirect the temporary file independently of its target,
+        # so Windows can reject the rename even for the same logical folder.
+        if error.errno != errno.EXDEV and getattr(error, 'winerror', None) != 17:
+            raise
+        path.write_text(content, encoding='utf-8')
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def begin():
