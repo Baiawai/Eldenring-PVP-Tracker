@@ -336,6 +336,9 @@ verified_steam = online._verified_steam
 online._verified_steam = lambda root, token: '76561198000000000'
 real_event_consent = online._ensure_event_consent
 online._ensure_event_consent = lambda root, token: None
+# Baseline import has its own isolated integration tests; these older tests
+# exercise the surrounding synchronization and consent behavior.
+online._ensure_baseline = lambda root, token: None
 with patch.object(online, '_call', return_value={'ok':True}) as request_consent:
     real_event_consent('https://events.example', 'test-token')
     assert request_consent.call_args.args[:3] == ('POST', '/api/v1/events/consent', {'consent':True, 'version':'events-1'})

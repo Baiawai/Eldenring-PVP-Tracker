@@ -33,7 +33,7 @@
 .cadre_multi table.dataTable tbody td:first-child { color:#e5c990; }
 .cadre_multi table.dataTable tbody img { display:block; width:48px; max-width:48px; max-height:48px; object-fit:contain; margin:0 auto; }
 .cadre_multi table.dataTable tbody td:nth-child(2) img { width:auto; max-height:20px; }
-.cadre_multi table.dataTable tbody td:nth-child(4) img { width:54px; max-width:54px; height:54px; object-fit:cover; border:1px solid #665538; }
+.cadre_multi table.dataTable tbody td:nth-child(4) img { width:auto; max-width:none; height:54px; max-height:none; object-fit:contain; border:1px solid #665538; }
 .cadre_multi table.dataTable .fakeImageuser { box-sizing:border-box; width:54px; min-height:54px; margin:0 auto; padding:14px; color:#c2aa7d; border:1px solid #665538; }
 .cadre_multi .dataTables_paginate .paginate_button { color:#d8cdbb !important; }
 @media (max-width:1100px) { .leaderboard-shell { padding:32px 22px 50px; } }

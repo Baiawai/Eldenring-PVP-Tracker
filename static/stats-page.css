@@ -121,6 +121,7 @@ body .profile-sidebar .onboarding-card * { cursor:pointer !important; }
 }
 .profile-sidebar .profile-card h5 { width:100%; border:0; font-size:20px; overflow-wrap:anywhere; }
 .profile-sidebar .sidebar-profile-name, .profile-sidebar .sidebar-profile-level { display:block; }
+.profile-sidebar .sidebar-profile-dev { color:#e1b96a; }
 .profile-sidebar .sidebar-profile-level { font-size:18px; }
 .profile-sidebar .sidebar-profile-level-label[hidden] { display:none; }
 .sidebar-summary { display:grid; gap:0; margin-top:20px; text-align:left; }
@@ -497,6 +498,14 @@ body .stats-mode-picker select { padding-right:38px; }
     justify-content:flex-start; text-align:left;
 }
 .profile-capture-panel { box-sizing:border-box; width:85%; max-width:700px; margin:16px auto; padding:18px; text-align:left; color:#d0c2a3; border:1px solid rgba(169,145,99,.38); background:rgba(17,15,11,.72); }
+.profile-saved-preview { box-sizing:border-box; width:85%; max-width:700px; margin:16px auto; padding:18px; text-align:left; color:#d0c2a3; border:1px solid rgba(169,145,99,.38); background:rgba(17,15,11,.72); }
+.profile-saved-preview[hidden], .profile-saved-preview [hidden] { display:none; }
+.profile-saved-preview h3 { margin:0 0 12px; padding-top:0; color:#e5cd98; font-size:20px; font-weight:normal; }
+.profile-saved-content { display:flex; align-items:center; flex-wrap:wrap; gap:20px; }
+.profile-saved-content img { display:block; width:auto; max-width:min(100%, 150px); max-height:140px; object-fit:contain; }
+.profile-saved-fields { min-width:0; flex:1 1 180px; }
+.profile-saved-fields p { display:flex; flex-wrap:wrap; gap:4px; margin:0; padding:10px 0; font-size:18px; line-height:1.4; border-bottom:1px solid rgba(169,145,99,.2); overflow-wrap:anywhere; }
+.profile-saved-fields strong { color:#f0dfbc; overflow-wrap:anywhere; }
 .profile-capture-panel[hidden], .profile-capture-panel [hidden] { display:none; }
 .profile-capture-panel p { margin:0 0 12px; font-size:18px; line-height:1.4; }
 .profile-capture-panel #profile_capture_success { color:#e5cd98; }
@@ -508,6 +517,9 @@ body .stats-mode-picker select { padding-right:38px; }
 .profile-capture-actions { display:flex; justify-content:flex-end; gap:12px; flex-wrap:wrap; margin-top:16px; }
 .profile-capture-actions button { min-width:130px; font-size:18px; }
 @media (max-width:520px) {
+    .profile-saved-preview { width:95%; padding:14px; }
+    .profile-saved-content { gap:12px; }
+    .profile-saved-content img { max-width:min(100%, 110px); }
     .profile-capture-panel { width:95%; padding:14px; }
     .profile-capture-content { grid-template-columns:minmax(75px,110px) minmax(0,1fr); gap:12px; }
     .profile-capture-actions button { flex:1 1 auto; min-width:0; }

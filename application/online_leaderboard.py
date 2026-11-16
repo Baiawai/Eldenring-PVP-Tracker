@@ -8,6 +8,7 @@ import os
 import secrets
 import socket
 import ssl
+import sys
 import sqlite3
 import threading
 import time
@@ -23,7 +24,7 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 from urllib.error import HTTPError, URLError
 from flask import jsonify, request
 from __main__ import app
-from application import init, mode_stats
+from application import init, mode_stats, leaderboard_baseline
 from application.runtime_paths import FROZEN, STORE_BUILD, data_dir
 from application.secur import decrypt_value
 import win32crypt
@@ -461,14 +462,17 @@ def _ensure_event_consent(root, token):
         raise ValueError('server_update_required')
 
 
-def _send_events(root, token):
+def _send_events(root, token, baseline_only=False):
     """Send ordered batches and remove only IDs acknowledged by the server."""
     while True:
         with closing(sqlite3.connect(init.database_user, timeout=10)) as db:
             exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='leaderboard_event_outbox'").fetchone()
             if not exists:
                 return
-            rows = db.execute('SELECT event_id,match_id,mode,kind,occurred_at FROM leaderboard_event_outbox ORDER BY rowid LIMIT 100').fetchall()
+            if baseline_only:
+                rows = db.execute('SELECT o.event_id,o.match_id,o.mode,o.kind,o.occurred_at FROM leaderboard_event_outbox o JOIN leaderboard_baseline_events b ON b.event_id=o.event_id ORDER BY o.rowid LIMIT 100').fetchall()
+            else:
+                rows = db.execute('SELECT event_id,match_id,mode,kind,occurred_at FROM leaderboard_event_outbox ORDER BY rowid LIMIT 100').fetchall()
         with closing(_db()) as settings:
             allowed = settings.execute('SELECT enabled,event_permission FROM online_leaderboard WHERE id=1').fetchone()
         if not rows or not allowed[0] or not allowed[1]:
@@ -490,11 +494,38 @@ def _send_events(root, token):
             raise ValueError('invalid_event_acknowledgement')
         with closing(sqlite3.connect(init.database_user, timeout=10)) as db, db:
             db.executemany('DELETE FROM leaderboard_event_outbox WHERE event_id=?', [(ident,) for ident in identifiers])
+            if baseline_only:
+                db.executemany('DELETE FROM leaderboard_baseline_events WHERE event_id=?', [(ident,) for ident in identifiers])
+
+
+def _ensure_baseline(root, token):
+    """Import local totals once, after draining the snapshot's queued events."""
+    enabled, ident, encrypted, pending, server = _settings()
+    if not enabled or pending or not ident or not encrypted or server != root:
+        raise ValueError('baseline_conflict')
+    tracking = sys.modules.get('application.functions')
+    payload = leaderboard_baseline.capture(init.database_user, root, ident, bool(getattr(tracking, 'fight', False)))
+    if payload is None:
+        return
+    _send_events(root, token, baseline_only=True)
+    if not _settings()[0] or not _event_permission():
+        raise ValueError('baseline_wait')
+    try:
+        result = _call('POST', '/api/v1/baselines', payload, token, root=root)
+    except HTTPError as error:
+        if error.code == 409:
+            raise ValueError('baseline_conflict') from error
+        if error.code in (404, 405, 426):
+            raise ValueError('server_update_required') from error
+        raise
+    if not isinstance(result, dict) or result.get('import_id') != payload['import_id']:
+        raise ValueError('baseline_conflict')
+    leaderboard_baseline.complete(init.database_user, root, ident, payload['import_id'])
 
 
 def _clear_event_outbox():
     with closing(sqlite3.connect(init.database_user, timeout=10)) as db, db:
-        for table in ('leaderboard_event_outbox', 'leaderboard_event_state'):
+        for table in ('leaderboard_event_outbox', 'leaderboard_event_state', 'leaderboard_baseline_events', 'leaderboard_baseline_state'):
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
                 db.execute('DELETE FROM ' + table)
 
@@ -590,6 +621,7 @@ def _sync():
                 _STATUS['state'] = 'disabled' if not _settings()[0] else 'event_consent_required'
                 return
             _ensure_event_consent(root, token)
+            _ensure_baseline(root, token)
             _send_events(root, token)
             profile = _profile()
             # Existing participants must separately approve the newly public language.
@@ -603,7 +635,7 @@ def _sync():
             _call('PUT', '/api/v1/profile', profile, token, root=root)
             _STATUS['state'] = 'success'
         except Exception as error:
-            _STATUS['state'] = str(error) if str(error) in ('not_configured', 'profile_required', 'invalid_statistics', 'server_changed', 'fresh_consent_required', 'pending_events', 'active_match', 'invalid_data', 'event_conflict', 'server_update_required') else 'offline'
+            _STATUS['state'] = str(error) if str(error) in ('not_configured', 'profile_required', 'invalid_statistics', 'server_changed', 'fresh_consent_required', 'pending_events', 'active_match', 'invalid_data', 'event_conflict', 'server_update_required', 'baseline_conflict', 'baseline_wait') else 'offline'
 
 
 @app.route('/online-leaderboard/settings', methods=['GET', 'POST'])
@@ -993,6 +1025,11 @@ def _worker():
         with _START_LOCK:
             _LANGUAGE_SYNC_REQUIRED = False
         result = _sync()
+        if _STATUS['state'] == 'baseline_wait' and _settings()[0]:
+            # The first snapshot must include an already running fight. Retry
+            # after it finishes, even when the settings page is closed.
+            time.sleep(2)
+            continue
         with _START_LOCK:
             # A withdrawal during upload must be handled even if no browser
             # remains open. Do not spin when the server is unavailable.

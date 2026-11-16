@@ -111,7 +111,11 @@ assert security_response.headers['Cache-Control'] == 'no-store'
 assert security_response.headers['X-Frame-Options'] == 'DENY'
 assert security_response.headers['X-Content-Type-Options'] == 'nosniff'
 assert client.post('/profile-legend', data=b'x' * (2 * 1024 * 1024 + 1), content_type='application/json').status_code == 413
-assert client.get('/init').status_code == 200
+for store_build in (False, True):
+    with patch.object(functions, 'STORE_BUILD', store_build):
+        response = client.get('/init')
+        assert response.status_code == 200
+        assert response.get_json()['development_build'] is (not store_build)
 state = client.get('/interval').get_json()
 assert state['fight'] is False and state['monitor_running'] is False
 

@@ -36,7 +36,7 @@ from application import game_language, capture_speed, notification_region, peer_
 from application.session_summary import SessionSummary
 from application.browser_language import browser_language
 from application.ui_localization import packs as ui_packs, localize_counter, display_game_text
-from application.runtime_paths import image_dir, RESOURCE_DIR, tesseract_path, data_dir
+from application.runtime_paths import image_dir, RESOURCE_DIR, tesseract_path, data_dir, STORE_BUILD
 from application import usage_metrics
 from application import auto_tracking
 from application import capture_display, profile_capture, notification_sample
@@ -891,10 +891,10 @@ def init():
         notif_base64 = base64.b64encode(cv2.imencode('.jpg', image_notif)[1]).decode()
         
 
-        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "size_notification":size_notification, "settings":settings, "language_default": language_default})
+        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "size_notification":size_notification, "settings":settings, "language_default": language_default, "development_build":not STORE_BUILD})
     else:                  
         notif_base64 = ""               
-        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "settings":settings, "language_default": language_default})
+        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "settings":settings, "language_default": language_default, "development_build":not STORE_BUILD})
 
 @app.route("/nextCaptures", endpoint="nextCaptures", methods={"GET"})
 def next_captures():

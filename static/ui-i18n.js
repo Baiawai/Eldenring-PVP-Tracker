@@ -10,7 +10,7 @@
     faqFrench.faq_q_20 = 'Que se passe-t-il lorsque l’overlay Steam est ouvert ?';
     faqFrench.faq_a_20 = 'La capture se met en pause lorsque l’overlay Steam est détecté ou que le jeu n’est plus au premier plan. Ferme l’overlay et remets le jeu au premier plan pour reprendre. Les notifications masquées pendant ce temps peuvent être manquées.';
     faqFrench.faq_q_21 = 'Mes anciens combats sont-ils importés dans le classement ?';
-    faqFrench.faq_a_21 = 'Pour une nouvelle inscription, les anciens résultats locaux ne sont pas importés. Seuls les combats détectés après ton accord sont envoyés ; les événements en attente sont réessayés. Les anciens scores non vérifiés déjà publiés restent signalés.';
+    faqFrench.faq_a_21 = 'Les statistiques locales existantes sont reprises pour chaque mode. Les nouveaux combats sont synchronisés et les événements en attente sont réessayés.';
     faqFrench.faq_q_22 = 'Puis-je utiliser le tracker sans connexion ?';
     faqFrench.faq_a_22 = 'Le suivi et les statistiques locales restent disponibles hors ligne. Le classement en ligne et la connexion Steam nécessitent Internet ; les événements de classement en attente sont réessayés au retour de la connexion.';
     const faqList = document.querySelector(".faq-list");

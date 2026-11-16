@@ -8,6 +8,45 @@
     const status = document.getElementById('profile_capture_status');
     const save = document.getElementById('profile_capture_save');
     const cancel = document.getElementById('profile_capture_cancel');
+    // Create the saved profile separately from the unconfirmed capture. This
+    // also upgrades templates cached by an already-running tracker.
+    let savedPreview = document.getElementById('saved_profile_preview');
+    if (!savedPreview) {
+        savedPreview = document.createElement('section');
+        savedPreview.id = 'saved_profile_preview';
+        savedPreview.className = 'profile-saved-preview';
+        savedPreview.hidden = true;
+        savedPreview.setAttribute('aria-labelledby', 'saved_profile_title');
+        savedPreview.innerHTML = '<h3 id="saved_profile_title" data-i18n="profile_saved_preview" data-i18n-fr="Profil enregistré">Profil enregistré</h3>' +
+            '<div class="profile-saved-content"><img id="saved_profile_avatar" alt="" hidden>' +
+            '<div class="profile-saved-fields"><p><span data-i18n="online_name" data-i18n-fr="Pseudo">Pseudo</span> : <strong id="saved_profile_name"></strong></p>' +
+            '<p><span data-i18n="leaderboard_level" data-i18n-fr="Niveau">Niveau</span> : <strong id="saved_profile_level"></strong></p></div></div>';
+        panel.before(savedPreview);
+        if (window.uiT) savedPreview.querySelectorAll('[data-i18n]').forEach(function (node) {
+            node.textContent = window.uiT(node.dataset.i18n, node.dataset.i18nFr);
+        });
+    }
+    window.updateSavedProfilePreview = function (profile) {
+        if (!profile || typeof profile !== 'object') return;
+        const name = typeof profile.name === 'string' ? profile.name : '';
+        const level = Number(profile.level);
+        const avatar = typeof profile.avatar === 'string' ? profile.avatar : '';
+        const hasName = !!name.trim();
+        const hasLevel = Number.isFinite(level) && level > 0;
+        const hasAvatar = !!avatar.trim();
+        savedPreview.hidden = !(hasName || hasLevel || hasAvatar);
+        const nameNode = savedPreview.querySelector('#saved_profile_name');
+        const levelNode = savedPreview.querySelector('#saved_profile_level');
+        nameNode.textContent = hasName ? name : '';
+        levelNode.textContent = hasLevel ? String(profile.level) : '';
+        nameNode.closest('p').hidden = !hasName;
+        levelNode.closest('p').hidden = !hasLevel;
+        const image = savedPreview.querySelector('#saved_profile_avatar');
+        image.hidden = !hasAvatar;
+        if (hasAvatar) image.src = 'data:image/jpeg;base64,' + avatar;
+        else image.removeAttribute('src');
+    };
+    if (window.savedProfileSnapshot) window.updateSavedProfilePreview(window.savedProfileSnapshot);
     // Bring older cached templates to the same compact review layout.
     if (!preview.querySelector('.profile-capture-content')) {
         const content = document.createElement('div');
@@ -62,6 +101,8 @@
         save.disabled = true;
         try {
             const data = await request('save', token);
+            window.savedProfileSnapshot = {name:data.profile.name, level:data.profile.level, avatar:data.profile.avatar};
+            window.updateSavedProfilePreview(window.savedProfileSnapshot);
             document.querySelectorAll('.userName').forEach(e => { e.textContent = data.profile.name; });
             document.querySelectorAll('.userLvl_count').forEach(e => { e.textContent = data.profile.level; });
             if (window.updateSidebarProfile) window.updateSidebarProfile(data.profile.name, data.profile.level);

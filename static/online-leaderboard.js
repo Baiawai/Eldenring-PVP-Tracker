@@ -31,7 +31,7 @@
     tab.classList.add('active_setting'); parent.querySelectorAll('.contente_settings').forEach(n => n.classList.add('hide'));
     section.classList.remove('hide');
     const heading = nav.querySelector('.settings-section-title'); if (heading) heading.textContent = t('online_title', 'Classement en ligne');
-    if (['not_configured', 'offline', 'restart_required', 'profile_required', 'server_changed', 'server_move_required', 'partial_identity', 'server_transition_blocked', 'fresh_consent_required', 'invalid_statistics', 'event_consent_required', 'event_conflict', 'server_update_required', 'delete_pending', 'language_remove_pending', 'steam_cancel_pending', 'steam_remove_pending'].includes(activeState)) { noticeAllowed = true; show(activeState); }
+    if (['not_configured', 'offline', 'restart_required', 'profile_required', 'server_changed', 'server_move_required', 'partial_identity', 'server_transition_blocked', 'fresh_consent_required', 'invalid_statistics', 'event_consent_required', 'event_conflict', 'server_update_required', 'baseline_wait', 'baseline_conflict', 'delete_pending', 'language_remove_pending', 'steam_cancel_pending', 'steam_remove_pending'].includes(activeState)) { noticeAllowed = true; show(activeState); }
     if (enabled) refreshSteamConnection();
   });
   const dialog = document.createElement('dialog'); dialog.className = 'online-dialog';
@@ -110,6 +110,8 @@
     event_conflict:['online_event_conflict','Des événements ne peuvent pas être synchronisés. Les données restent locales ; contacte le support.'],
     event_consent_required:['online_event_consent_required','Accepte les nouvelles conditions pour reprendre la synchronisation du classement.'],
     server_update_required:['online_server_update_required','Le serveur du classement doit être mis à jour pour recevoir les combats.'],
+    baseline_wait:['online_baseline_wait','Les statistiques seront reprises à la fin du combat en cours.'],
+    baseline_conflict:['online_baseline_conflict','Les statistiques du serveur sont plus élevées que les statistiques locales. Les données sont conservées ; contacte le support.'],
     delete_pending:['online_delete_pending','Demande en attente : une nouvelle tentative sera effectuée au prochain démarrage.'],
     language_remove_pending:['online_delete_pending','Demande en attente : une nouvelle tentative sera effectuée au prochain démarrage.'],
     steam_cancel_pending:['online_delete_pending','Demande en attente : une nouvelle tentative sera effectuée au prochain démarrage.'],
@@ -448,7 +450,7 @@
     if (!disabling && document.body.dataset.storeBuild === 'true') document.getElementById('online_dialog_text').textContent += ' ' + t('online_server_consent_domain', 'Le classement public est hébergé sur https://eldenringpvp.com.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_steam_login_required', 'Connecte ton compte Steam pour participer au classement.') + ' ' + t('online_steam_identity_consent', 'Le serveur conserve ton identifiant Steam vérifié. La publication du lien vers ton profil Steam est facultative.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_notice', 'Les débuts et résultats des combats, leur mode et leur date sont envoyés au serveur pour calculer le classement. Les anciens scores déjà publiés ne sont pas vérifiés. Les événements sont conservés jusqu’au retrait du profil.');
-    if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_new_only', 'Pour une nouvelle inscription, seuls les combats détectés après accord comptent ; les anciennes statistiques locales ne sont pas importées.');
+    if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_new_only', 'Les statistiques locales existantes seront aussi envoyées au classement. Les nouveaux combats seront ensuite synchronisés.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_player_content_risk', 'Les pseudonymes et avatars sont fournis par les joueurs. Malgré une modération manuelle, des contenus choquants ou inappropriés peuvent apparaître. La nudité et la violence explicite sont interdites ; signale tout contenu sur Discord.');
     document.getElementById('online_cancel').textContent = t('online_cancel','Annuler');
     document.getElementById('online_keep').textContent = t('online_keep','Conserver les données');

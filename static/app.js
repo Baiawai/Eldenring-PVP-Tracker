@@ -487,7 +487,7 @@ function launchLanguages(language){
         ['tb-8', 'draw', 'Égalité', 37],
         ['tb-9', 'stats_win_rate', 'Taux de victoire', 38],
         ['tb-10', 'fights', 'Combats', 39],
-        ['tb-11', 'game_language', 'Langue du jeu', 40]
+        ['tb-11', 'leaderboard_language', 'Langue', 40]
     ];
     rankingHeadings.forEach(function(entry) {
         document.querySelectorAll('.panel_user table .' + entry[0]).forEach(function(header) {
@@ -568,20 +568,32 @@ let start_ready = true;
     if (!heading.querySelector('.sidebar-profile-name')) {
         heading.innerHTML = '<span class="sidebar-profile-name"></span><span class="sidebar-profile-level"><span class="sidebar-profile-level-label" hidden></span><span class="sidebar-profile-level-value"></span></span>';
     }
-    let name = '', level = '';
+    // Older source-version servers do not yet expose the precise build flag.
+    // A non-frozen source build is unambiguously a development build.
+    let name = '', level = '', developmentBuild = document.body.dataset.storeBuild === 'false';
     function render() {
         const t = (key, fallback) => window.uiT ? window.uiT(key, fallback) : fallback;
         const hasName = typeof name === 'string' && name.trim().length > 0;
         const hasLevel = Number.isFinite(Number(level)) && Number(level) > 0;
-        heading.querySelector('.sidebar-profile-name').textContent = hasName ? name : t('sidebar_profile_missing', 'Profil à compléter');
+        const nameNode = heading.querySelector('.sidebar-profile-name');
+        if (hasName && developmentBuild) {
+            const displayName = name.endsWith(' (dev)') ? name.slice(0, -6) : name;
+            const badge = document.createElement('span');
+            badge.className = 'sidebar-profile-dev';
+            badge.textContent = ' (dev)';
+            nameNode.replaceChildren(document.createTextNode(displayName), badge);
+        } else {
+            nameNode.textContent = hasName ? name : t('sidebar_profile_missing', 'Profil à compléter');
+        }
         const label = heading.querySelector('.sidebar-profile-level-label');
         label.hidden = !hasLevel;
         label.textContent = String(interface_active[74] || 'Niveau :').replace(/<br\s*\/?\s*>/gi, '').trim() + ' ';
         heading.querySelector('.sidebar-profile-level-value').textContent = hasLevel ? String(level) : t('sidebar_level_missing', 'Niveau non renseigné');
     }
-    window.updateSidebarProfile = function(nextName, nextLevel) {
+    window.updateSidebarProfile = function(nextName, nextLevel, nextDevelopmentBuild) {
         if (nextName !== undefined) name = nextName;
         if (nextLevel !== undefined) level = nextLevel;
+        if (typeof nextDevelopmentBuild === 'boolean') developmentBuild = nextDevelopmentBuild;
         render();
     };
     document.addEventListener('ui-language-change', render);
@@ -1738,6 +1750,8 @@ function init(){
             let language_default = response["language_default"];
             let captures = response["captures"];
             let user = response["user"];
+            window.savedProfileSnapshot = {name:user[1], level:user[19], avatar:user[6]};
+            if (window.updateSavedProfilePreview) window.updateSavedProfilePreview(window.savedProfileSnapshot);
             let score = response["user"][16];
             let victory = response["user"][2];
             let defeat = response["user"][3];
@@ -1781,7 +1795,7 @@ function init(){
             $(".connexionError_count").text(connexionError);
             $(".gameExit_count").text(gameExit);
             $(".userLvl_count").text(userLvl);
-            if (window.updateSidebarProfile) window.updateSidebarProfile(user[1], userLvl);
+            if (window.updateSidebarProfile) window.updateSidebarProfile(user[1], userLvl, response.development_build);
             if(autoStart == "true"){
                 $(".auto_start span").addClass("hide");
                 $(".auto_start span[auto_start=true]").removeClass("hide");

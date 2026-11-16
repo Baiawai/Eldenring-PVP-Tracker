@@ -18,7 +18,7 @@ from check_online_profile_notice import CHROME, LANGUAGES, scenario
 ROOT = Path(__file__).resolve().parents[2]
 HEADINGS = [
     ('tb-1', 'leaderboard_rank', 'Rang'),
-    ('tb-11', 'game_language', 'Langue du jeu'),
+    ('tb-11', 'leaderboard_language', 'Langue'),
     ('tb-3', 'online_name', 'Pseudo'),
     ('tb-2', 'leaderboard_avatar', 'Avatar'),
     ('tb-4', 'leaderboard_level', 'Niveau'),

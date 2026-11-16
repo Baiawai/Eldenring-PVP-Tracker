@@ -99,7 +99,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-onboarding-browser-', ignore_cl
                     if not page.locator('body').evaluate("element => element.classList.contains('profile-sidebar-open')"):
                         page.locator('#sidebar_toggle').click()
                 page.evaluate("window.updateSidebarProfile('Tarnished', 0)")
-                assert page.locator('.sidebar-profile-name').inner_text() == 'Tarnished'
+                assert page.locator('.sidebar-profile-name').inner_text() == 'Tarnished (dev)'
                 assert page.locator('.sidebar-profile-level-label').is_hidden()
                 page.evaluate("window.updateSidebarProfile('', 170)")
                 assert page.locator('.sidebar-profile-level-value').inner_text() == '170'
