@@ -18,6 +18,9 @@ from PIL import Image
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root))
 from application import runtime_paths
+from application import error_reports
+error_reports.report = lambda *args, **kwargs: None
+error_reports.start = lambda: None
 test_images = Path(os.environ['APPDATA']) / 'test-runtime-images'
 test_images.mkdir(parents=True, exist_ok=True)
 runtime_paths.image_dir = lambda: test_images
@@ -86,6 +89,16 @@ assert anonymous.get('/modeStats').status_code == 403
 assert anonymous.post('/history-purge').status_code == 403
 assert anonymous.post('/initialization-notice').status_code == 403
 assert anonymous.post('/initialization-error-log').status_code == 403
+assert anonymous.post('/error-log/open').status_code == 403
+assert anonymous.post('/tracker-presence/active').status_code == 403
+with patch('application.tracker_presence.notify_browser') as pulse:
+    assert client.post('/tracker-presence/active').status_code == 204
+    pulse.assert_called_once()
+with patch('application.error_log.open_log', return_value=True) as opened:
+    assert client.post('/error-log/open').get_json()['opened'] is True
+    opened.assert_called_once()
+with patch('application.error_log.open_log', return_value=False):
+    assert client.post('/error-log/open').status_code == 404
 with patch.object(module.first_run, 'claim', return_value={'state':'ready', 'log_available':False}):
     assert client.post('/initialization-notice').get_json()['notice']['state'] == 'ready'
 with patch.object(module.first_run, 'open_log', return_value=True) as opened:

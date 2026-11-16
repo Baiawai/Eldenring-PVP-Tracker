@@ -107,6 +107,7 @@
                     </div>
                 </section>
                 <header class="information-header"><p class="information-eyebrow">FAQ</p><h1 id="information_title" data-i18n="information_title">Informations</h1></header>
+                <p class="stats-chart-note" data-i18n="tracker_presence_notice">Le tracker transmet au site un identifiant aléatoire au démarrage, puis un signal d’activité au moins toutes les 10 minutes tant que l’interface est ouverte ou le suivi actif, indépendamment du classement.</p>
                 <div class="faq-list">
                     <details class="faq-item"><summary data-i18n="faq_q_12">Faut-il installer Python ou Tesseract ?</summary><p data-i18n="faq_a_12">La version Store comprend les composants nécessaires. Pour lancer le projet depuis ses sources, installe Python et prépare la distribution locale de Tesseract ou utilise une installation existante ; consulte le README du projet.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_01">Comment démarrer le suivi ?</summary><p data-i18n="faq_a_01">Lance le tracker et Elden Ring. Vérifie que la langue choisie correspond à celle du jeu, puis clique sur Start. Stop arrête le suivi ; le redémarrer remet la session en mémoire à zéro.</p></details>
@@ -140,6 +141,7 @@
                         <div class="environment-row"><span>Tesseract OCR</span><strong data-environment="tesseract">—</strong></div>
                         <div class="environment-row"><span data-i18n="environment_os">Système</span><strong data-environment="os">—</strong></div>
                         <div class="environment-row"><span data-i18n="environment_data_path">Dossier des données</span><strong data-environment="data_path">—</strong></div>
+                            <div class="environment-row error-log-row"><span data-i18n="error_log_label">Journal des erreurs</span><strong><button type="button" class="error-log-link" data-error-log-open disabled>—</button><span class="error-log-status" data-error-log-status role="status"></span></strong></div>
                     </div>
                 </section>
             </div>
@@ -577,6 +579,9 @@
                 <section class="contente_settings hide diagnostics-settings" setting="6" aria-labelledby="diagnostics_title">
                     <h2 id="diagnostics_title" data-i18n="diagnostics_title">Diagnostic</h2>
                     <p data-i18n="diagnostics_note">Mesures locales depuis le lancement actuel. Le CPU et la mémoire concernent le processus du tracker.</p>
+                    <div class="stat-detail-row"><label for="error-reporting-enabled" data-i18n="error_reporting_label">Envoi automatique des erreurs techniques</label><input id="error-reporting-enabled" type="checkbox" disabled></div>
+                    <p data-i18n="error_reporting_notice">Les messages et traces techniques filtrés sont envoyés automatiquement au site. Les secrets, chemins et identifiants courants sont masqués, mais des données personnelles inattendues peuvent subsister. Aucune capture n’est envoyée. Désactive cette option pour supprimer les rapports en attente.</p>
+                    <p id="error-reporting-status" role="status"></p>
                     <p id="diagnostics_status" role="status"></p>
                     <div id="diagnostics_content" hidden>
                         <div class="stat-detail-row"><span>CPU</span><strong id="diag_cpu">—</strong></div>
@@ -609,6 +614,7 @@
                             <div class="environment-row"><span>Tesseract OCR</span><strong data-environment="tesseract">—</strong></div>
                             <div class="environment-row"><span data-i18n="environment_os">Système</span><strong data-environment="os">—</strong></div>
                             <div class="environment-row"><span data-i18n="environment_data_path">Dossier des données</span><strong data-environment="data_path">—</strong></div>
+                            <div class="environment-row error-log-row"><span data-i18n="error_log_label">Journal des erreurs</span><strong><button type="button" class="error-log-link" data-error-log-open disabled>—</button><span class="error-log-status" data-error-log-status role="status"></span></strong></div>
                         </div>
                     </section>
                     <section class="usage-settings" aria-labelledby="usage_title">
@@ -815,6 +821,7 @@
     <script src="{{ url_for('static', filename='information.js') }}"></script>
     <script src="{{ url_for('static', filename='usage-metrics.js') }}"></script>
     <script src="{{ url_for('static', filename='system-details.js') }}"></script>
+    <script src="{{ url_for('static', filename='tracker-presence.js') }}"></script>
    
     <div id="capture_viewer_overlay" class="capture-viewer-overlay" hidden>
         <div class="capture-viewer-content" role="dialog" aria-label="Capture agrandie" data-i18n-aria="capture_viewer_title">

@@ -15,6 +15,9 @@ from cryptography.fernet import Fernet
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root))
 from application import runtime_paths
+from application import error_reports
+error_reports.report = lambda *args, **kwargs: None
+error_reports.start = lambda: None
 
 images = Path(os.environ['APPDATA']) / 'test-runtime-images'
 images.mkdir(parents=True, exist_ok=True)

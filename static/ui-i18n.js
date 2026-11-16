@@ -42,6 +42,16 @@
         panel.innerHTML = '<img class="information-discord-icon" src="/static/icon-discord-bronze.png" alt=""><div class="information-discord-content"><h2 id="information_discord_title" data-i18n="information_discord_title">Aide et assistance</h2><p data-i18n="information_discord_help">Pour toute aide ou demande de support, rejoins notre serveur Discord.</p><a class="information-discord" href="https://discord.gg/y79z83D2Ua" target="_blank" rel="noopener noreferrer" data-i18n="information_discord">Rejoindre le serveur Discord</a></div>';
         informationShell.prepend(panel);
     }
+    if (informationShell && !informationShell.querySelector('[data-i18n="tracker_presence_notice"]')) {
+        const header = informationShell.querySelector('.information-header');
+        if (header) {
+            const notice = document.createElement('p');
+            notice.className = 'stats-chart-note';
+            notice.dataset.i18n = 'tracker_presence_notice';
+            notice.textContent = 'Le tracker transmet au site un identifiant aléatoire au démarrage, puis un signal d’activité au moins toutes les 10 minutes tant que l’interface est ouverte ou le suivi actif, indépendamment du classement.';
+            header.insertAdjacentElement('afterend', notice);
+        }
+    }
     const rankingPanel = document.querySelector('.cadre_multi');
     if (rankingPanel) {
         // Restore the original layout even when Flask has cached the disabled-page template.

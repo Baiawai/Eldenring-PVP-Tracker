@@ -1,10 +1,14 @@
 """Exercise consent, synchronization, and retry using private APPDATA only."""
+import unittest.mock
 from unittest.mock import patch
 import json
 import tempfile
 from pathlib import Path
 from flask import Flask
 app = Flask(__name__)
+from application import error_reports
+error_reports.report = lambda *args, **kwargs: None
+error_reports.start = lambda: None
 from application import online_leaderboard as online
 client = app.test_client()
 
@@ -969,3 +973,65 @@ with tempfile.TemporaryDirectory(prefix='steam-diagnostic-test-') as directory, 
     assert status == 503 and response.get_json()['reason'] == 'http' and response.get_json()['http_status'] == 502
     log = (Path(directory) / 'tracker-errors.log').read_text(encoding='utf-8')
     assert 'stage=login' in log and 'http_status=502' in log and 'secret' not in log and 'https://' not in log
+    assert response.get_json()['diagnostic'] == log.rstrip('\n')
+    with app.app_context():
+        repeated, repeated_status = online._steam_failure('login', online.HTTPError('https://other-secret.example', 502, 'private', {}, None))
+    assert repeated_status == 503 and repeated.get_json()['diagnostic'] == log.rstrip('\n')
+    assert (Path(directory) / 'tracker-errors.log').read_text(encoding='utf-8') == log
+
+# Only a server-generated UUID is admitted to the shareable diagnostic.
+with tempfile.TemporaryDirectory(prefix='steam-request-id-test-') as directory, \
+     patch.object(online, 'data_dir', return_value=Path(directory)):
+    online._STEAM_FAILURES.clear()
+    request_id = '123e4567-e89b-42d3-a456-426614174000'
+    with app.app_context():
+        response, status = online._steam_failure('credentials', online.HTTPError('https://secret.example', 403, 'private', {'X-Request-ID': request_id}, None))
+    assert status == 503 and 'request_id=' + request_id in response.get_json()['diagnostic']
+    assert 'secret' not in response.get_json()['diagnostic']
+    with app.app_context():
+        response, status = online._steam_failure('credentials', online.HTTPError('https://secret.example', 403, 'private', {'X-Request-ID': '<script>secret</script>'}, None))
+    assert 'secret' not in response.get_json()['diagnostic'] and 'request_id=' not in response.get_json()['diagnostic']
+
+# A safe transient failure schedules a bounded retry and honours server cooldown.
+with patch.object(online, '_sync', return_value=('retry_transient', 120, 'fixture-id', b'fixture-token')), \
+     patch.object(online, '_settings', return_value=(True, 'fixture-id', b'fixture-token', False, 'https://example.invalid')), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_language_remove_pending', return_value=False), \
+     patch.object(online, '_steam_settings', return_value=(False, False)), \
+     patch.object(online, '_RUNNING', True), patch.object(online, '_SCHEDULED_RETRY', None), \
+     patch.object(online, '_RETRY_ATTEMPT', 0), patch.object(online, '_RETRY_GENERATION', 0), \
+     patch.object(online, '_SERVER_RETRY_UNTIL', 0.0), \
+     patch.object(online.time, 'monotonic', return_value=100), \
+     patch.object(online.random, 'uniform', return_value=1.0), \
+     patch.object(online.threading, 'Timer') as timer:
+    online._worker()
+    assert timer.call_args.args[0] >= 120
+    assert online.sync_cooldown_remaining_ms() >= 120000
+    assert online.start_sync(rate_limit=True) == 'rate_limited'
+    with patch.object(online, 'start_sync') as start:
+        online._retry_scheduled('fixture-id', b'wrong-token', online._RETRY_GENERATION)
+        start.assert_not_called()
+        online._retry_scheduled('fixture-id', b'fixture-token', online._RETRY_GENERATION - 1)
+        start.assert_not_called()
+        online._retry_scheduled('fixture-id', b'fixture-token', online._RETRY_GENERATION)
+        start.assert_called_once()
+
+# Replay-safe API calls retry on transient failures; registration never replays.
+with patch.object(online, 'build_opener') as make_opener, \
+     patch.object(online.network_retry.time, 'sleep') as retry_sleep, \
+     patch.object(online.network_retry.random, 'uniform', return_value=1.0):
+    opener = make_opener.return_value
+    opener.open.side_effect = online.HTTPError('https://example.invalid', 503, 'error', {}, None)
+    try:
+        online._call('POST', '/api/v1/installations', {'uuid':'fixture'}, root=online._DEFAULT_BASE_URL)
+        raise AssertionError('Registration unexpectedly succeeded')
+    except online.HTTPError:
+        pass
+    assert opener.open.call_count == 1
+    retry_sleep.assert_not_called()
+    opener.open.reset_mock()
+    reply = unittest.mock.MagicMock()
+    reply.__enter__.return_value.read.return_value = b'{"accepted": []}'
+    opener.open.side_effect = [online.HTTPError('https://example.invalid', 503, 'error', {}, None), reply]
+    assert online._call('POST', '/api/v1/events', {'events':[]}, root=online._DEFAULT_BASE_URL) == {'accepted': []}
+    assert opener.open.call_count == 2

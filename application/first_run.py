@@ -100,7 +100,9 @@ def finish():
                 if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone():
                     raise RuntimeError('Required table missing: ' + name + ' / ' + table)
         _save({'state': 'ready'})
-    except Exception:
+    except Exception as error:
+        from application import error_reports
+        error_reports.report('initialization', 'storage', error)
         path = log_error(traceback.format_exc())
         _save({'state': 'failed', 'log': str(path) if path else '', 'shown': bool(previous.get('shown'))})
 
@@ -125,6 +127,11 @@ def open_log():
 
 
 def report_fatal(details):
+    from application import error_reports
+    import sys
+    error = sys.exception()
+    if error is not None:
+        error_reports.report('initialization', 'other', error)
     path = log_error(details)
     language = browser_language([(locale.getlocale()[0] or 'en', 1)])
     try:

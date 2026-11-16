@@ -1,6 +1,6 @@
 # Elden Ring PvP Tracker
 
-Elden Ring PvP Tracker est une application Windows locale qui suit les combats PvP à partir des notifications affichées dans le jeu. Son interface s'ouvre dans le navigateur et les données sont conservées sur le PC. Version actuelle : **1.0.8.0**.
+Elden Ring PvP Tracker est une application Windows locale qui suit les combats PvP à partir des notifications affichées dans le jeu. Son interface s'ouvre dans le navigateur et les données sont conservées sur le PC. Version actuelle : **1.0.9.0**.
 
 ## Fonctionnalités
 
@@ -78,6 +78,10 @@ Arrêtez le suivi avant de purger ou d'archiver l'historique actif. L'archivage 
 La purge retire également les rencontres Steam de la liste active des joueurs, mais ne supprime ni les archives, ni les captures, ni les statistiques cumulées. SQLite peut réutiliser l'espace libéré sans réduire immédiatement la taille du fichier.
 
 Les durées de conservation des captures et de l'historique Steam sont désactivées par défaut. Si vous en activez une, les anciennes données sont supprimées au démarrage. La suppression des captures peut modifier les graphiques et certaines rencontres, sans modifier les statistiques cumulées.
+
+## Mesure du nombre d’installations
+
+Le tracker transmet à `https://eldenringpvp.com` un identifiant aléatoire créé localement au démarrage, puis un signal d’activité au moins toutes les 10 minutes tant que l’interface est ouverte ou que le suivi fonctionne, indépendamment de la participation au classement. Le serveur conserve une empreinte de cet identifiant ainsi que la première et la dernière réception ainsi que la dernière activité afin de compter les installations et d’estimer celles qui sont actives. Ce compteur ne permet pas de connaître le nombre exact de personnes, ni les installations antérieures qui ne se sont pas encore signalées. Les données de combat et le profil ne sont pas inclus dans cette requête. Une nouvelle installation ou la suppression des données locales peut produire un nouvel identifiant. Les journaux techniques de l’hébergement peuvent contenir des données de connexion telles que l’adresse IP.
 
 ## Données locales et sauvegarde
 

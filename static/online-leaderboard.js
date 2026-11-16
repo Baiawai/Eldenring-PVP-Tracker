@@ -35,7 +35,7 @@
     if (enabled) refreshSteamConnection();
   });
   const dialog = document.createElement('dialog'); dialog.className = 'online-dialog';
-  dialog.innerHTML = '<h2 id="online_dialog_title"></h2><p id="online_dialog_text" role="status" aria-live="polite"></p><input id="online_steam_code" type="text" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="one-time-code" hidden><select id="online_recovery_select" hidden></select><div class="online-dialog-actions"><button type="button" id="online_cancel"></button><button type="button" id="online_keep"></button><button type="button" id="online_accept"></button></div>';
+  dialog.innerHTML = '<h2 id="online_dialog_title"></h2><p id="online_dialog_text" role="status" aria-live="polite"></p><pre class="online-diagnostic" id="online_diagnostic" hidden><code></code></pre><input id="online_steam_code" type="text" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="one-time-code" hidden><select id="online_recovery_select" hidden></select><div class="online-dialog-actions"><button type="button" id="online_cancel"></button><button type="button" id="online_keep"></button><button type="button" id="online_accept"></button></div>';
   dialog.setAttribute('aria-labelledby', 'online_dialog_title'); document.body.appendChild(dialog);
   const check = document.getElementById('online_enabled');
   const steamCheck = document.getElementById('online_steam');
@@ -249,6 +249,9 @@
       recovery_empty: ['online_recovery_empty', 'Aucune autre installation publiée n’a été trouvée pour ce compte Steam.'],
       recovery_done: ['online_recovery_done', 'Installation récupérée. Les événements en attente seront envoyés à la prochaine synchronisation.']
     };
+    const diagnosticBlock = document.getElementById('online_diagnostic');
+    diagnosticBlock.hidden = true;
+    diagnosticBlock.firstElementChild.textContent = '';
     const message = messages[step] || messages.offline;
     document.getElementById('online_dialog_text').textContent = t(message[0], message[1]);
     if (step === 'offline' && steamDiagnostic && ['credentials', 'status', 'login', 'confirmation', 'browser'].includes(steamDiagnostic.stage) && ['http', 'tls', 'timeout', 'dns', 'storage', 'network', 'other', 'browser'].includes(steamDiagnostic.reason)) {
@@ -259,6 +262,10 @@
       const code = Number.isInteger(steamDiagnostic.http_status) ? ' (HTTP ' + steamDiagnostic.http_status + ')' : '';
       const detail = t('steam_diag_detail', 'Étape : {stage}. Cause : {reason}{code}.').replace('{stage}', stage).replace('{reason}', reason).replace('{code}', code);
       document.getElementById('online_dialog_text').textContent += ' ' + detail + ' ' + (steamDiagnostic.log_saved ? t('steam_diag_log_saved', 'Détails enregistrés dans tracker-errors.log.') : t('steam_diag_log_failed', 'Le journal n’a pas pu être enregistré.'));
+      if (typeof steamDiagnostic.diagnostic === 'string' && steamDiagnostic.diagnostic) {
+        diagnosticBlock.firstElementChild.textContent = steamDiagnostic.diagnostic.slice(0, 2048);
+        diagnosticBlock.hidden = false;
+      }
     }
     const keep = document.getElementById('online_keep');
     keep.textContent = t('online_disable_title', 'Désactiver la participation');
@@ -445,6 +452,8 @@
     } finally { busy = false; }
   }
   function renderConsentText(disabling) {
+    document.getElementById('online_diagnostic').hidden = true;
+    document.querySelector('#online_diagnostic code').textContent = '';
     document.getElementById('online_dialog_title').textContent = disabling ? t('online_disable_title','Désactiver la participation') : t('online_consent_title','Participer au classement');
     document.getElementById('online_dialog_text').textContent = disabling ? t('online_disable_text','Veux-tu conserver tes données déjà publiées dans le classement ou demander leur suppression ? La suppression sera réessayée si le serveur est indisponible.') : t('online_consent_text','La participation au classement PvP est facultative. Si tu acceptes, ton pseudo, ton niveau, ton avatar et la langue de jeu sélectionnée sont envoyés au serveur et peuvent être publiés. Un drapeau représente la langue, pas la nationalité. Tu peux arrêter de participer à tout moment.');
     if (!disabling && document.body.dataset.storeBuild === 'true') document.getElementById('online_dialog_text').textContent += ' ' + t('online_server_consent_domain', 'Le classement public est hébergé sur https://eldenringpvp.com.');

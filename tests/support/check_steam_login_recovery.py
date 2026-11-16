@@ -99,7 +99,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-steam-login-test-', ignore_clea
                 'steam_status_observe': True, 'steam_consent': False}))
             context.route('**/online-leaderboard/steam-status?**', lambda route: route.fulfill(status=503, json={'error':'unavailable'}))
             context.route('**/online-leaderboard/steam-login', lambda route: route.fulfill(status=503, json={
-                'error':'unavailable', 'stage':'login', 'reason':'http', 'http_status':502, 'log_saved':True}))
+                'error':'unavailable', 'stage':'login', 'reason':'http', 'http_status':502, 'log_saved':True, 'diagnostic':'2026-11-16 - Steam connection: stage=login, reason=http, exception=HTTPError, http_status=502 <unsafe>'}))
             page = context.new_page()
             page.add_init_script("window.open = () => ({closed:false, close(){this.closed=true}, location:{href:''}})")
             page.goto(url, wait_until='load')
@@ -107,6 +107,10 @@ with tempfile.TemporaryDirectory(prefix='tracker-steam-login-test-', ignore_clea
             page.evaluate("() => document.querySelector('#online_enabled').dispatchEvent(new Event('change'))")
             page.locator('#online_accept').click()
             page.wait_for_function("() => document.querySelector('dialog.online-dialog').dataset.step === 'offline'", timeout=10000)
+            block = page.locator('#online_diagnostic')
+            assert block.is_visible()
+            assert block.locator('code').inner_text() == '2026-11-16 - Steam connection: stage=login, reason=http, exception=HTTPError, http_status=502 <unsafe>'
+            assert block.locator('unsafe').count() == 0
             for language in ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
                 page.evaluate('(language) => launchLanguages(language)', language)
                 page.wait_for_timeout(100)

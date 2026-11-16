@@ -45,3 +45,12 @@
 @media (max-width:480px) { .environment-row { flex-direction:column; gap:3px; } .environment-row strong { max-width:100%; text-align:left; } }
 
 @media(max-width:600px) { .information-discord-panel { gap:14px; padding:18px 16px; } .information-discord-icon { width:72px; height:72px; } .information-discord-content h2 { font-size:22px; } .faq-item summary { padding:18px 48px 18px 24px; } .faq-item p { padding:16px 24px 22px; } }
+
+.environment-row .error-log-link { display:inline; width:auto; max-width:100%; padding:0; border:0; background:transparent; color:#e8d09c; font:inherit; text-align:inherit; overflow-wrap:anywhere; text-decoration:underline; cursor:pointer; }
+.environment-row .error-log-link:hover:not(:disabled) { color:#fff0c8; background:transparent; }
+.environment-row .error-log-link:focus-visible { outline:2px solid #e1c487; outline-offset:3px; }
+.environment-row .error-log-link:disabled { color:#c0b29a; text-decoration:none; cursor:default; }
+.error-log-status { display:block; margin-top:4px; color:#c0b29a; }
+.error-log-status:empty { display:none; }
+
+body .app-content .environment-row button.error-log-link { background-image:none !important; border:0; box-shadow:none; }

@@ -755,7 +755,14 @@
       "online_baseline_wait": "Die Statistiken werden nach dem laufenden Kampf übernommen.",
       "online_baseline_conflict": "Die Serverstatistiken sind höher als die lokalen Statistiken. Die Daten bleiben erhalten; kontaktiere den Support.",
       "profile_saved_preview": "Gespeichertes Profil",
-      "draw_against": "Der Kampf gegen {opponent} endet unentschieden."
+      "draw_against": "Der Kampf gegen {opponent} endet unentschieden.",
+      "tracker_presence_notice": "Der Tracker sendet beim Start eine zufällige Kennung an die Website und meldet danach mindestens alle 10 Minuten Aktivität, solange die Oberfläche geöffnet oder die Erfassung aktiv ist, unabhängig von der Rangliste.",
+      "error_log_label": "Fehlerprotokoll",
+      "error_log_missing": "Noch kein Fehlerprotokoll vorhanden.",
+      "error_log_open_failed": "Das Fehlerprotokoll konnte nicht geöffnet werden.",
+      "error_reporting_label": "Automatische technische Fehlerberichte",
+      "error_reporting_notice": "Gefilterte technische Fehlermeldungen und Ablaufverfolgungen werden automatisch an die Website gesendet. Häufige Geheimnisse, Pfade und Kennungen werden maskiert; unerwartete persönliche Daten können enthalten sein. Screenshots werden nicht gesendet. Deaktivieren löscht ausstehende Berichte.",
+      "error_reporting_failed": "Fehlerberichte konnten nicht geändert werden."
     },
     "html_lang": "de"
   },
@@ -1515,7 +1522,14 @@
       "online_baseline_wait": "Le statistiche saranno importate al termine del combattimento.",
       "online_baseline_conflict": "Le statistiche sul server sono superiori a quelle locali. I dati sono conservati; contatta il supporto.",
       "profile_saved_preview": "Profilo salvato",
-      "draw_against": "Il combattimento con {opponent} termina in pareggio."
+      "draw_against": "Il combattimento con {opponent} termina in pareggio.",
+      "tracker_presence_notice": "Il tracker invia al sito un identificatore casuale all’avvio e un segnale di attività almeno ogni 10 minuti mentre l’interfaccia è aperta o il monitoraggio è attivo, indipendentemente dalla classifica.",
+      "error_log_label": "Registro errori",
+      "error_log_missing": "Nessun registro errori disponibile per ora.",
+      "error_log_open_failed": "Impossibile aprire il registro errori.",
+      "error_reporting_label": "Invio automatico degli errori tecnici",
+      "error_reporting_notice": "Messaggi e tracce tecniche filtrati vengono inviati automaticamente al sito. Segreti, percorsi e identificativi comuni sono mascherati, ma possono restare dati personali imprevisti. Le schermate non vengono inviate. Disattiva per eliminare i rapporti in attesa.",
+      "error_reporting_failed": "Impossibile modificare le segnalazioni."
     },
     "html_lang": "it"
   },
@@ -2275,7 +2289,14 @@
       "online_baseline_wait": "As estatísticas serão importadas após o combate atual.",
       "online_baseline_conflict": "As estatísticas do servidor são superiores às locais. Os dados são preservados; contacte o suporte.",
       "profile_saved_preview": "Perfil salvo",
-      "draw_against": "O combate contra {opponent} termina empatado."
+      "draw_against": "O combate contra {opponent} termina empatado.",
+      "tracker_presence_notice": "O tracker envia ao site um identificador aleatório ao iniciar e um sinal de atividade pelo menos a cada 10 minutos enquanto a interface estiver aberta ou o monitoramento ativo, independentemente da classificação.",
+      "error_log_label": "Registro de erros",
+      "error_log_missing": "Ainda não há registro de erros.",
+      "error_log_open_failed": "Não foi possível abrir o registro de erros.",
+      "error_reporting_label": "Envio automático de erros técnicos",
+      "error_reporting_notice": "Mensagens e rastros técnicos filtrados são enviados automaticamente ao site. Segredos, caminhos e identificadores comuns são ocultados, mas dados pessoais inesperados podem permanecer. Capturas não são enviadas. Desative para apagar relatórios pendentes.",
+      "error_reporting_failed": "Não foi possível alterar o envio de erros."
     },
     "html_lang": "pt-BR"
   },
@@ -3035,7 +3056,14 @@
       "online_baseline_wait": "Statystyki zostaną zaimportowane po zakończeniu obecnej walki.",
       "online_baseline_conflict": "Statystyki serwera są wyższe niż lokalne. Dane są zachowane; skontaktuj się z pomocą.",
       "profile_saved_preview": "Zapisany profil",
-      "draw_against": "Walka z graczem {opponent} kończy się remisem."
+      "draw_against": "Walka z graczem {opponent} kończy się remisem.",
+      "tracker_presence_notice": "Tracker wysyła losowy identyfikator do strony przy uruchomieniu, a następnie sygnał aktywności co najmniej co 10 minut, gdy interfejs jest otwarty lub śledzenie aktywne, niezależnie od rankingu.",
+      "error_log_label": "Dziennik błędów",
+      "error_log_missing": "Nie zapisano jeszcze dziennika błędów.",
+      "error_log_open_failed": "Nie można otworzyć dziennika błędów.",
+      "error_reporting_label": "Automatyczne raporty błędów technicznych",
+      "error_reporting_notice": "Filtrowane komunikaty i ślady błędów są automatycznie wysyłane do witryny. Typowe sekrety, ścieżki i identyfikatory są ukrywane, ale mogą pozostać nieoczekiwane dane osobowe. Zrzuty nie są wysyłane. Wyłącz, aby usunąć oczekujące raporty.",
+      "error_reporting_failed": "Nie można zmienić raportowania błędów."
     },
     "html_lang": "pl"
   },
@@ -3795,7 +3823,14 @@
       "online_baseline_wait": "Статистика будет импортирована после текущего боя.",
       "online_baseline_conflict": "Статистика сервера выше локальной. Данные сохранены; обратитесь в поддержку.",
       "profile_saved_preview": "Сохранённый профиль",
-      "draw_against": "Бой с игроком {opponent} завершился вничью."
+      "draw_against": "Бой с игроком {opponent} завершился вничью.",
+      "tracker_presence_notice": "Трекер отправляет сайту случайный идентификатор при запуске, а затем сигнал активности не реже одного раза в 10 минут, пока интерфейс открыт или отслеживание включено, независимо от рейтинга.",
+      "error_log_label": "Журнал ошибок",
+      "error_log_missing": "Журнал ошибок пока не создан.",
+      "error_log_open_failed": "Не удалось открыть журнал ошибок.",
+      "error_reporting_label": "Автоматическая отправка технических ошибок",
+      "error_reporting_notice": "Отфильтрованные сообщения и трассировки автоматически отправляются на сайт. Типичные секреты, пути и идентификаторы скрываются, но непредвиденные личные данные могут остаться. Снимки экрана не отправляются. Отключение удаляет ожидающие отчёты.",
+      "error_reporting_failed": "Не удалось изменить отправку ошибок."
     },
     "html_lang": "ru"
   },
@@ -4555,7 +4590,14 @@
       "online_baseline_wait": "現在の対戦終了後に統計が取り込まれます。",
       "online_baseline_conflict": "サーバーの統計がローカル統計を上回っています。データは保持されます。サポートにお問い合わせください。",
       "profile_saved_preview": "保存済みプロフィール",
-      "draw_against": "{opponent}との戦いは引き分けに終わりました。"
+      "draw_against": "{opponent}との戦いは引き分けに終わりました。",
+      "tracker_presence_notice": "トラッカーは起動時にランダムな識別子をサイトへ送信し、その後は画面が開いているか追跡が有効な間、ランキングへの参加に関係なく少なくとも10分ごとに利用状況を送信します。",
+      "error_log_label": "エラーログ",
+      "error_log_missing": "エラーログはまだありません。",
+      "error_log_open_failed": "エラーログを開けませんでした。",
+      "error_reporting_label": "技術的なエラーの自動送信",
+      "error_reporting_notice": "フィルター済みの技術エラーとトレースがサイトに自動送信されます。一般的な秘密情報、パス、IDは隠されますが、予期しない個人情報が残る可能性があります。スクリーンショットは送信されません。無効にすると保留中の報告が削除されます。",
+      "error_reporting_failed": "エラー送信の設定を変更できませんでした。"
     },
     "html_lang": "ja"
   },
@@ -5315,7 +5357,14 @@
       "online_baseline_wait": "현재 전투가 끝나면 통계를 가져옵니다.",
       "online_baseline_conflict": "서버 통계가 로컬 통계보다 높습니다. 데이터는 보존됩니다. 지원팀에 문의하세요.",
       "profile_saved_preview": "저장된 프로필",
-      "draw_against": "{opponent}님과의 전투가 무승부로 끝났습니다."
+      "draw_against": "{opponent}님과의 전투가 무승부로 끝났습니다.",
+      "tracker_presence_notice": "트래커는 시작할 때 임의 식별자를 사이트에 전송하고, 화면이 열려 있거나 추적이 실행 중인 동안 순위표 참여 여부와 관계없이 최소 10분마다 활동 신호를 보냅니다.",
+      "error_log_label": "오류 로그",
+      "error_log_missing": "아직 저장된 오류 로그가 없습니다.",
+      "error_log_open_failed": "오류 로그를 열 수 없습니다.",
+      "error_reporting_label": "기술 오류 자동 전송",
+      "error_reporting_notice": "필터링된 기술 오류 메시지와 추적 정보가 사이트로 자동 전송됩니다. 일반적인 비밀 정보, 경로 및 식별자는 가려지지만 예상치 못한 개인정보가 남을 수 있습니다. 스크린샷은 전송되지 않습니다. 끄면 대기 중인 보고서가 삭제됩니다.",
+      "error_reporting_failed": "오류 보고 설정을 변경할 수 없습니다."
     },
     "html_lang": "ko"
   },
@@ -6075,7 +6124,14 @@
       "online_baseline_wait": "当前战斗结束后将导入统计数据。",
       "online_baseline_conflict": "服务器统计数据高于本地数据。数据已保留，请联系支持。",
       "profile_saved_preview": "已保存的个人资料",
-      "draw_against": "与{opponent}的战斗以平局结束。"
+      "draw_against": "与{opponent}的战斗以平局结束。",
+      "tracker_presence_notice": "跟踪器启动时会向网站发送随机标识符；只要界面打开或追踪运行，就会至少每10分钟发送一次活动信号，与排行榜无关。",
+      "error_log_label": "错误日志",
+      "error_log_missing": "目前尚无错误日志。",
+      "error_log_open_failed": "无法打开错误日志。",
+      "error_reporting_label": "自动发送技术错误",
+      "error_reporting_notice": "经过过滤的技术错误消息和堆栈会自动发送到网站。常见密钥、路径和标识符会被遮盖，但仍可能包含意外的个人信息。不会发送截图。关闭后会删除待发送的报告。",
+      "error_reporting_failed": "无法更改错误报告设置。"
     },
     "html_lang": "zh-Hans"
   },
@@ -6835,7 +6891,14 @@
       "online_baseline_wait": "目前戰鬥結束後將匯入統計資料。",
       "online_baseline_conflict": "伺服器統計資料高於本機資料。資料已保留，請聯絡支援。",
       "profile_saved_preview": "已儲存的個人資料",
-      "draw_against": "與{opponent}的戰鬥以平手結束。"
+      "draw_against": "與{opponent}的戰鬥以平手結束。",
+      "tracker_presence_notice": "追蹤器啟動時會向網站傳送隨機識別碼；只要介面開啟或追蹤運作，就會至少每10分鐘傳送一次活動訊號，與排行榜無關。",
+      "error_log_label": "錯誤日誌",
+      "error_log_missing": "目前尚無錯誤日誌。",
+      "error_log_open_failed": "無法開啟錯誤日誌。",
+      "error_reporting_label": "自動傳送技術錯誤",
+      "error_reporting_notice": "經過過濾的技術錯誤訊息和堆疊會自動傳送至網站。常見密鑰、路徑和識別碼會被遮蓋，但仍可能包含意外的個人資訊。不會傳送截圖。關閉後會刪除待傳報告。",
+      "error_reporting_failed": "無法變更錯誤報告設定。"
     },
     "html_lang": "zh-Hant"
   },
@@ -7595,7 +7658,14 @@
       "online_baseline_wait": "สถิติจะถูกนำเข้าหลังการต่อสู้ปัจจุบัน",
       "online_baseline_conflict": "สถิติบนเซิร์ฟเวอร์สูงกว่าในเครื่อง ข้อมูลยังคงอยู่ โปรดติดต่อฝ่ายสนับสนุน",
       "profile_saved_preview": "โปรไฟล์ที่บันทึกไว้",
-      "draw_against": "การต่อสู้กับ {opponent} จบลงด้วยผลเสมอ"
+      "draw_against": "การต่อสู้กับ {opponent} จบลงด้วยผลเสมอ",
+      "tracker_presence_notice": "โปรแกรมส่งตัวระบุแบบสุ่มไปยังเว็บไซต์เมื่อเริ่มทำงาน และส่งสัญญาณกิจกรรมอย่างน้อยทุก 10 นาทีขณะที่เปิดหน้าจอหรือเปิดการติดตาม โดยไม่ขึ้นกับตารางอันดับ",
+      "error_log_label": "บันทึกข้อผิดพลาด",
+      "error_log_missing": "ยังไม่มีบันทึกข้อผิดพลาด",
+      "error_log_open_failed": "ไม่สามารถเปิดบันทึกข้อผิดพลาดได้",
+      "error_reporting_label": "ส่งรายงานข้อผิดพลาดทางเทคนิคอัตโนมัติ",
+      "error_reporting_notice": "ข้อความและข้อมูลติดตามข้อผิดพลาดที่กรองแล้วจะถูกส่งไปยังเว็บไซต์โดยอัตโนมัติ ข้อมูลลับ เส้นทาง และตัวระบุทั่วไปจะถูกปิดบัง แต่อาจยังมีข้อมูลส่วนบุคคลที่ไม่คาดคิด ระบบไม่ส่งภาพหน้าจอ ปิดเพื่อลบรายงานที่รอส่ง",
+      "error_reporting_failed": "ไม่สามารถเปลี่ยนการรายงานข้อผิดพลาดได้"
     },
     "html_lang": "th"
   },
@@ -8355,7 +8425,14 @@
       "online_baseline_wait": "ستُستورد الإحصاءات بعد انتهاء المعركة الحالية.",
       "online_baseline_conflict": "إحصاءات الخادم أعلى من الإحصاءات المحلية. تم الاحتفاظ بالبيانات؛ تواصل مع الدعم.",
       "profile_saved_preview": "الملف الشخصي المحفوظ",
-      "draw_against": "انتهت المعركة بالتعادل مع {opponent}."
+      "draw_against": "انتهت المعركة بالتعادل مع {opponent}.",
+      "tracker_presence_notice": "يرسل المتتبع معرّفًا عشوائيًا إلى الموقع عند بدء التشغيل، ثم إشارة نشاط كل 10 دقائق على الأقل ما دامت الواجهة مفتوحة أو التتبع نشطًا، بشكل مستقل عن الترتيب.",
+      "error_log_label": "سجل الأخطاء",
+      "error_log_missing": "لا يوجد سجل أخطاء حتى الآن.",
+      "error_log_open_failed": "تعذر فتح سجل الأخطاء.",
+      "error_reporting_label": "إرسال الأخطاء التقنية تلقائياً",
+      "error_reporting_notice": "تُرسل رسائل الأخطاء التقنية وتتبعها بعد تصفيتها تلقائياً إلى الموقع. تُحجب الأسرار والمسارات والمعرّفات الشائعة، لكن قد تبقى بيانات شخصية غير متوقعة. لا تُرسل لقطات الشاشة. عطّل الخيار لحذف التقارير المعلقة.",
+      "error_reporting_failed": "تعذر تغيير إعداد تقارير الأخطاء."
     },
     "html_lang": "ar"
   },
@@ -9115,7 +9192,14 @@
       "online_baseline_wait": "Statistics will be imported after the current fight.",
       "online_baseline_conflict": "Server statistics are higher than local statistics. Your data is preserved; contact support.",
       "profile_saved_preview": "Saved profile",
-      "draw_against": "The fight ends in a draw with {opponent}."
+      "draw_against": "The fight ends in a draw with {opponent}.",
+      "tracker_presence_notice": "The tracker sends a random identifier to the website at startup, then an activity signal at least every 10 minutes while its interface is open or tracking is running, independently of the leaderboard.",
+      "error_log_label": "Error log",
+      "error_log_missing": "No error log has been saved yet.",
+      "error_log_open_failed": "Unable to open the error log.",
+      "error_reporting_label": "Automatic technical error reports",
+      "error_reporting_notice": "Filtered technical error messages and traces are automatically sent to the website. Common secrets, paths and identifiers are masked, but unexpected personal data may remain. Screenshots are not sent. Turn this off to stop sending and delete pending reports.",
+      "error_reporting_failed": "Could not change error reporting."
     },
     "html_lang": "en"
   },
@@ -9875,7 +9959,14 @@
       "online_baseline_wait": "Las estadísticas se importarán al terminar el combate actual.",
       "online_baseline_conflict": "Las estadísticas del servidor son superiores a las locales. Los datos se conservan; contacta con soporte.",
       "profile_saved_preview": "Perfil guardado",
-      "draw_against": "El combate contra {opponent} termina en empate."
+      "draw_against": "El combate contra {opponent} termina en empate.",
+      "tracker_presence_notice": "El tracker envía al sitio un identificador aleatorio al iniciarse y una señal de actividad al menos cada 10 minutos mientras la interfaz esté abierta o el seguimiento activo, independientemente de la clasificación.",
+      "error_log_label": "Registro de errores",
+      "error_log_missing": "Todavía no hay ningún registro de errores.",
+      "error_log_open_failed": "No se pudo abrir el registro de errores.",
+      "error_reporting_label": "Envío automático de errores técnicos",
+      "error_reporting_notice": "Los mensajes y trazas técnicas filtrados se envían automáticamente al sitio. Se ocultan secretos, rutas e identificadores comunes, pero podrían quedar datos personales inesperados. No se envían capturas. Desactívalo para borrar los informes pendientes.",
+      "error_reporting_failed": "No se pudo cambiar el envío de errores."
     },
     "html_lang": "es-ES"
   },
@@ -10635,7 +10726,14 @@
       "online_baseline_wait": "Las estadísticas se importarán al terminar el combate actual.",
       "online_baseline_conflict": "Las estadísticas del servidor son superiores a las locales. Los datos se conservan; contacta a soporte.",
       "profile_saved_preview": "Perfil guardado",
-      "draw_against": "El combate contra {opponent} termina en empate."
+      "draw_against": "El combate contra {opponent} termina en empate.",
+      "tracker_presence_notice": "El tracker envía al sitio un identificador aleatorio al iniciarse y una señal de actividad al menos cada 10 minutos mientras la interfaz esté abierta o el seguimiento activo, independientemente de la clasificación.",
+      "error_log_label": "Registro de errores",
+      "error_log_missing": "Todavía no hay ningún registro de errores.",
+      "error_log_open_failed": "No se pudo abrir el registro de errores.",
+      "error_reporting_label": "Envío automático de errores técnicos",
+      "error_reporting_notice": "Los mensajes y trazas técnicas filtrados se envían automáticamente al sitio. Se ocultan secretos, rutas e identificadores comunes, pero podrían quedar datos personales inesperados. No se envían capturas. Desactívalo para borrar los informes pendientes.",
+      "error_reporting_failed": "No se pudo cambiar el envío de errores."
     },
     "html_lang": "es-419"
   }

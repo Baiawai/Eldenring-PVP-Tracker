@@ -1,5 +1,7 @@
 """Optional leaderboard: participation requires consent; public reads do not."""
 import base64
+import re
+import random
 import hashlib
 import io
 import json
@@ -24,7 +26,7 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 from urllib.error import HTTPError, URLError
 from flask import jsonify, request
 from __main__ import app
-from application import init, mode_stats, leaderboard_baseline
+from application import init, mode_stats, leaderboard_baseline, network_retry
 from application.runtime_paths import FROZEN, STORE_BUILD, data_dir
 from application.secur import decrypt_value
 import win32crypt
@@ -35,6 +37,10 @@ _LOCK = threading.RLock()
 _START_LOCK = threading.Lock()
 _SCHEMA_LOCK = threading.Lock()
 _RUNNING = False
+_SCHEDULED_RETRY = None
+_RETRY_ATTEMPT = 0
+_RETRY_GENERATION = 0
+_SERVER_RETRY_UNTIL = 0.0
 _LAST_SYNC_START = None
 _SYNC_INTERVAL_SECONDS = 10
 _STATUS = {'state': 'idle'}
@@ -73,6 +79,9 @@ def _steam_failure(stage, error):
         category, http_status = 'network', None
     else:
         category, http_status = 'other', None
+    from application import error_reports
+    report_stage = {'credentials': 'steam_credentials', 'status': 'steam_status', 'confirmation': 'steam_confirmation', 'browser': 'steam_browser'}.get(stage, 'steam_login')
+    error_reports.report(report_stage, category, reason, http_status)
     message = f'{time.strftime("%Y-%m-%d %H:%M:%S")} - Steam connection: stage={stage}, reason={category}'
     name = type(reason).__name__
     if name.isascii() and name.isidentifier() and len(name) < 80:
@@ -83,11 +92,16 @@ def _steam_failure(stage, error):
             message += f', {attr}={number}'
     if http_status is not None:
         message += f', http_status={http_status}'
-    key = (stage, category, http_status)
+    request_id = error.headers.get('X-Request-ID', '') if isinstance(error, HTTPError) and error.headers else ''
+    if not isinstance(request_id, str) or not re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}', request_id):
+        request_id = ''
+    if request_id:
+        message += f', request_id={request_id}'
+    key = (stage, category, http_status, request_id)
     with _STEAM_FAILURES_LOCK:
         recent = _STEAM_FAILURES.get(key)
-        if recent and time.monotonic() - recent < 60:
-            return jsonify(error='unavailable', stage=stage, reason=category, http_status=http_status, log_saved=True), 503
+        if recent and time.monotonic() - recent[0] < 60:
+            return jsonify(error='unavailable', stage=stage, reason=category, http_status=http_status, log_saved=True, diagnostic=recent[1]), 503
     saved = False
     try:
         primary = data_dir()
@@ -106,8 +120,8 @@ def _steam_failure(stage, error):
             continue
     if saved:
         with _STEAM_FAILURES_LOCK:
-            _STEAM_FAILURES[key] = time.monotonic()
-    return jsonify(error='unavailable', stage=stage, reason=category, http_status=http_status, log_saved=saved), 503
+            _STEAM_FAILURES[key] = (time.monotonic(), message)
+    return jsonify(error='unavailable', stage=stage, reason=category, http_status=http_status, log_saved=saved, diagnostic=message), 503
 
 
 def _database():
@@ -264,11 +278,13 @@ def _call(method, path, data=None, token=None, root=None, extra_headers=None):
     if payload:
         headers['Content-Type'] = 'application/json'
     try:
-        with build_opener(_NoRedirect()).open(Request(root + path, data=payload, headers=headers, method=method), timeout=8) as response:
-            body = response.read(2_000_001)
-            if len(body) > 2_000_000:
-                raise ValueError('Response too large')
-            return json.loads(body) if body else None
+        def perform():
+            with build_opener(_NoRedirect()).open(Request(root + path, data=payload, headers=headers, method=method), timeout=8) as response:
+                body = response.read(2_000_001)
+                if len(body) > 2_000_000:
+                    raise ValueError('Response too large')
+                return json.loads(body) if body else None
+        return network_retry.execute(perform, safe=network_retry.replay_safe(method, path))
     except HTTPError as error:
         if error.code == 422:
             try:
@@ -635,7 +651,13 @@ def _sync():
             _call('PUT', '/api/v1/profile', profile, token, root=root)
             _STATUS['state'] = 'success'
         except Exception as error:
+            if isinstance(error, (HTTPError, URLError, OSError, sqlite3.Error)):
+                from application import error_reports
+                category = 'http' if isinstance(error, HTTPError) else ('storage' if isinstance(error, sqlite3.Error) else 'network')
+                error_reports.report('leaderboard', category, error, error.code if isinstance(error, HTTPError) else None)
             _STATUS['state'] = str(error) if str(error) in ('not_configured', 'profile_required', 'invalid_statistics', 'server_changed', 'fresh_consent_required', 'pending_events', 'active_match', 'invalid_data', 'event_conflict', 'server_update_required', 'baseline_conflict', 'baseline_wait') else 'offline'
+            if (ident and encrypted and getattr(error, 'tracker_replay_safe', False) and network_retry.transient(error)):
+                return ('retry_transient', network_retry.retry_after(error), ident, encrypted)
 
 
 @app.route('/online-leaderboard/settings', methods=['GET', 'POST'])
@@ -1019,8 +1041,19 @@ def online_leaderboard_steam_recovery():
         return jsonify(error='unavailable'), 503
 
 
+def _retry_scheduled(expected_ident, expected_token, generation):
+    global _SCHEDULED_RETRY
+    with _START_LOCK:
+        if generation != _RETRY_GENERATION:
+            return
+        _SCHEDULED_RETRY = None
+    enabled, ident, encrypted, pending, _ = _settings()
+    if enabled and not pending and ident == expected_ident and encrypted == expected_token:
+        start_sync()
+
+
 def _worker():
-    global _RUNNING, _LANGUAGE_SYNC_REQUIRED
+    global _RUNNING, _LANGUAGE_SYNC_REQUIRED, _SCHEDULED_RETRY, _RETRY_ATTEMPT, _RETRY_GENERATION, _SERVER_RETRY_UNTIL
     while True:
         with _START_LOCK:
             _LANGUAGE_SYNC_REQUIRED = False
@@ -1043,11 +1076,25 @@ def _worker():
                 _STATUS['state'] = 'syncing'
                 continue
             _RUNNING = False
+            if isinstance(result, tuple) and result[0] == 'retry_transient':
+                _, retry_after, ident, encrypted = result
+                if retry_after is not None:
+                    _SERVER_RETRY_UNTIL = max(_SERVER_RETRY_UNTIL, time.monotonic() + retry_after)
+                # Do not shorten very long server cooldowns by imposing a cap.
+                if retry_after is None or retry_after <= 86400:
+                    delay = max(retry_after or 0, min(900, 30 * (2 ** min(_RETRY_ATTEMPT, 5))) * random.uniform(0.8, 1.2))
+                    _RETRY_ATTEMPT += 1
+                    _RETRY_GENERATION += 1
+                    _SCHEDULED_RETRY = threading.Timer(delay, _retry_scheduled, args=(ident, encrypted, _RETRY_GENERATION))
+                    _SCHEDULED_RETRY.daemon = True
+                    _SCHEDULED_RETRY.start()
+            else:
+                _RETRY_ATTEMPT = 0
             return
 
 
 def start_sync(rate_limit=False):
-    global _RUNNING, _LAST_SYNC_START
+    global _RUNNING, _LAST_SYNC_START, _SCHEDULED_RETRY, _RETRY_GENERATION
     with _START_LOCK:
         enabled, _, _, pending, _ = _settings()
         steam_pending = _steam_settings()[1]
@@ -1058,8 +1105,14 @@ def start_sync(rate_limit=False):
         if _RUNNING:
             return 'syncing'
         now = time.monotonic()
+        if not pending and not steam_pending and not language_pending and not cancel_pending and now < _SERVER_RETRY_UNTIL:
+            return 'rate_limited'
         if rate_limit and not pending and not steam_pending and not language_pending and not cancel_pending and _LAST_SYNC_START is not None and now - _LAST_SYNC_START < _SYNC_INTERVAL_SECONDS:
             return 'rate_limited'
+        if _SCHEDULED_RETRY is not None:
+            _SCHEDULED_RETRY.cancel()
+            _SCHEDULED_RETRY = None
+            _RETRY_GENERATION += 1
         if not pending:
             _LAST_SYNC_START = now
         _RUNNING = True
@@ -1070,9 +1123,10 @@ def start_sync(rate_limit=False):
 
 def sync_cooldown_remaining_ms():
     with _START_LOCK:
-        if _LAST_SYNC_START is None:
-            return 0
-        return max(0, math.ceil((_SYNC_INTERVAL_SECONDS - (time.monotonic() - _LAST_SYNC_START)) * 1000))
+        now = time.monotonic()
+        local_wait = 0 if _LAST_SYNC_START is None else max(0, _SYNC_INTERVAL_SECONDS - (now - _LAST_SYNC_START))
+        remaining = max(local_wait, _SERVER_RETRY_UNTIL - now)
+        return 86400000 if not math.isfinite(remaining) else max(0, math.ceil(remaining * 1000))
 
 
 @app.route('/online-leaderboard/sync', methods=['POST'])

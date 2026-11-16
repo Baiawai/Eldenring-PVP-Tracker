@@ -972,6 +972,8 @@ def _run_monitor():
         monitor_error_detail = (type(error).__name__ + ': ' + str(error))[:1000]
         monitor_error = True
         usage_metrics.record_monitor_error()
+        from application import error_reports
+        error_reports.report('capture', 'other', error)
         details = traceback.format_exc()
         app.logger.error('Capture monitor failed: %s', details)
         try:
@@ -1027,6 +1029,11 @@ def start():
         except Exception:
             app.logger.exception('Unable to start Steam peer detection')
         threading.Thread(target=_run_monitor, name='capture-monitor', daemon=True).start()
+        try:
+            from application import tracker_presence
+            tracker_presence.notify_tracking()
+        except Exception:
+            app.logger.exception('Unable to schedule tracker activity heartbeat')
     except Exception:
         run_monitor = False
         monitor_lock.release()

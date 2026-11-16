@@ -80,3 +80,5 @@ body .app-content .cadre_multi .ranking-mode-tabs button[aria-pressed="true"] {
   left: 22px;
   top: -22px;
 }
+
+.online-dialog .online-diagnostic:not([hidden]) { box-sizing:border-box; max-height:180px; margin:0 0 24px; padding:12px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; color:#eee4ce; background:#0f0e0a; border:1px solid #766542; font:16px/1.45 monospace; user-select:text; }

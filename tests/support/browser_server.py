@@ -8,6 +8,9 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(root))
 from application import runtime_paths
+from application import error_reports
+error_reports.report = lambda *args, **kwargs: None
+error_reports.start = lambda: None
 test_images = Path(os.environ['APPDATA']) / 'test-runtime-images'
 test_images.mkdir(parents=True, exist_ok=True)
 runtime_paths.image_dir = lambda: test_images

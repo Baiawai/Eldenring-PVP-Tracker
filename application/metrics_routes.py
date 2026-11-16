@@ -1,7 +1,7 @@
 """Read local usage and current diagnostics; no game data leaves the PC."""
 from __main__ import app
 from flask import jsonify, request
-from application import usage_metrics, peer_tracking, system_details
+from application import usage_metrics, peer_tracking, system_details, error_log, tracker_presence, error_reports
 from application.version import APP_VERSION
 
 
@@ -42,3 +42,29 @@ def system_metrics_get():
 @app.route('/system-details', methods=['GET'])
 def system_details_get():
     return jsonify(request='success', **system_details.snapshot())
+
+
+@app.route('/error-log/open', methods=['POST'])
+def error_log_open():
+    opened = error_log.open_log()
+    return jsonify(opened=opened), 200 if opened else 404
+
+
+@app.route('/tracker-presence/active', methods=['POST'])
+def tracker_presence_active():
+    tracker_presence.notify_browser()
+    return '', 204
+
+
+@app.route('/error-reporting', methods=['GET', 'POST'])
+def error_reporting_settings():
+    try:
+        if request.method == 'POST':
+            data = request.get_json(silent=True)
+            if not isinstance(data, dict) or type(data.get('enabled')) is not bool:
+                return jsonify(request='error'), 400
+            error_reports.set_enabled(data['enabled'])
+        return jsonify(request='success', enabled=error_reports.enabled())
+    except Exception:
+        app.logger.exception('Unable to access diagnostic settings')
+        return jsonify(request='error'), 503

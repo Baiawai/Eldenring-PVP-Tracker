@@ -8,6 +8,7 @@ from pathlib import Path
 
 from application.runtime_paths import tesseract_path, data_dir, database_path, accessible_data_directories
 from application.version import APP_VERSION
+from application import error_log
 
 
 def database_sizes(directory):
@@ -64,7 +65,9 @@ def snapshot():
         free_bytes = shutil.disk_usage(str(directory)).free
     except OSError:
         free_bytes = None
+    log_path, log_exists = error_log.selected_log()
     return {
+        'error_log': {'path': str(log_path), 'exists': log_exists},
         'storage': {'databases': databases,
                     'database_bytes': sum(item['bytes'] for item in databases) if databases is not None else None,
                     'disk_free_bytes': free_bytes},

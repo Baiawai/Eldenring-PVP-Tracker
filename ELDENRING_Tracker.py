@@ -109,6 +109,16 @@ except Exception:
     raise
 
 
+# Report uncaught local request failures without transmitting requests or messages.
+from flask import got_request_exception
+from application import error_reports
+
+def _report_local_exception(sender, exception, **extra):
+    error_reports.report('application', 'other', exception)
+
+got_request_exception.connect(_report_local_exception, app, weak=False)
+
+
 # POUR LE NO CONSOLE 
 # sys.stdout = sys.stderr = open(os.devnull, 'w') 
 server = None
@@ -431,6 +441,10 @@ if __name__ == '__main__' and app_started == True:
             first_run.finish()
         except Exception:
             first_run.report_fatal(traceback.format_exc())
+        from application import tracker_presence
+        tracker_presence.start(lambda: bool(functions.run_monitor))
+        from application import error_reports
+        error_reports.start()
         online_leaderboard.start_sync()
         auto_tracking.start_worker(app, functions)
         steam_log_auto.start_worker(peer_tracking.enabled)

@@ -8,11 +8,14 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 
-from application import first_run, runtime_paths
+from application import first_run, runtime_paths, error_reports
 
 
 class FirstRunTests(unittest.TestCase):
     def setUp(self):
+        reporter = patch.object(error_reports, 'report')
+        reporter.start()
+        self.addCleanup(reporter.stop)
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.env = patch.dict(os.environ, {'APPDATA': self.temporary.name,
