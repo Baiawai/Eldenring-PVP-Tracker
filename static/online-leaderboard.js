@@ -221,15 +221,20 @@
     if (!r.ok) {
       if (r.status === 404 || r.status === 405) throw Error('restart_required');
       const details = await r.json().catch(() => ({}));
-      throw Error(['not_configured', 'pending_events', 'active_match', 'pending_operations', 'invalid_data', 'tracking_running', 'fresh_consent_required'].includes(details.error) ? details.error : 'request');
+      const error = Error(['not_configured', 'pending_events', 'active_match', 'pending_operations', 'invalid_data', 'tracking_running', 'fresh_consent_required'].includes(details.error) ? details.error : 'request');
+      error.diagnostic = details;
+      throw error;
     }
     return r.json();
   }
+  let steamDiagnostic = null;
   function renderSteamStepText(step) {
     document.getElementById('online_dialog_title').textContent = step === 'success' ? t('online_steam_connected', 'Connecté') : t('online_steam_waiting', 'Connexion à Steam');
     const messages = {
       ready: ['online_steam_login_required', 'Connecte ton compte Steam pour participer au classement.'],
+      preparing: ['online_steam_preparing', 'Préparation de la connexion à Steam…'],
       waiting: ['online_steam_waiting_code', 'Termine la connexion dans la fenêtre Steam, puis saisis ici le code à 8 chiffres affiché sur la page.'],
+      waiting_auto: ['online_steam_waiting_auto', 'Termine la connexion dans la fenêtre Steam. Le tracker confirmera automatiquement.'],
       closed: ['online_steam_closed', 'La fenêtre Steam a été fermée avant la fin de la connexion.'],
       blocked: ['online_steam_blocked', 'Le navigateur a bloqué la fenêtre Steam. Autorise les fenêtres pour le tracker, puis réessaie.'],
       offline: ['online_offline', 'Synchronisation indisponible. Tes statistiques restent enregistrées localement.'],
@@ -244,6 +249,15 @@
     };
     const message = messages[step] || messages.offline;
     document.getElementById('online_dialog_text').textContent = t(message[0], message[1]);
+    if (step === 'offline' && steamDiagnostic && ['credentials', 'status', 'login', 'confirmation', 'browser'].includes(steamDiagnostic.stage) && ['http', 'tls', 'timeout', 'dns', 'storage', 'network', 'other', 'browser'].includes(steamDiagnostic.reason)) {
+      const stages = {credentials:'identifiants de l’installation', status:'état Steam', login:'démarrage de la connexion', confirmation:'confirmation', browser:'ouverture de la fenêtre'};
+      const reasons = {http:'réponse du serveur', tls:'connexion sécurisée', timeout:'délai dépassé', dns:'résolution DNS', storage:'données locales', network:'connexion réseau', other:'erreur inconnue', browser:'fenêtre du navigateur indisponible'};
+      const stage = t(['steam_diag_stage', steamDiagnostic.stage].join('_'), stages[steamDiagnostic.stage]);
+      const reason = t(['steam_diag_reason', steamDiagnostic.reason].join('_'), reasons[steamDiagnostic.reason]);
+      const code = Number.isInteger(steamDiagnostic.http_status) ? ' (HTTP ' + steamDiagnostic.http_status + ')' : '';
+      const detail = t('steam_diag_detail', 'Étape : {stage}. Cause : {reason}{code}.').replace('{stage}', stage).replace('{reason}', reason).replace('{code}', code);
+      document.getElementById('online_dialog_text').textContent += ' ' + detail + ' ' + (steamDiagnostic.log_saved ? t('steam_diag_log_saved', 'Détails enregistrés dans tracker-errors.log.') : t('steam_diag_log_failed', 'Le journal n’a pas pu être enregistré.'));
+    }
     const keep = document.getElementById('online_keep');
     keep.textContent = t('online_disable_title', 'Désactiver la participation');
     const cancel = document.getElementById('online_cancel'); cancel.textContent = t('online_cancel', 'Annuler');
@@ -255,6 +269,7 @@
     input.setAttribute('aria-label', t('online_steam_code_label', 'Code de confirmation Steam'));
     const accept = document.getElementById('online_accept');
     accept.textContent = ['success','recovery_empty','recovery_done'].includes(step) ? t('online_steam_finish', 'Terminer') : (step === 'recovery_choose' ? t('online_recovery_start', 'Récupérer') : (step === 'ready' ? t('online_steam_login', 'Connecter mon compte Steam') : (['waiting','code','invalid_code'].includes(step) ? t('online_steam_code_confirm', 'Confirmer') : t('online_steam_retry', 'Réessayer'))));
+    if (step === 'waiting_auto' || step === 'preparing') accept.textContent = t('online_steam_checking', 'Vérification…');
   }
   function steamStep(step) {
     dialog.dataset.action = 'steam'; dialog.dataset.step = step;
@@ -264,7 +279,7 @@
     const input = document.getElementById('online_steam_code'); input.hidden = !['waiting', 'code', 'invalid_code'].includes(step);
     const recoverySelect = document.getElementById('online_recovery_select'); recoverySelect.hidden = step !== 'recovery_choose';
     const accept = document.getElementById('online_accept'); accept.hidden = false;
-    accept.disabled = step === 'waiting' && !/^[0-9]{8}$/.test(input.value.trim());
+    accept.disabled = ['preparing', 'waiting_auto'].includes(step) || (step === 'waiting' && !/^[0-9]{8}$/.test(input.value.trim()));
     renderSteamStepText(step);
   }
   document.getElementById('online_steam_code').addEventListener('input', () => {
@@ -288,13 +303,24 @@
   }
   async function connectSteam(popup) {
     const generation = ++loginGeneration; loginPopup = popup;
-    if (!popup) { steamStep('blocked'); return; }
-    steamStep('waiting');
+    steamDiagnostic = null;
+    if (!popup) {
+      fetch('/online-leaderboard/steam-browser-diagnostic', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({event:'popup_blocked'})}).catch(() => {});
+      steamStep('blocked'); return;
+    }
+    steamStep('preparing');
     try {
-      const existing = await call('steam-status?observe=1');
-      if (typeof existing.confirmation_pending !== 'boolean') throw Error('restart_required');
+      let existing = null;
+      try {
+        existing = await call('steam-status?observe=1');
+      } catch (error) {
+        // A stale or unreadable credential can prevent the observation route
+        // from succeeding. The explicit login route can safely recover it.
+        if (error.message === 'restart_required' || error.message === 'not_configured') throw error;
+      }
+      if (existing && typeof existing.confirmation_pending !== 'boolean') throw Error('restart_required');
       if (generation !== loginGeneration) return;
-      if (existing.connected && !recoveryMode) {
+      if (existing && existing.connected && !recoveryMode) {
         try { popup.close(); } catch (_) {}
         ++steamCheckGeneration; lastSteamCheckAt = Date.now(); steamConnection = 'connected'; startedParticipation = false; renderSteamConnection(); steamStep('success');
         if (existing.observation_only === true) await call('steam-status').catch(() => {});
@@ -303,6 +329,7 @@
       }
       const result = await call('steam-login', {method:'POST'});
       if (generation !== loginGeneration) return;
+      steamStep(result.automatic === true ? 'waiting_auto' : 'waiting');
       // Older running backends do not forward the chosen language. The site
       // advertises support with a lang parameter in its signed return URL.
       const steamUrl = new URL(result.url);
@@ -316,14 +343,22 @@
           steamUrl.searchParams.set('openid.return_to', callback.toString());
         }
       }
-      popup.location.href = steamUrl.toString();
+      try { popup.location.href = steamUrl.toString(); }
+      catch (error) { error.browserPopupFailure = true; throw error; }
       for (let attempt = 0; attempt < 200; attempt++) {
         await new Promise(resolve => setTimeout(resolve, 2000));
         if (generation !== loginGeneration) return;
         const state = await call('steam-status?observe=1');
         if (generation !== loginGeneration) return;
         if (typeof state.confirmation_pending !== 'boolean') throw Error('restart_required');
-        if (state.confirmation_pending === true) { steamStep('code'); document.getElementById('online_steam_code').focus(); return; }
+        if (state.confirmation_pending === true) {
+          if (result.automatic === true) {
+            await call('steam-auto-confirm', {method:'POST'});
+            if (generation !== loginGeneration) return;
+            await finishSteamLogin();
+          } else { steamStep('code'); document.getElementById('online_steam_code').focus(); }
+          return;
+        }
         if (state.connected && !recoveryMode) {
           ++steamCheckGeneration; lastSteamCheckAt = Date.now(); steamConnection = 'connected'; startedParticipation = false; renderSteamConnection();
           steamStep('success');
@@ -338,6 +373,14 @@
       if (generation !== loginGeneration) return;
       try { popup.close(); } catch (_) {}
       steamConnection = 'unavailable'; renderSteamConnection();
+      steamDiagnostic = error.diagnostic || null;
+      if (!steamDiagnostic && !['restart_required', 'not_configured'].includes(error.message)) {
+        try {
+          const report = await fetch('/online-leaderboard/steam-browser-diagnostic', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({event:error.browserPopupFailure ? 'popup_failed' : 'client_error'})});
+          steamDiagnostic = await report.json();
+        } catch (_) {}
+        if (generation !== loginGeneration) return;
+      }
       steamStep(error.message === 'restart_required' || error.message === 'not_configured' ? error.message : 'offline');
     }
   }
@@ -522,6 +565,19 @@
     choose(disabling, popup);
   };
 
+  async function finishSteamLogin() {
+    ++loginGeneration; ++steamCheckGeneration; steamConnection = 'connected'; startedParticipation = false; renderSteamConnection();
+    if (loginPopup) { try { loginPopup.close(); } catch (_) {} loginPopup = null; }
+    document.getElementById('online_steam_code').value = '';
+    if (recoveryMode) {
+      const result = await call('steam-recovery');
+      const select = document.getElementById('online_recovery_select'); select.replaceChildren();
+      const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = t('online_recovery_placeholder', 'Choisir une installation'); select.appendChild(placeholder);
+      (result.installations || []).forEach(item => { const option = document.createElement('option'); option.value = item.uuid; option.textContent = item.name + ' · ' + (item.updated_at || ''); select.appendChild(option); });
+      steamStep(result.installations && result.installations.length ? 'recovery_choose' : 'recovery_empty');
+    } else { steamStep('success'); await sync(); }
+  }
+
   async function confirmSteamCode() {
     const input = document.getElementById('online_steam_code');
     const accept = document.getElementById('online_accept');
@@ -529,16 +585,7 @@
     try {
       const response = await fetch('/online-leaderboard/steam-confirm', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({code:input.value.trim()})});
       if (!response.ok) { steamStep(response.status === 400 ? 'invalid_code' : 'offline'); return; }
-      ++loginGeneration; ++steamCheckGeneration; steamConnection = 'connected'; startedParticipation = false; renderSteamConnection();
-      if (loginPopup) { try { loginPopup.close(); } catch (_) {} loginPopup = null; }
-      input.value = '';
-      if (recoveryMode) {
-        const result = await call('steam-recovery');
-        const select = document.getElementById('online_recovery_select'); select.replaceChildren();
-        const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = t('online_recovery_placeholder', 'Choisir une installation'); select.appendChild(placeholder);
-        (result.installations || []).forEach(item => { const option = document.createElement('option'); option.value = item.uuid; option.textContent = item.name + ' · ' + (item.updated_at || ''); select.appendChild(option); });
-        steamStep(result.installations && result.installations.length ? 'recovery_choose' : 'recovery_empty');
-      } else { steamStep('success'); await sync(); }
+      await finishSteamLogin();
     } catch (_) { steamStep('offline'); }
     finally { accept.disabled = false; }
   }

@@ -14,6 +14,15 @@ from application import runtime_paths
 
 
 class DataDirectoryTests(unittest.TestCase):
+    def test_store_marker_distinguishes_store_from_source_and_other_executables(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertFalse(runtime_paths.is_store_build(False, root))
+            self.assertFalse(runtime_paths.is_store_build(True, root))
+            (root / 'store-build.marker').write_text('Store', encoding='utf-8')
+            self.assertFalse(runtime_paths.is_store_build(False, root))
+            self.assertTrue(runtime_paths.is_store_build(True, root))
+
     def test_private_profile_key_and_runtime_images_follow_selected_database(self):
         with tempfile.TemporaryDirectory() as temp, \
              patch.dict('os.environ', {'APPDATA': str(Path(temp) / 'roaming'), 'LOCALAPPDATA': str(Path(temp) / 'local')}), \

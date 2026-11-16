@@ -2,7 +2,8 @@
 from urllib.parse import urlsplit
 
 _ALLOWED_HOSTS = frozenset(('localhost', 'localhost:5000', '127.0.0.1',
-                            '127.0.0.1:5000', '[::1]', '[::1]:5000'))
+                            '127.0.0.1:5000', '[::1]', '[::1]:5000',
+                            'elden-tracker.localhost', 'elden-tracker.localhost:5000'))
 
 
 def is_allowed_request(host, origin=None, referer=None, fetch_site=None):

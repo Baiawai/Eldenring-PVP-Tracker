@@ -50,6 +50,37 @@ assert client.get('/', headers={'Host':'127.0.0.1:5000', 'Origin':'http://127.0.
 assert client.get('/exit', headers={'Origin':'https://example.com', 'Sec-Fetch-Site':'cross-site'}).status_code == 403
 assert client.get('/start', headers={'Referer':'http://localhost:1234/'}).status_code == 403
 assert client.get('/', headers={'Host':'attacker.example:5000'}).status_code == 403
+assert client.get('/', headers={'Host':'elden-tracker.localhost', 'Sec-Fetch-Site':'none'}).status_code == 200
+with patch.object(module, 'interface_url', 'http://elden-tracker.localhost/'):
+    redirected = client.get('/', headers={'Host':'localhost:5000'})
+    assert redirected.status_code == 302 and redirected.headers['Location'] == 'http://elden-tracker.localhost/'
+assert client.post('/interface-mode', headers={'Host':'elden-tracker.localhost', 'Origin':'https://attacker.example', 'Sec-Fetch-Site':'cross-site'}, data={'mode':'window'}).status_code == 403
+assert client.get('/preference-migration', headers={'Host':'localhost:5000'}).status_code == 403
+frame = client.get('/preference-migration', headers={'Host':'localhost:5000', 'Sec-Fetch-Dest':'iframe'})
+assert frame.status_code == 200 and 'frame-ancestors http://elden-tracker.localhost' in frame.headers['Content-Security-Policy']
+assert client.get('/interface-mode').get_json()['mode'] == 'browser'
+assert client.post('/interface-mode', data={'mode':'unknown'}).status_code == 400
+with patch.object(module.interface_mode, 'open_interface') as launch, patch.object(module.icon, 'update_menu'):
+    assert client.post('/interface-mode', data={'mode':'window'}).get_json()['mode'] == 'window'
+    launch.assert_called_once_with(module.interface_url, 'window')
+    assert client.get('/interface-mode').get_json()['mode'] == 'window'
+    launch.side_effect = RuntimeError('unavailable')
+    assert client.post('/interface-mode', data={'mode':'browser'}).status_code == 503
+    assert module.interface_mode.get_mode() == 'window'
+    module.interface_mode.set_mode('browser')
+with patch.object(module.interface_mode, 'browser_executable', return_value='C:/test/chrome.exe'), \
+     patch.object(module.interface_mode, '_app_windows', return_value=set()), \
+     patch.object(module.interface_mode.threading, 'Thread') as worker, \
+     patch.object(module.interface_mode.subprocess, 'Popen') as process:
+    module.interface_mode.open_interface('http://elden-tracker.localhost/', 'window')
+    assert process.call_args.args[0] == ['C:/test/chrome.exe', '--start-maximized', '--app=http://elden-tracker.localhost/']
+    worker.return_value.start.assert_called_once()
+with patch.object(module.interface_mode, 'browser_executable', return_value=None):
+    try:
+        module.interface_mode.open_interface('http://elden-tracker.localhost/', 'window')
+        raise AssertionError('A missing browser must be reported')
+    except RuntimeError:
+        pass
 anonymous = module.app.test_client(use_cookies=False)
 assert anonymous.get('/modeStats').status_code == 403
 assert anonymous.post('/history-purge').status_code == 403

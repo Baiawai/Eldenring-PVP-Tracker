@@ -2602,7 +2602,7 @@ $(window).on('load', function() {
     document.body.appendChild(dialog);
     const descriptions = [
         ['onboarding_profile', 'Choisis la langue du jeu, démarre le suivi et charge ta partie. Dans Configuration → Profil, lance la récupération, puis ouvre dans le jeu l’onglet « Quitter la partie » sans quitter. Vérifie et enregistre ton pseudo, ton niveau et ton image.'],
-        ['onboarding_steam', 'Pour participer au classement en ligne, active la participation et accepte les conditions. Connecte ton compte Steam et saisis le code de confirmation. La participation est facultative.'],
+        ['onboarding_steam', 'Pour participer au classement en ligne, active la participation, accepte les conditions et connecte Steam. La confirmation peut être automatique ; saisis le code si nécessaire. La participation est facultative.'],
         ['onboarding_duel', 'Avec le suivi activé et le jeu au premier plan, commence par un duel d’arène 1 contre 1 pour aider le tracker à repérer les notifications. Le rappel disparaîtra après ta première victoire ou défaite enregistrée en arène, invasion ou défense.']
     ];
     const headings = [['profile_capture_title','Profil du personnage'], ['online_title','Classement en ligne'],

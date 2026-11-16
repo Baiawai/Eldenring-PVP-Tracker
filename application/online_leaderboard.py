@@ -1,13 +1,17 @@
 """Optional leaderboard: participation requires consent; public reads do not."""
 import base64
+import hashlib
 import io
 import json
 import math
 import os
 import secrets
+import socket
+import ssl
 import sqlite3
 import threading
 import time
+import tempfile
 import uuid
 import winreg
 import ctypes
@@ -16,11 +20,11 @@ from contextlib import closing
 from pathlib import Path
 from urllib.parse import urlparse, urlencode
 from urllib.request import Request, build_opener, HTTPRedirectHandler
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from flask import jsonify, request
 from __main__ import app
 from application import init, mode_stats
-from application.runtime_paths import FROZEN, data_dir
+from application.runtime_paths import FROZEN, STORE_BUILD, data_dir
 from application.secur import decrypt_value
 import win32crypt
 import pywintypes
@@ -36,10 +40,73 @@ _STATUS = {'state': 'idle'}
 _DEFAULT_BASE_URL = 'https://eldenringpvp.com'
 _LANGUAGE_SYNC_REQUIRED = False
 _RECOVERY_GRANT = None
+_AUTO_LOGIN_PROOF = None
+_STEAM_FAILURES = {}
+_STEAM_FAILURES_LOCK = threading.Lock()
 _LANGUAGES = frozenset(('fra', 'eng', 'deu', 'ita', 'spaes', 'spaar', 'por', 'pol', 'rus', 'jap', 'kor', 'chi', 'zht', 'tha', 'ara'))
 _FIELDS = dict(victory=2, defeat=3, egality=4, combats=9, noResult=10,
                fight_exit=11, abandon=12, maxVictory=13, maxDefeat=14,
                ratioTime=15, connexionError=17, gameExit=18, ratio=7)
+
+
+class _BrowserLoginError(Exception):
+    pass
+
+
+def _steam_failure(stage, error):
+    """Report only a safe category and HTTP code, never request contents."""
+    reason = error.reason if isinstance(error, URLError) and not isinstance(error, HTTPError) else error
+    if isinstance(error, _BrowserLoginError):
+        category, http_status = 'browser', None
+    elif isinstance(error, HTTPError):
+        category, http_status = 'http', error.code
+    elif isinstance(reason, ssl.SSLError):
+        category, http_status = 'tls', None
+    elif isinstance(reason, (TimeoutError, socket.timeout)):
+        category, http_status = 'timeout', None
+    elif isinstance(reason, socket.gaierror):
+        category, http_status = 'dns', None
+    elif isinstance(error, pywintypes.error) or isinstance(error, sqlite3.Error):
+        category, http_status = 'storage', None
+    elif isinstance(error, URLError) or isinstance(error, ConnectionError):
+        category, http_status = 'network', None
+    else:
+        category, http_status = 'other', None
+    message = f'{time.strftime("%Y-%m-%d %H:%M:%S")} - Steam connection: stage={stage}, reason={category}'
+    name = type(reason).__name__
+    if name.isascii() and name.isidentifier() and len(name) < 80:
+        message += f', exception={name}'
+    for attr in ('errno', 'winerror'):
+        number = getattr(reason, attr, None)
+        if type(number) is int and -1000000 <= number <= 1000000:
+            message += f', {attr}={number}'
+    if http_status is not None:
+        message += f', http_status={http_status}'
+    key = (stage, category, http_status)
+    with _STEAM_FAILURES_LOCK:
+        recent = _STEAM_FAILURES.get(key)
+        if recent and time.monotonic() - recent < 60:
+            return jsonify(error='unavailable', stage=stage, reason=category, http_status=http_status, log_saved=True), 503
+    saved = False
+    try:
+        primary = data_dir()
+    except OSError:
+        primary = None
+    for directory in (primary, Path(tempfile.gettempdir()) / 'Elden Ring PvP Tracker'):
+        if directory is None:
+            continue
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            with (directory / 'tracker-errors.log').open('a', encoding='utf-8') as stream:
+                stream.write(message + '\n')
+            saved = True
+            break
+        except OSError:
+            continue
+    if saved:
+        with _STEAM_FAILURES_LOCK:
+            _STEAM_FAILURES[key] = time.monotonic()
+    return jsonify(error='unavailable', stage=stage, reason=category, http_status=http_status, log_saved=saved), 503
 
 
 def _database():
@@ -217,6 +284,10 @@ def _profile():
     name = str(profile[1]).strip()
     if not name or len(name) > 80:
         raise ValueError('profile_required')
+    if not STORE_BUILD and not name.endswith(' (dev)'):
+        # Preserve the local character profile; only the published name is
+        # marked. Reserve space for the suffix within the API's 80-char limit.
+        name = name[:74].rstrip() + ' (dev)'
     try:
         level = int(profile[19])
         if not 1 <= level <= 713:
@@ -537,7 +608,7 @@ def _sync():
 
 @app.route('/online-leaderboard/settings', methods=['GET', 'POST'])
 def online_leaderboard_settings():
-    global _RECOVERY_GRANT
+    global _RECOVERY_GRANT, _AUTO_LOGIN_PROOF
     if request.method == 'POST':
         data = request.get_json(silent=True)
         if not isinstance(data, dict):
@@ -593,6 +664,7 @@ def online_leaderboard_settings():
                 tracking.monitor_lock.release()
         if not enabled:
             _RECOVERY_GRANT = None
+            _AUTO_LOGIN_PROOF = None
             _STATUS['state'] = 'delete_pending' if data.get('remove') else 'disabled'
             start_sync()
     enabled, ident, token, pending, server = _settings()
@@ -720,10 +792,12 @@ def online_leaderboard_steam_consent():
 
 @app.route('/online-leaderboard/steam-login', methods=['POST'])
 def online_leaderboard_steam_login():
-    global _RECOVERY_GRANT
+    global _RECOVERY_GRANT, _AUTO_LOGIN_PROOF
     _RECOVERY_GRANT = None
+    stage = 'credentials'
     try:
         with _LOCK:
+            _AUTO_LOGIN_PROOF = None
             root = _base_url()
             if not root:
                 return jsonify(error='not_configured'), 503
@@ -744,8 +818,11 @@ def online_leaderboard_steam_login():
                 return jsonify(error='participation_disabled'), 409
             language = init.get_selected_language()
             selected = language if _language_permission() == 1 and language in _LANGUAGES else 'browser'
+            proof = secrets.token_hex(32)
+            payload = {'language': selected, 'proof_challenge': hashlib.sha256(proof.encode('ascii')).hexdigest()}
+            stage = 'login'
             try:
-                result = _call('POST', '/api/v1/steam/login', {'language': selected}, token=token, root=root)
+                result = _call('POST', '/api/v1/steam/login', payload, token=token, root=root)
             except HTTPError as error:
                 if error.code != 401 or not _settings()[0] or _settings()[3]:
                     raise
@@ -754,16 +831,18 @@ def online_leaderboard_steam_login():
                 with closing(_db()) as db, db:
                     db.execute('UPDATE online_leaderboard SET uuid=NULL,token=NULL,rotation_token=NULL,recovery_payload=NULL,server_url=NULL,server_consent_url=? WHERE id=1 AND enabled=1 AND delete_pending=0', (root,))
                 token = _credentials(root)
-                result = _call('POST', '/api/v1/steam/login', {'language': selected}, token=token, root=root)
+                result = _call('POST', '/api/v1/steam/login', payload, token=token, root=root)
             url = result.get('url') if isinstance(result, dict) else None
             parsed = urlparse(url or '')
             if parsed.scheme != 'https' or parsed.netloc != 'steamcommunity.com' or parsed.path != '/openid/login' or not parsed.query or parsed.fragment:
                 raise ValueError('invalid_login_url')
             if not _settings()[0]:
                 return jsonify(error='participation_disabled'), 409
-            return jsonify(url=url)
-    except Exception:
-        return jsonify(error='unavailable'), 503
+            automatic = result.get('confirmation_method') == 'proof'
+            _AUTO_LOGIN_PROOF = proof if automatic else None
+            return jsonify(url=url, automatic=automatic)
+    except Exception as error:
+        return _steam_failure(stage, error)
     finally:
         if _settings()[3] or _login_cancel_pending():
             start_sync()
@@ -771,10 +850,11 @@ def online_leaderboard_steam_login():
 
 @app.route('/online-leaderboard/steam-cancel', methods=['POST'])
 def online_leaderboard_steam_cancel():
-    global _RECOVERY_GRANT
+    global _RECOVERY_GRANT, _AUTO_LOGIN_PROOF
     _RECOVERY_GRANT = None
     try:
         with _LOCK:
+            _AUTO_LOGIN_PROOF = None
             root = _base_url()
             if not root:
                 return jsonify(error='not_configured'), 503
@@ -787,12 +867,15 @@ def online_leaderboard_steam_cancel():
 @app.route('/online-leaderboard/steam-status', methods=['GET'])
 def online_leaderboard_steam_status():
     global _LANGUAGE_SYNC_REQUIRED
+    stage = 'credentials'
     try:
         with _LOCK:
             root = _base_url()
             if not root:
                 return jsonify(error='not_configured'), 503
-            status = _remote_steam_status(root, _credentials(root))
+            token = _credentials(root)
+            stage = 'status'
+            status = _remote_steam_status(root, token)
             connected = status['connected']
         observe = request.args.get('observe') == '1'
         if connected and not observe:
@@ -800,8 +883,42 @@ def online_leaderboard_steam_status():
                 _LANGUAGE_SYNC_REQUIRED = True
             start_sync()
         return jsonify(connected=connected, confirmation_pending=status.get('confirmation_pending') is True, observation_only=observe)
-    except Exception:
-        return jsonify(error='unavailable'), 503
+    except Exception as error:
+        return _steam_failure(stage, error)
+
+
+@app.route('/online-leaderboard/steam-auto-confirm', methods=['POST'])
+def online_leaderboard_steam_auto_confirm():
+    global _RECOVERY_GRANT, _AUTO_LOGIN_PROOF
+    try:
+        with _LOCK:
+            if not _AUTO_LOGIN_PROOF:
+                return jsonify(error='no_pending_login'), 409
+            root = _base_url()
+            token = _credentials(root)
+            result = _call('POST', '/api/v1/steam/confirm', {'proof': _AUTO_LOGIN_PROOF}, token, root=root)
+            if not isinstance(result, dict) or result.get('connected') is not True:
+                raise ValueError('invalid_confirmation')
+            grant = result.get('recovery_grant')
+            _RECOVERY_GRANT = grant if isinstance(grant, str) and len(grant) == 64 and all(c in '0123456789abcdef' for c in grant) else None
+            _AUTO_LOGIN_PROOF = None
+            try:
+                _rotate_token(root, token)
+            except Exception:
+                pass  # Pending rotation is retried before the next authenticated request.
+        return jsonify(connected=True)
+    except Exception as error:
+        return _steam_failure('confirmation', error)
+
+
+@app.route('/online-leaderboard/steam-browser-diagnostic', methods=['POST'])
+def online_leaderboard_steam_browser_diagnostic():
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or data.get('event') not in ('popup_blocked', 'popup_failed', 'client_error'):
+        return jsonify(error='invalid_request'), 400
+    if data['event'] == 'client_error':
+        return _steam_failure('login', ValueError())
+    return _steam_failure('browser', _BrowserLoginError())
 
 
 @app.route('/online-leaderboard/steam-confirm', methods=['POST'])

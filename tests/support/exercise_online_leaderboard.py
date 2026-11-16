@@ -674,7 +674,22 @@ with patch.object(online, '_call', side_effect=language_api), \
 profile = ['0'] * 20
 profile[1], profile[5], profile[6], profile[19] = 'Test', 'spaar', '', '150'
 with patch.object(online.init, 'load_user', return_value=[profile]), patch.object(online.mode_stats, 'mode_user', return_value=profile):
-    assert online._profile()['language'] == 'spaar'
+    with patch.object(online, 'STORE_BUILD', False):
+        assert online._profile()['name'] == 'Test (dev)'
+        assert online._profile()['language'] == 'spaar'
+        assert profile[1] == 'Test'
+        profile[1] = 'Test (dev)'
+        assert online._profile()['name'] == 'Test (dev)'
+        profile[1] = '가' * 80
+        assert online._profile()['name'] == '가' * 74 + ' (dev)'
+        assert profile[1] == '가' * 80
+        with patch.object(online, 'FROZEN', True):
+            assert online._profile()['name'] == '가' * 74 + ' (dev)'
+    profile[1] = 'Test'
+    with patch.object(online, 'STORE_BUILD', True):
+        assert online._profile()['name'] == 'Test'
+        profile[1] = '가' * 80
+        assert online._profile()['name'] == '가' * 80
     profile[5] = '../fr'
     assert online._profile()['language'] is None
 
@@ -906,7 +921,48 @@ with patch.object(online, '_base_url', return_value='https://test.example'), \
         patch.object(online, '_call', return_value=login_url) as remote:
     with patch.object(online, '_language_permission', return_value=-1):
         assert client.post('/online-leaderboard/steam-login').status_code == 200
-        assert remote.call_args.args[2] == {'language':'browser'}
+        assert remote.call_args.args[2]['language'] == 'browser'
+        assert len(remote.call_args.args[2]['proof_challenge']) == 64
     with patch.object(online, '_language_permission', return_value=1):
         assert client.post('/online-leaderboard/steam-login').status_code == 200
-        assert remote.call_args.args[2] == {'language':'fra'}
+        assert remote.call_args.args[2]['language'] == 'fra'
+        assert len(remote.call_args.args[2]['proof_challenge']) == 64
+
+# Proof-based confirmation never exposes its secret to the browser and falls
+# back to the existing code flow when the server does not advertise support.
+with patch.object(online, '_base_url', return_value='https://test.example'), \
+     patch.object(online, '_credentials', return_value='token-fixture'), \
+     patch.object(online, '_settings', return_value=(True, None, None, False, None)), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_language_permission', return_value=1), \
+     patch.object(online.init, 'get_selected_language', return_value='eng'), \
+     patch.object(online, '_rotate_token') as rotate:
+    sent = []
+    def remote_auto(method, path, data=None, token=None, root=None, **kwargs):
+        sent.append((path, data))
+        if path == '/api/v1/steam/login':
+            return {'url':'https://steamcommunity.com/openid/login?state=fixture', 'confirmation_method':'proof'}
+        if path == '/api/v1/steam/confirm':
+            assert online.hashlib.sha256(data['proof'].encode('ascii')).hexdigest() == sent[0][1]['proof_challenge']
+            return {'connected':True, 'recovery_grant':'a'*64}
+        raise AssertionError(path)
+    with patch.object(online, '_call', side_effect=remote_auto):
+        response = client.post('/online-leaderboard/steam-login').get_json()
+        assert response['automatic'] is True and 'proof' not in str(response)
+        assert client.post('/online-leaderboard/steam-auto-confirm').get_json()['connected'] is True
+        assert client.post('/online-leaderboard/steam-auto-confirm').status_code == 409
+        rotate.assert_called_once()
+    with patch.object(online, '_call', return_value={'url':'https://steamcommunity.com/openid/login?state=fixture'}):
+        assert client.post('/online-leaderboard/steam-login').get_json()['automatic'] is False
+        assert client.post('/online-leaderboard/steam-auto-confirm').status_code == 409
+
+# Diagnostic logs must include only a category and status, not exception URLs,
+# tokens, installation IDs, or other potentially sensitive exception text.
+with tempfile.TemporaryDirectory(prefix='steam-diagnostic-test-') as directory, \
+     patch.object(online, 'data_dir', return_value=Path(directory)):
+    online._STEAM_FAILURES.clear()
+    with app.app_context():
+        response, status = online._steam_failure('login', online.HTTPError('https://secret.example/token-secret', 502, 'secret-body', {}, None))
+    assert status == 503 and response.get_json()['reason'] == 'http' and response.get_json()['http_status'] == 502
+    log = (Path(directory) / 'tracker-errors.log').read_text(encoding='utf-8')
+    assert 'stage=login' in log and 'http_status=502' in log and 'secret' not in log and 'https://' not in log

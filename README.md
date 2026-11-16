@@ -12,6 +12,8 @@ Elden Ring PvP Tracker est une application Windows locale qui suit les combats P
 
 La reconnaissance utilise l'OCR et ne peut lire que les notifications visibles. Un texte ou un nom peut être mal reconnu ; un personnage et un compte Steam ne sont pas nécessairement associés. L'ancien classement distant est désactivé. Le nouveau classement utilise par défaut le site `https://eldenringpvp.com` : la participation nécessite une autorisation explicite et une connexion Steam vérifiée. Dans l'application, les profils des autres joueurs sont affichés après l'acceptation des conditions. Les statistiques locales restent disponibles hors ligne.
 
+Lorsqu'une version de développement participe au classement, le pseudo publié porte le suffixe ` (dev)`. Le profil de personnage local n'est pas modifié. Les packages préparés pour le Microsoft Store ne reçoivent pas automatiquement ce suffixe.
+
 ## Installation de la version de développement
 
 ### Prérequis
@@ -28,7 +30,7 @@ py -3.15 -m venv .venv
 .\Lancer le tracker.bat
 ```
 
-Le lanceur utilise `.venv` et ouvre normalement [localhost:5000](http://localhost:5000/). Le serveur écoute uniquement sur `127.0.0.1:5000`. Si le tracker tourne déjà, utilisez sa page existante ou l'icône dans la zone de notification. Pour afficher les messages du programme dans une console :
+Le lanceur utilise `.venv` et ouvre normalement [elden-tracker.localhost](http://elden-tracker.localhost/). Le serveur écoute uniquement sur ce PC : le port 5000 reste disponible pour les anciens onglets et le port 80 est utilisé pour l’adresse courte. Si le port 80 est occupé, l’adresse devient `http://elden-tracker.localhost:5000/`. Dans Configuration → Graphismes ou depuis l’icône de notification, choisissez le navigateur ou une fenêtre dédiée utilisant Chrome ou Edge installé. Si le tracker tourne déjà, utilisez sa page existante ou l’icône dans la zone de notification. Pour afficher les messages du programme dans une console :
 
 ```powershell
 .\.venv\Scripts\python.exe ELDENRING_Tracker.py

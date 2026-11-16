@@ -1,5 +1,5 @@
 import threading
-from flask import Flask, abort, jsonify, render_template, request
+from flask import Flask, abort, jsonify, redirect, render_template, request
 import webbrowser
 import os
 import socket
@@ -11,7 +11,7 @@ from application.version import APP_VERSION
 from application.local_security import is_allowed_request
 from application import store_update
 import threading
-from waitress import serve
+from waitress import serve, create_server
 import sys
 import traceback
 
@@ -38,9 +38,17 @@ _LOCAL_COOKIE = 'tracker_session'
 
 @app.before_request
 def restrict_local_requests():
+    if request.path == '/preference-migration':
+        if (request.method != 'GET' or request.host.lower() != 'localhost:5000' or
+                request.headers.get('Sec-Fetch-Dest') != 'iframe'):
+            abort(403)
+        return None
     if not is_allowed_request(request.host, request.headers.get('Origin'),
                               request.headers.get('Referer'), request.headers.get('Sec-Fetch-Site')):
         abort(403)
+    if (request.method == 'GET' and request.path == '/' and request.host.lower() == 'localhost:5000'
+            and globals().get('interface_url', '').startswith('http://elden-tracker.localhost')):
+        return redirect(interface_url, code=302)
     if request.path not in ('/', '/monitor-status') and not request.path.startswith('/static/'):
         supplied = request.cookies.get(_LOCAL_COOKIE, '')
         if not supplied.isascii() or not secrets.compare_digest(supplied, _LOCAL_SESSION):
@@ -56,7 +64,10 @@ def restrict_local_requests():
 @app.after_request
 def secure_local_response(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
+    if request.path == '/preference-migration':
+        response.headers['Content-Security-Policy'] = "default-src 'none'; script-src 'unsafe-inline'; frame-ancestors http://elden-tracker.localhost http://elden-tracker.localhost:5000"
+    else:
+        response.headers['X-Frame-Options'] = 'DENY'
     response.headers['Referrer-Policy'] = 'same-origin'
     if not request.path.startswith('/static/'):
         response.headers['Cache-Control'] = 'no-store'
@@ -89,6 +100,7 @@ try:
     from application import steam_log_auto, peer_tracking
     from application import history_archives
     from application import tray_controls
+    from application import interface_mode
     from application.tray_navigation import Navigation
     from application.init import get_selected_language
     from application.ui_localization import packs
@@ -105,7 +117,58 @@ current_folder = os.path.dirname(os.path.abspath(__file__))
 static_folder = os.path.join(current_folder, "static")
 icon_path = os.path.join(static_folder, "tracker-eye-ornament.ico")
 image = Image.open(icon_path)
-tray_navigation = Navigation(webbrowser.open_new)
+interface_url = 'http://localhost:5000/'
+tray_navigation = Navigation(lambda url: interface_mode.open_interface(url), base_url=lambda: interface_url)
+
+
+@app.route('/preference-migration')
+def preference_migration():
+    return '''<!doctype html><script>
+    addEventListener('message', function(e) {
+      if (!['http://elden-tracker.localhost', 'http://elden-tracker.localhost:5000'].includes(e.origin) || e.source !== parent || e.data !== 'tracker-preferences-request') return;
+      const result = {};
+      for (const key of ['trackerDisplayPreferences', 'trackerSteamDisplayPreferences', 'trackerProfileSidebarOpen']) {
+        try { const value = localStorage.getItem(key); if (value !== null && value.length < 4096) result[key] = value; } catch (_) {}
+      }
+      parent.postMessage({type:'tracker-preferences-response', values:result}, e.origin);
+    });</script>'''
+
+
+@app.route('/interface-mode', methods=['GET', 'POST'])
+def change_interface_mode():
+    if request.method == 'POST':
+        mode = request.form.get('mode')
+        if mode not in ('browser', 'window'):
+            abort(400)
+        previous = interface_mode.get_mode()
+        try:
+            if mode != previous:
+                interface_mode.set_mode(mode)
+                try:
+                    interface_mode.open_interface(interface_url, mode)
+                except (OSError, RuntimeError):
+                    interface_mode.set_mode(previous)
+                    raise
+                icon.update_menu()
+        except (OSError, RuntimeError):
+            return jsonify(request='error'), 503
+    return jsonify(request='success', mode=interface_mode.get_mode())
+
+
+def tray_mode(mode):
+    def action(icon, item):
+        previous = interface_mode.get_mode()
+        try:
+            interface_mode.set_mode(mode)
+            try:
+                interface_mode.open_interface(interface_url, mode)
+            except (OSError, RuntimeError):
+                interface_mode.set_mode(previous)
+                raise
+            icon.update_menu()
+        except (OSError, RuntimeError):
+            icon.notify(tray_modern('interface_mode_error', 'Impossible d’ouvrir cette fenêtre.'))
+    return action
 
 
 
@@ -176,6 +239,9 @@ icon = pystray.Icon("EldenRingPvPTracker", image, "Elden PVP Tracker", menu=pyst
     pystray.MenuItem("Elden PVP Tracker", open_tracker, default=True),
     pystray.MenuItem(tray_start_label, start_tracking),
     pystray.MenuItem(tray_stop_label, stop_tracking),
+    pystray.MenuItem(lambda item: tray_modern('interface_mode', 'Mode d’ouverture'), pystray.Menu(
+        pystray.MenuItem(lambda item: tray_modern('interface_browser', 'Navigateur'), tray_mode('browser'), checked=lambda item: interface_mode.get_mode() == 'browser', radio=True),
+        pystray.MenuItem(lambda item: tray_modern('interface_window', 'Fenêtre dédiée'), tray_mode('window'), checked=lambda item: interface_mode.get_mode() == 'window', radio=True))),
     pystray.Menu.SEPARATOR,
     pystray.MenuItem(tray_text(3, 'Captures'), open_captures),
     pystray.MenuItem(tray_text(83, 'Statistiques'), open_statistics),
@@ -246,7 +312,8 @@ if getattr(sys, 'frozen', False) and len(sys.argv) == 3 and sys.argv[1] == '--di
                   'store_mode': b'data-store-build="true"' in response.data,
                   'legacy_leaderboard_disabled': client.get('/syncMulti').status_code == 404,
                   'steam_login_route': client.post('/online-leaderboard/steam-login').status_code == 503,
-                  'production_leaderboard': online_leaderboard._base_url() == 'https://eldenringpvp.com'}
+                  'production_leaderboard': online_leaderboard._base_url() == 'https://eldenringpvp.com',
+                  'store_distribution_marker': online_leaderboard.STORE_BUILD}
         # Exercise the bundled OCR subprocess and its positioned-text output on
         # a synthetic image, without capturing the screen or using game data.
         try:
@@ -312,7 +379,7 @@ def start_flask():
 def open_initial_browser():
     # A previously open tab can reconnect once the server is listening.
     if not tray_navigation.wait_for_tab(6):
-        webbrowser.open_new('http://localhost:5000/')
+        interface_mode.open_interface(interface_url)
     
 
 
@@ -330,6 +397,19 @@ def exit():
     
 flask_thread = threading.Thread(target=start_flask)     
 if __name__ == '__main__' and app_started == True:
+    alias_socket = None
+    try:
+        alias_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        alias_socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        alias_socket.bind(('127.0.0.1', 80))
+        alias_socket.listen(128)
+        alias_server = create_server(app, map={}, sockets=[alias_socket], max_request_body_size=2 * 1024 * 1024)
+        interface_url = 'http://elden-tracker.localhost/'
+        threading.Thread(target=alias_server.run, name='local-alias-server', daemon=True).start()
+    except OSError:
+        if alias_socket is not None:
+            alias_socket.close()
+        interface_url = 'http://elden-tracker.localhost:5000/'
     if not store_update.is_required():
         try:
             from contextlib import closing

@@ -7,8 +7,9 @@ SECTIONS = frozenset(('home', 'captures', 'statistics', 'history', 'settings'))
 
 
 class Navigation:
-    def __init__(self, open_url, clock=time.monotonic, timeout=6):
+    def __init__(self, open_url, clock=time.monotonic, timeout=6, base_url=None):
         self.open_url = open_url
+        self.base_url = base_url or (lambda: 'http://localhost:5000/')
         self.clock = clock
         self.timeout = timeout
         self.lock = threading.Lock()
@@ -55,7 +56,7 @@ class Navigation:
                 self.pending[ident] = {'tab': tab, 'section': section, 'ack': acknowledged}
             else:
                 ident = None
-        url = 'http://localhost:5000/' + ('' if section == 'home' else '#' + section)
+        url = self.base_url() + ('' if section == 'home' else '#' + section)
         if ident is None:
             self.open_url(url)
             return

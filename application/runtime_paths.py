@@ -10,6 +10,13 @@ from pathlib import Path
 
 RESOURCE_DIR = Path(__file__).resolve().parent
 FROZEN = bool(getattr(sys, 'frozen', False))
+
+
+def is_store_build(frozen, resource_dir):
+    return bool(frozen and (resource_dir / 'store-build.marker').is_file())
+
+
+STORE_BUILD = is_store_build(FROZEN, RESOURCE_DIR)
 DATA_FOLDER = 'Elden Ring PvP Tracker'
 LEGACY_DATA_FOLDER = 'hid_el_cou'
 

@@ -9,6 +9,7 @@ datas = [(str(root / name), name) for name in ('static', 'templates')]
 datas += [(str(root / 'application' / name), 'application/' + name)
           for name in ('locales', 'geoip', 'steam_peers')]
 datas += [(str(root / 'application' / 'steam_logo.png'), 'application')]
+datas += [(str(root / 'store' / 'store-build.marker'), 'application')]
 # PyWinRT projections load their generated metadata from disk at runtime.
 winrt_modules = ['winrt.windows.applicationmodel', 'winrt.windows.services.store',
                  'winrt.windows.foundation', 'winrt.windows.foundation.collections',
