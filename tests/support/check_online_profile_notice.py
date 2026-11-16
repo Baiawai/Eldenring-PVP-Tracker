@@ -56,7 +56,7 @@ def check(browser, url):
         for language in LANGUAGES:
             page.evaluate('(code) => launchLanguages(code)', language)
             expected = page.evaluate('''code => code === 'fra'
-                ? ['Ajoute un pseudo dans ton profil avant la synchronisation.', 'Récupérer mon profil']
+                ? ['Récupère et enregistre ton profil de personnage avant la synchronisation au classement.', 'Récupérer mon profil']
                 : [ELDEN_UI_PACKS[code].modern.online_profile_required,
                    ELDEN_UI_PACKS[code].modern.profile_capture_start]''', language)
             assert expected[0] in notice.inner_text(), (language, notice.inner_text(), expected)

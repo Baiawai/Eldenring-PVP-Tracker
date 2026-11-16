@@ -123,7 +123,7 @@ def _banner_edges(image, first_top, last_bottom, line_height):
     return top, bottom
 
 
-def analyze_notification(data, image_height, language, image=None, image_width=None):
+def analyze_notification(data, image_height, language, image=None, image_width=None, reference_height=None):
     """Locate complete catalog messages and count their OCR text lines.
 
     Return None if the message or its position is uncertain.  The minimum
@@ -180,7 +180,8 @@ def analyze_notification(data, image_height, language, image=None, image_width=N
             continue
         left, right = offsets[start], offsets[end - 1] + 1
         indices = [i for i, (a, b) in enumerate(ranges) if a < right and b > left]
-        if not indices or any(lines[j]['top'] - lines[i]['bottom'] > image_height * .08 for i, j in zip(indices, indices[1:])):
+        spacing_height = max(image_height, reference_height or image_height)
+        if not indices or any(lines[j]['top'] - lines[i]['bottom'] > spacing_height * .08 for i, j in zip(indices, indices[1:])):
             continue
         matched.update(indices)
         max_lines = max(max_lines, len(indices))

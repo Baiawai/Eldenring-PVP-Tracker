@@ -599,7 +599,7 @@
       "online_success": "Synchronisierte Bestenliste.",
       "online_offline": "Synchronisierung nicht verfügbar. Ihre Statistiken bleiben lokal gespeichert.",
       "online_not_configured": "Ranking-Server nicht konfiguriert.",
-      "online_profile_required": "Fügen Sie Ihrem Profil vor der Synchronisierung einen Spitznamen hinzu.",
+      "online_profile_required": "Erfasse und speichere dein Charakterprofil, bevor du es mit der Rangliste synchronisierst.",
       "online_invalid_stats": "Statistiken können nicht synchronisiert werden.",
       "online_delete_pending": "Anfrage ausstehend: Beim nächsten Start wird sie erneut versucht.",
       "online_deleted": "Daten aus dem Ranking entfernt.",
@@ -754,7 +754,8 @@
       "leaderboard_language": "Sprache",
       "online_baseline_wait": "Die Statistiken werden nach dem laufenden Kampf übernommen.",
       "online_baseline_conflict": "Die Serverstatistiken sind höher als die lokalen Statistiken. Die Daten bleiben erhalten; kontaktiere den Support.",
-      "profile_saved_preview": "Gespeichertes Profil"
+      "profile_saved_preview": "Gespeichertes Profil",
+      "draw_against": "Der Kampf gegen {opponent} endet unentschieden."
     },
     "html_lang": "de"
   },
@@ -1358,7 +1359,7 @@
       "online_success": "Classifica sincronizzata.",
       "online_offline": "Sincronizzazione non disponibile. Le tue statistiche rimangono salvate localmente.",
       "online_not_configured": "Server di classificazione non configurato.",
-      "online_profile_required": "Aggiungi un nickname al tuo profilo prima della sincronizzazione.",
+      "online_profile_required": "Acquisisci e salva il profilo del tuo personaggio prima di sincronizzarlo con la classifica.",
       "online_invalid_stats": "Le statistiche non possono essere sincronizzate.",
       "online_delete_pending": "Richiesta in sospeso: sarà ritentata al prossimo avvio.",
       "online_deleted": "Dati rimossi dalla classifica.",
@@ -1513,7 +1514,8 @@
       "leaderboard_language": "Lingua",
       "online_baseline_wait": "Le statistiche saranno importate al termine del combattimento.",
       "online_baseline_conflict": "Le statistiche sul server sono superiori a quelle locali. I dati sono conservati; contatta il supporto.",
-      "profile_saved_preview": "Profilo salvato"
+      "profile_saved_preview": "Profilo salvato",
+      "draw_against": "Il combattimento con {opponent} termina in pareggio."
     },
     "html_lang": "it"
   },
@@ -2117,7 +2119,7 @@
       "online_success": "Tabela de classificação sincronizada.",
       "online_offline": "Sincronização indisponível. Suas estatísticas permanecem salvas localmente.",
       "online_not_configured": "Servidor de classificação não configurado.",
-      "online_profile_required": "Adicione um apelido ao seu perfil antes de sincronizar.",
+      "online_profile_required": "Captura e guarda o perfil da tua personagem antes de o sincronizares com a classificação.",
       "online_invalid_stats": "As estatísticas não podem ser sincronizadas.",
       "online_delete_pending": "Solicitação pendente: uma nova tentativa será feita na próxima inicialização.",
       "online_deleted": "Dados removidos da classificação.",
@@ -2272,7 +2274,8 @@
       "leaderboard_language": "Idioma",
       "online_baseline_wait": "As estatísticas serão importadas após o combate atual.",
       "online_baseline_conflict": "As estatísticas do servidor são superiores às locais. Os dados são preservados; contacte o suporte.",
-      "profile_saved_preview": "Perfil salvo"
+      "profile_saved_preview": "Perfil salvo",
+      "draw_against": "O combate contra {opponent} termina empatado."
     },
     "html_lang": "pt-BR"
   },
@@ -2876,7 +2879,7 @@
       "online_success": "Zsynchronizowana tabela wyników.",
       "online_offline": "Synchronizacja niedostępna. Twoje statystyki pozostają zapisane lokalnie.",
       "online_not_configured": "Serwer rankingowy nie jest skonfigurowany.",
-      "online_profile_required": "Dodaj pseudonim do swojego profilu przed synchronizacją.",
+      "online_profile_required": "Pobierz i zapisz profil swojej postaci przed synchronizacją z rankingiem.",
       "online_invalid_stats": "Statystyki nie mogą być synchronizowane.",
       "online_delete_pending": "Oczekujące żądanie: próba zostanie ponowiona przy następnym uruchomieniu.",
       "online_deleted": "Dane usunięte z rankingu.",
@@ -3031,7 +3034,8 @@
       "leaderboard_language": "Język",
       "online_baseline_wait": "Statystyki zostaną zaimportowane po zakończeniu obecnej walki.",
       "online_baseline_conflict": "Statystyki serwera są wyższe niż lokalne. Dane są zachowane; skontaktuj się z pomocą.",
-      "profile_saved_preview": "Zapisany profil"
+      "profile_saved_preview": "Zapisany profil",
+      "draw_against": "Walka z graczem {opponent} kończy się remisem."
     },
     "html_lang": "pl"
   },
@@ -3635,7 +3639,7 @@
       "online_success": "Синхронизированная таблица лидеров.",
       "online_offline": "Синхронизация недоступна. Ваша статистика остается сохраненной локально.",
       "online_not_configured": "Сервер рейтинга не настроен.",
-      "online_profile_required": "Перед синхронизацией добавьте псевдоним в свой профиль.",
+      "online_profile_required": "Получи и сохрани профиль своего персонажа перед синхронизацией с таблицей лидеров.",
       "online_invalid_stats": "Статистику невозможно синхронизировать.",
       "online_delete_pending": "Запрос ожидает выполнения: попытка будет повторена при следующем запуске.",
       "online_deleted": "Данные удалены из рейтинга.",
@@ -3790,7 +3794,8 @@
       "leaderboard_language": "Язык",
       "online_baseline_wait": "Статистика будет импортирована после текущего боя.",
       "online_baseline_conflict": "Статистика сервера выше локальной. Данные сохранены; обратитесь в поддержку.",
-      "profile_saved_preview": "Сохранённый профиль"
+      "profile_saved_preview": "Сохранённый профиль",
+      "draw_against": "Бой с игроком {opponent} завершился вничью."
     },
     "html_lang": "ru"
   },
@@ -4394,7 +4399,7 @@
       "online_success": "同期されたリーダーボード。",
       "online_offline": "同期が利用できません。統計はローカルに保存されたままになります。",
       "online_not_configured": "ランキングサーバーが設定されていません。",
-      "online_profile_required": "同期する前に、プロフィールにニックネームを追加してください。",
+      "online_profile_required": "ランキングと同期する前に、キャラクターのプロフィールを取得して保存してください。",
       "online_invalid_stats": "統計を同期できません。",
       "online_delete_pending": "リクエストは保留中です。次回起動時に再試行します。",
       "online_deleted": "ランキングからデータを削除しました。",
@@ -4549,7 +4554,8 @@
       "leaderboard_language": "言語",
       "online_baseline_wait": "現在の対戦終了後に統計が取り込まれます。",
       "online_baseline_conflict": "サーバーの統計がローカル統計を上回っています。データは保持されます。サポートにお問い合わせください。",
-      "profile_saved_preview": "保存済みプロフィール"
+      "profile_saved_preview": "保存済みプロフィール",
+      "draw_against": "{opponent}との戦いは引き分けに終わりました。"
     },
     "html_lang": "ja"
   },
@@ -5153,7 +5159,7 @@
       "online_success": "동기화된 리더보드.",
       "online_offline": "동기화할 수 없습니다. 통계는 로컬에 계속 저장됩니다.",
       "online_not_configured": "순위 서버가 구성되지 않았습니다.",
-      "online_profile_required": "동기화하기 전에 프로필에 닉네임을 추가하세요.",
+      "online_profile_required": "순위표와 동기화하기 전에 캐릭터 프로필을 가져와 저장하세요.",
       "online_invalid_stats": "통계를 동기화할 수 없습니다.",
       "online_delete_pending": "요청이 대기 중입니다. 다음 시작 시 다시 시도합니다.",
       "online_deleted": "순위에서 데이터가 제거되었습니다.",
@@ -5308,7 +5314,8 @@
       "leaderboard_language": "언어",
       "online_baseline_wait": "현재 전투가 끝나면 통계를 가져옵니다.",
       "online_baseline_conflict": "서버 통계가 로컬 통계보다 높습니다. 데이터는 보존됩니다. 지원팀에 문의하세요.",
-      "profile_saved_preview": "저장된 프로필"
+      "profile_saved_preview": "저장된 프로필",
+      "draw_against": "{opponent}님과의 전투가 무승부로 끝났습니다."
     },
     "html_lang": "ko"
   },
@@ -5912,7 +5919,7 @@
       "online_success": "同步排行榜。",
       "online_offline": "无法同步。您的统计数据仍保存在本地。",
       "online_not_configured": "未配置排名服务器。",
-      "online_profile_required": "同步前将昵称添加到您的个人资料中。",
+      "online_profile_required": "与排行榜同步前，请获取并保存你的角色资料。",
       "online_invalid_stats": "统计数据无法同步。",
       "online_delete_pending": "请求待处理：将在下次启动时重试。",
       "online_deleted": "从排名中删除的数据。",
@@ -6067,7 +6074,8 @@
       "leaderboard_language": "语言",
       "online_baseline_wait": "当前战斗结束后将导入统计数据。",
       "online_baseline_conflict": "服务器统计数据高于本地数据。数据已保留，请联系支持。",
-      "profile_saved_preview": "已保存的个人资料"
+      "profile_saved_preview": "已保存的个人资料",
+      "draw_against": "与{opponent}的战斗以平局结束。"
     },
     "html_lang": "zh-Hans"
   },
@@ -6671,7 +6679,7 @@
       "online_success": "同步排行榜。",
       "online_offline": "無法同步。您的統計資料仍保存在本地。",
       "online_not_configured": "未配置排名伺服器。",
-      "online_profile_required": "同步前將暱稱新增至您的個人資料。",
+      "online_profile_required": "與排行榜同步前，請取得並儲存你的角色資料。",
       "online_invalid_stats": "統計資料無法同步。",
       "online_delete_pending": "要求待處理：將於下次啟動時重試。",
       "online_deleted": "從排名中刪除的數據。",
@@ -6826,7 +6834,8 @@
       "leaderboard_language": "語言",
       "online_baseline_wait": "目前戰鬥結束後將匯入統計資料。",
       "online_baseline_conflict": "伺服器統計資料高於本機資料。資料已保留，請聯絡支援。",
-      "profile_saved_preview": "已儲存的個人資料"
+      "profile_saved_preview": "已儲存的個人資料",
+      "draw_against": "與{opponent}的戰鬥以平手結束。"
     },
     "html_lang": "zh-Hant"
   },
@@ -7430,7 +7439,7 @@
       "online_success": "กระดานผู้นำที่ซิงโครไนซ์",
       "online_offline": "การซิงโครไนซ์ไม่พร้อมใช้งาน สถิติของคุณยังคงบันทึกไว้ในเครื่อง",
       "online_not_configured": "ไม่ได้กำหนดค่าเซิร์ฟเวอร์การจัดอันดับ",
-      "online_profile_required": "เพิ่มชื่อเล่นในโปรไฟล์ของคุณก่อนทำการซิงค์",
+      "online_profile_required": "ดึงข้อมูลและบันทึกโปรไฟล์ตัวละครก่อนซิงค์กับตารางอันดับ",
       "online_invalid_stats": "ไม่สามารถซิงโครไนซ์สถิติได้",
       "online_delete_pending": "คำขอกำลังรอดำเนินการ โดยจะลองอีกครั้งเมื่อเริ่มต้นครั้งถัดไป",
       "online_deleted": "ข้อมูลถูกลบออกจากการจัดอันดับ",
@@ -7585,7 +7594,8 @@
       "leaderboard_language": "ภาษา",
       "online_baseline_wait": "สถิติจะถูกนำเข้าหลังการต่อสู้ปัจจุบัน",
       "online_baseline_conflict": "สถิติบนเซิร์ฟเวอร์สูงกว่าในเครื่อง ข้อมูลยังคงอยู่ โปรดติดต่อฝ่ายสนับสนุน",
-      "profile_saved_preview": "โปรไฟล์ที่บันทึกไว้"
+      "profile_saved_preview": "โปรไฟล์ที่บันทึกไว้",
+      "draw_against": "การต่อสู้กับ {opponent} จบลงด้วยผลเสมอ"
     },
     "html_lang": "th"
   },
@@ -8189,7 +8199,7 @@
       "online_success": "المتصدرين متزامنة.",
       "online_offline": "المزامنة غير متاحة. تظل إحصائياتك محفوظة محليًا.",
       "online_not_configured": "لم يتم تكوين خادم الترتيب.",
-      "online_profile_required": "أضف لقبًا إلى ملف التعريف الخاص بك قبل المزامنة.",
+      "online_profile_required": "استرجع ملف شخصيتك واحفظه قبل مزامنته مع لوحة الترتيب.",
       "online_invalid_stats": "لا يمكن مزامنة الإحصائيات.",
       "online_delete_pending": "الطلب قيد الانتظار: ستُعاد المحاولة عند بدء التشغيل التالي.",
       "online_deleted": "تمت إزالة البيانات من الترتيب.",
@@ -8344,7 +8354,8 @@
       "leaderboard_language": "اللغة",
       "online_baseline_wait": "ستُستورد الإحصاءات بعد انتهاء المعركة الحالية.",
       "online_baseline_conflict": "إحصاءات الخادم أعلى من الإحصاءات المحلية. تم الاحتفاظ بالبيانات؛ تواصل مع الدعم.",
-      "profile_saved_preview": "الملف الشخصي المحفوظ"
+      "profile_saved_preview": "الملف الشخصي المحفوظ",
+      "draw_against": "انتهت المعركة بالتعادل مع {opponent}."
     },
     "html_lang": "ar"
   },
@@ -8948,7 +8959,7 @@
       "online_success": "Synchronized leaderboard.",
       "online_offline": "Synchronization unavailable. Your statistics remain saved locally.",
       "online_not_configured": "Ranking server not configured.",
-      "online_profile_required": "Add a nickname to your profile before syncing.",
+      "online_profile_required": "Capture and save your character profile before syncing with the leaderboard.",
       "online_invalid_stats": "Statistics cannot be synchronized.",
       "online_delete_pending": "Request pending: it will be retried at the next startup.",
       "online_deleted": "Data removed from ranking.",
@@ -9103,7 +9114,8 @@
       "leaderboard_language": "Language",
       "online_baseline_wait": "Statistics will be imported after the current fight.",
       "online_baseline_conflict": "Server statistics are higher than local statistics. Your data is preserved; contact support.",
-      "profile_saved_preview": "Saved profile"
+      "profile_saved_preview": "Saved profile",
+      "draw_against": "The fight ends in a draw with {opponent}."
     },
     "html_lang": "en"
   },
@@ -9707,7 +9719,7 @@
       "online_success": "Tabla de clasificación sincronizada.",
       "online_offline": "Sincronización no disponible. Sus estadísticas permanecen guardadas localmente.",
       "online_not_configured": "Servidor de clasificación no configurado.",
-      "online_profile_required": "Agregue un apodo a su perfil antes de sincronizar.",
+      "online_profile_required": "Captura y guarda el perfil de tu personaje antes de sincronizarlo con la clasificación.",
       "online_invalid_stats": "Las estadísticas no se pueden sincronizar.",
       "online_delete_pending": "Solicitud pendiente: se volverá a intentar en el próximo inicio.",
       "online_deleted": "Datos eliminados del ranking.",
@@ -9862,7 +9874,8 @@
       "leaderboard_language": "Idioma",
       "online_baseline_wait": "Las estadísticas se importarán al terminar el combate actual.",
       "online_baseline_conflict": "Las estadísticas del servidor son superiores a las locales. Los datos se conservan; contacta con soporte.",
-      "profile_saved_preview": "Perfil guardado"
+      "profile_saved_preview": "Perfil guardado",
+      "draw_against": "El combate contra {opponent} termina en empate."
     },
     "html_lang": "es-ES"
   },
@@ -10466,7 +10479,7 @@
       "online_success": "Tabla de clasificación sincronizada.",
       "online_offline": "Sincronización no disponible. Sus estadísticas permanecen guardadas localmente.",
       "online_not_configured": "Servidor de clasificación no configurado.",
-      "online_profile_required": "Agregue un apodo a su perfil antes de sincronizar.",
+      "online_profile_required": "Captura y guarda el perfil de tu personaje antes de sincronizarlo con la clasificación.",
       "online_invalid_stats": "Las estadísticas no se pueden sincronizar.",
       "online_delete_pending": "Solicitud pendiente: se volverá a intentar en el próximo inicio.",
       "online_deleted": "Datos eliminados del ranking.",
@@ -10621,7 +10634,8 @@
       "leaderboard_language": "Idioma",
       "online_baseline_wait": "Las estadísticas se importarán al terminar el combate actual.",
       "online_baseline_conflict": "Las estadísticas del servidor son superiores a las locales. Los datos se conservan; contacta a soporte.",
-      "profile_saved_preview": "Perfil guardado"
+      "profile_saved_preview": "Perfil guardado",
+      "draw_against": "El combate contra {opponent} termina en empate."
     },
     "html_lang": "es-419"
   }

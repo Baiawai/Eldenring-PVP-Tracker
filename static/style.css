@@ -498,18 +498,18 @@ height:auto;
     top:50%;
     transform:translateY(-50%);
     z-index:200;
-    width:42px;
-    height:58px;
+    width:52px;
+    height:76px;
     padding:0;
     border:0;
     box-shadow:none;
     background:transparent;
     color:#f2dfb6;
-    font:40px/1 Georgia, serif;
+    font:60px/1 Georgia, serif;
     cursor:pointer;
 }
-.capture-viewer-content .capture-viewer-prev { left:-54px; }
-.capture-viewer-content .capture-viewer-next { right:-54px; }
+.capture-viewer-content .capture-viewer-prev { left:-60px; }
+.capture-viewer-content .capture-viewer-next { right:-60px; }
 .capture-viewer-content .capture-viewer-nav:hover:not(:disabled) { color:#fff; }
 .capture-viewer-content .capture-viewer-nav:disabled { opacity:.35; cursor:default; }
 .capture-viewer-content .capture-viewer-nav:focus-visible { outline:2px solid #e1c487; outline-offset:2px; }
@@ -518,12 +518,13 @@ height:auto;
     right:0;
     top:0;
     z-index:200;
-    width:34px;
-    height:34px;
+    width:48px;
+    height:48px;
+    padding:0;
     border:0;
     background:transparent;
     color:#fff;
-    font-size:24px;
+    font-size:40px;
     line-height:1;
     cursor:pointer;
 }
@@ -2307,10 +2308,11 @@ font-family: optimus princeps;
 
 /* Ornamental frame around the live capture, extending beyond its edges. */
 .live-preview { border: 0; box-shadow: none; overflow: visible; }
+.live .live-preview img { position:absolute; inset:1%; width:98%; height:98%; }
 .live-preview::after {
     content: "";
     position: absolute;
-    inset: -14% -25%;
+    inset: -14% -25% -13%;
     z-index: 2;
     background: url("live-preview-arabesques.png") center / 100% 100% no-repeat;
     pointer-events: none;

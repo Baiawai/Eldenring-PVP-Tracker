@@ -54,6 +54,31 @@
         const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(value || '');
         return match ? match[3] + '/' + match[2] + '/' + match[1] + ' · ' + match[4] + ':' + match[5] : value;
     }
+    function historicalOpponent(line) {
+        const templates = ['Vous remportez la victoire contre {opponent} !', 'Vous avez perdu contre {opponent}.', 'Le combat s’achève par une égalité avec {opponent}.'];
+        Object.values(window.ELDEN_UI_PACKS || {}).forEach(function(pack) {
+            if (pack.modern) templates.push(pack.modern.victory_against, pack.modern.defeat_against, pack.modern.draw_against);
+        });
+        for (const template of templates) {
+            if (typeof template !== 'string' || !template.includes('{opponent}')) continue;
+            const parts = template.split('{opponent}');
+            if (parts.length !== 2 || !line.startsWith(parts[0]) || !line.endsWith(parts[1])) continue;
+            const name = line.slice(parts[0].length, parts[1] ? -parts[1].length : undefined);
+            if (name) return name;
+        }
+        return '';
+    }
+    function appendPlayerName(container, line, name, source, id) {
+        const index = name ? line.indexOf(name) : -1;
+        if (index < 0 || !window.openEncounteredPlayer) {
+            container.appendChild(document.createTextNode(line));
+            return;
+        }
+        const link = element('button', 'encounter-player-link', name);
+        link.type = 'button';
+        link.addEventListener('click', () => window.openEncounteredPlayer(name, source, id));
+        container.append(document.createTextNode(line.slice(0, index)), link, document.createTextNode(line.slice(index + name.length)));
+    }
     function modeLabel(value) {
         return ({Arena:tr('arena','Arène 1v1'), Invasion:tr('invasion','Invasions'), Defense:tr('defense','Monde envahi'), System:tr('history_system','Système'), Unknown:tr('unknown_mode','Mode non déterminé')})[value] || tr('unknown_mode','Mode non déterminé');
     }
@@ -178,7 +203,12 @@
             text.split('\n').forEach(function(line, i) {
                 if (i) message.appendChild(document.createElement('br'));
                 const translatedWarnings = Object.values(window.ELDEN_UI_PACKS || {}).map(pack => pack.modern.inventory_warning);
-                message.appendChild(element('span', line.startsWith('Pensez à retirer') || translatedWarnings.includes(line) ? 'history-warning' : '', line));
+                const span = element('span', line.startsWith('Pensez à retirer') || translatedWarnings.includes(line) ? 'history-warning' : '');
+                const metadata = entry.metadata || {};
+                const steamEvent = entry.kind && entry.kind.startsWith('steam_');
+                const name = i === 0 ? (steamEvent ? (metadata.name || metadata.id || '') : (metadata.opponent || historicalOpponent(line))) : '';
+                appendPlayerName(span, line, name, steamEvent ? 'steam' : (metadata.opponent_source || ''), steamEvent ? String(metadata.id || '') : '');
+                message.appendChild(span);
             });
             if (entry.kind === 'steam_encounter' && entry.metadata && entry.metadata.country_code) {
                 const country = element('div', 'history-steam-country');

@@ -376,7 +376,7 @@ body select {
     background-size:5px 5px,5px 5px,1px 20px,cover;
     background-repeat:no-repeat; border-color:#806b45; color:#f0e1c4;
 }
-body :is(.app-content button:not(.diagnostics-tab):not(.player-profile-button), .modal_chart button, .dataTables_paginate .paginate_button) {
+body :is(.app-content button:not(.diagnostics-tab):not(.player-profile-button):not(:where(.encounter-player-link, .home-start-prompt)), .modal_chart button, .dataTables_paginate .paginate_button) {
     background-image:linear-gradient(rgba(0,0,0,.42),rgba(0,0,0,.42)),url("settings-button-texture.png") !important;
     background-size:cover; background-position:center; border-color:#967d50; color:#f2e4c5;
 }

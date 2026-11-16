@@ -29,6 +29,9 @@
 .history-entry time, .history-mode { color:#ded1b7; text-shadow:0 1px 3px #000; font:18px/1.5 Arial,sans-serif; }
 .history-mode { text-align:right; color:#e2c995; }
 .history-message { color:#fff0d2; text-shadow:0 1px 4px #000; white-space:pre-wrap; overflow-wrap:anywhere; font:18px/1.5 Arial,sans-serif; }
+.encounter-player-link { display:inline; padding:0; border:0; background:none; color:#f4d588; font:inherit; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.encounter-player-link:hover { color:#fff4ce; }
+.encounter-player-link:focus-visible { outline:2px solid #f4d588; outline-offset:3px; }
 .history-warning { display:block; color:#ff9292; }
 .history-empty { padding:36px 10%; color:#ddd5c5; text-align:center; font:18px/1.6 Arial,sans-serif; }
 .history-more { display:block; margin:22px auto; }

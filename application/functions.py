@@ -1,6 +1,6 @@
 from flask import Flask, session, jsonify, request
 from datetime import date, datetime
-from concurrent.futures import ThreadPoolExecutor
+from contextlib import closing
 from screeninfo import get_monitors
 from PIL import Image
 from pytesseract import pytesseract
@@ -96,6 +96,7 @@ monitor_ready = False
 monitor_error = False
 monitor_error_detail = ''
 sighting_tracker = SightingTracker()
+recent_defense_victories = {}
 ally_summoning_last_seen = None
 ally_summon_failure_last_seen = None
 inventory_warning_seen = {}
@@ -621,16 +622,17 @@ def _notification_preview():
         return dict(notification_event_sample) if notification_event_sample else None
 
 
-def _publish_preview_notification(frame_revision, box):
-    """Publish coordinates only for the still-current, visible capture."""
-    global preview_notification_box, preview_notification_version
-    if not box:
-        return False
+def _publish_preview_frame(image, box):
+    """Publish an image and its OCR box together without delaying later frames."""
+    global capture, capture_revision, preview_notification_box, preview_notification_version
     with preview_condition:
-        if not run_monitor or not game_detected or capture_revision != frame_revision:
+        if not run_monitor or not game_detected:
             return False
-        preview_notification_box = {'frame':frame_revision, 'box':box}
-        preview_notification_version += 1
+        capture = image
+        capture_revision += 1
+        if preview_notification_box is not None or box:
+            preview_notification_version += 1
+        preview_notification_box = {'frame':capture_revision, 'box':box} if box else None
         preview_condition.notify_all()
     return True
 
@@ -963,8 +965,7 @@ def _auto_lock_notification(located, crop_recognized):
 def _run_monitor():
     global run_monitor, monitor_ready, monitor_error, monitor_error_detail, steam_overlay_open
     try:
-        with ThreadPoolExecutor(max_workers=1, thread_name_prefix='tracker-ocr') as ocr_executor:
-            monitor(ocr_executor)
+        monitor(None)
     except _CaptureStopped:
         pass
     except Exception as error:
@@ -1148,7 +1149,10 @@ def interval():
             size_notification = [left, top, right, bottom, h, w]
             notif_base64 = base64.b64encode(cv2.imencode('.jpg', image_notif)[1]).decode()
     
-    return jsonify({"request": "success", "datas":array_tampo, "capture":capture, "gameDetected": game_detected, "game_running": game_running, "steamOverlay": steam_overlay_open, "time_actuel": time_actuel, "fight":fight, "mode": mode_select, "mode_detected": mode_detected, "sightings_revision": sightings_revision, "monitor_running": run_monitor, "monitor_ready": monitor_ready, "monitor_error": monitor_error, "monitor_error_detail": monitor_error_detail, "session_summary": session_summary.snapshot(), "user": user, "notif_base64": notif_base64, "size_notification": size_notification})
+    # Current clients receive frames through /live-preview; keep the field for
+    # older tabs but avoid repeatedly transferring the full image when asked.
+    interval_capture = '' if request.headers.get('X-Tracker-Light') == '1' else capture
+    return jsonify({"request": "success", "datas":array_tampo, "capture":interval_capture, "gameDetected": game_detected, "game_running": game_running, "steamOverlay": steam_overlay_open, "time_actuel": time_actuel, "fight":fight, "mode": mode_select, "mode_detected": mode_detected, "sightings_revision": sightings_revision, "monitor_running": run_monitor, "monitor_ready": monitor_ready, "monitor_error": monitor_error, "monitor_error_detail": monitor_error_detail, "session_summary": session_summary.snapshot(), "user": user, "notif_base64": notif_base64, "size_notification": size_notification})
 
 
 @app.route('/profile-legend', methods={'GET', 'POST'})
@@ -1208,15 +1212,18 @@ def emit_tracking_event(text, mode_override=None, *, opponent='', opponent_sourc
     # The frontend uses commas as message separators. Preserve literal commas
     # inside translated strings and leave the queue delimiter unambiguous.
     text = localize_counter(text, langue_select)
-    if opponent and opponent_source in ('game', 'steam') and outcome in ('victory', 'defeat'):
-        key = 'victory_against' if outcome == 'victory' else 'defeat_against'
-        fallback = 'Vous remportez la victoire contre {opponent} !' if outcome == 'victory' else 'Vous avez perdu contre {opponent}.'
-        legacy = correspondly_fr[10 if outcome == 'victory' else 12].strip()
+    if opponent and opponent_source in ('game', 'steam') and outcome in ('victory', 'defeat', 'draw'):
+        key, fallback, backend_index, counter_index = {
+            'victory': ('victory_against', 'Vous remportez la victoire contre {opponent} !', 10, 8),
+            'defeat': ('defeat_against', 'Vous avez perdu contre {opponent}.', 12, 9),
+            'draw': ('draw_against', "Le combat s’achève par une égalité avec {opponent}.", 20, 12),
+        }[outcome]
+        legacy = correspondly_fr[backend_index].strip()
         try:
             pack = ui_packs().get(langue_select, {})
             template = pack.get('modern', {}).get(key, fallback)
             if pack:
-                legacy = pack['counter'][8 if outcome == 'victory' else 9]
+                legacy = pack['counter'][counter_index]
         except (OSError, ValueError, TypeError):
             app.logger.exception('Unable to translate combat result')
             template = fallback
@@ -1224,7 +1231,9 @@ def emit_tracking_event(text, mode_override=None, *, opponent='', opponent_sourc
         # History strips it, while the visible sentence escapes player names.
         sentence = html.escape(template, quote=False).replace('{opponent}', html.escape(str(opponent), quote=False))
         duration = text.partition('<br>')[2]
-        text = '<!--' + html.escape(legacy, quote=False).replace('--', '') + '--><span class="combat-result-text">' + sentence + '</span>'
+        text = ('<!--' + html.escape(legacy, quote=False).replace('--', '') +
+                '--><span class="combat-result-text" data-opponent="' + html.escape(str(opponent), quote=True) +
+                '" data-opponent-source="' + opponent_source + '">' + sentence + '</span>')
         if duration:
             text += '<br>' + duration
     text = marker + text.replace(',', '&#44;')
@@ -1243,7 +1252,8 @@ def emit_tracking_event(text, mode_override=None, *, opponent='', opponent_sourc
             elif marker == '<!--search-update-->' and update_detection(invasion_search_history_id, text):
                 pass
             else:
-                event_id = record_detection(text, mode_override if mode_override is not None else (mode_select if mode_detected else 'Unknown'))
+                metadata = {'opponent': str(opponent), 'opponent_source': opponent_source} if opponent and opponent_source in ('game', 'steam') and outcome in ('victory', 'defeat', 'draw') else None
+                event_id = record_detection(text, mode_override if mode_override is not None else (mode_select if mode_detected else 'Unknown'), metadata=metadata)
                 if marker in ('<!--search-start-->', '<!--search-update-->'):
                     invasion_search_history_id = event_id
         except Exception:
@@ -1313,30 +1323,9 @@ def get_window_resolution(window_name: str) -> tuple:
 # \_____| \_____/ |_|  \_\ |_|  \_\ |_____| /_____/ |_|     \_____/ |_|  \_| |_____/ |_____|  /_/     
 
 def kmp_search(pattern, text):
-  
-    n = len(text)
-    m = len(pattern)
-    
-    # Preprocessing
-    lsp = [0] * m
-    j = 0
-    for i in range(1, m):
-        while j > 0 and pattern[i] != pattern[j]:
-            j = lsp[j - 1]
-        if pattern[i] == pattern[j]:
-            j += 1
-        lsp[i] = j
-    
-    # Searching
-    j = 0
-    for i in range(n):
-        while j > 0 and text[i] != pattern[j]:
-            j = lsp[j - 1]
-        if text[i] == pattern[j]:
-            j += 1
-        if j == m:
-            return i - m + 1
-    return -1
+    # str.find uses CPython's native substring search and returns the same
+    # index convention as the previous Python KMP implementation.
+    return text.find(pattern)
 
 def measured_game_ocr(*args, **kwargs):
     started = time.monotonic()
@@ -1350,13 +1339,41 @@ def measured_game_ocr(*args, **kwargs):
         usage_metrics.record_ocr(time.monotonic() - started, failed)
 
 
-def recognize_game_frame(ocr_executor, original_grey, notification_grey, game_model, ocr_data):
-    """Read both views of the same frame concurrently, then process them in order."""
-    full_frame = ocr_executor.submit(measured_game_ocr, original_grey,
-                                     lang=game_model, config='--psm 12 --oem 1' + ocr_data)
-    notification_text = measured_game_ocr(notification_grey, lang=game_model,
-                                           config='--psm 6 --oem 1' + ocr_data)
-    return full_frame.result(), notification_text
+def recognize_game_frame(notification_grey, game_model, ocr_data):
+    """Read one region once, retaining word positions for automatic detection."""
+    started = time.monotonic()
+    failed = False
+    try:
+        data = ocr_runner.image_to_data(notification_grey, lang=game_model,
+                                        config='--psm 6 --oem 1' + ocr_data)
+        lines = {}
+        for i, word in enumerate(data['text']):
+            word = str(word).strip()
+            if word:
+                key = (data['block_num'][i], data['par_num'][i], data['line_num'][i])
+                lines.setdefault(key, []).append(word)
+        return '\n'.join(' '.join(words) for words in lines.values()), data
+    except Exception:
+        failed = True
+        raise
+    finally:
+        usage_metrics.record_ocr(time.monotonic() - started, failed)
+
+
+def locate_notification_crop(data, image, frame_height, crop_top, language):
+    """Map OCR coordinates from the selected crop back to the captured frame."""
+    height, width = image.shape[:2]
+    located = notification_region.analyze_notification(data, height, language, image, width, reference_height=frame_height)
+    if not located:
+        return None
+    top, bottom = located['bounds']
+    located['bounds'] = ((crop_top + top * height) / frame_height,
+                         (crop_top + bottom * height) / frame_height)
+    if located.get('box'):
+        left, top, right, bottom = located['box']
+        located['box'] = (left, (crop_top + top * height) / frame_height,
+                          right, (crop_top + bottom * height) / frame_height)
+    return located
 
 
 def game_ocr_data_config():
@@ -1407,6 +1424,65 @@ def _cancel_pvp_encounter():
         app.logger.exception('Unable to cancel Steam participant observation')
 
 
+def _defense_name_key(name):
+    return ''.join(c for c in normalise_ocr(name or '') if c.isalnum())
+
+
+def _remember_defense_victory(name):
+    now = time.monotonic()
+    for key, timestamp in list(recent_defense_victories.items()):
+        if now - timestamp >= 45:
+            recent_defense_victories.pop(key, None)
+    key = _defense_name_key(name)
+    if key:
+        recent_defense_victories[key] = now
+
+
+def _recent_saved_defense_victory(key):
+    """Avoid counting the same still-visible message after a tracker restart."""
+    from application.init import database_capture
+    with closing(sqlite3.connect(database_capture, timeout=10)) as db:
+        rows = db.execute('SELECT id,name,victory,mode,date FROM tabel_captures ORDER BY id DESC LIMIT 30').fetchall()
+    for _, name, victory, mode, date in decrypt_rows(rows):
+        if mode != 'Defense' or str(victory) not in ('1', 'True') or _defense_name_key(name) != key:
+            continue
+        try:
+            age = (datetime.now() - datetime.fromisoformat(str(date))).total_seconds()
+        except ValueError:
+            continue
+        if 0 <= age < 45:
+            return True
+    return False
+
+
+def _untracked_defense_victory(sighting, path_video_simple):
+    """Record a confirmed death without inventing a start time or disrupting a fight."""
+    global mode_select, mode_detected, invasion_phase, sightings_revision
+    name = sighting['name']
+    key = _defense_name_key(name)
+    now = time.monotonic()
+    if not key or (key in recent_defense_victories and now - recent_defense_victories[key] < 45):
+        return False
+    if fight or invasion_phase in ('search', 'loading', 'fight'):
+        return False
+    if _recent_saved_defense_victory(key):
+        _remember_defense_victory(name)
+        return False
+    with open(path_video_simple, 'rb') as image_file:
+        image = b64encode(image_file.read()).decode('utf-8')
+    date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    add_capture(name, 1, 0, 0, '—', date, 'Defense', image)
+    add_mode_score('Defense', 1, 0, 0, 1, 0, 0, 0, 0, 0, independent_victory=True)
+    session_summary.independent_victory('Defense', name)
+    captures_stats.append([True, '—', date, 'Defense', name, image, ''])
+    _remember_defense_victory(name)
+    if not fight:
+        mode_select, mode_detected, invasion_phase = 'Defense', True, 'finished'
+    emit_tracking_event(correspondly_active[10] + '<br> Time: —', mode_override='Defense',
+                        opponent=name, opponent_source='game', outcome='victory')
+    return True
+
+
 def handle_invasion(text, path_video_simple, original_grey):
     global fight, mode_select, mode_detected, stape, time_start, time_end, time_result
     global fighter_find, fighters_exit, fighter_exit, error, want_annul
@@ -1437,6 +1513,7 @@ def handle_invasion(text, path_video_simple, original_grey):
         stape = 1
         invasion_phase = 'fight'
         opponent_name = ' '.join(host_start.group(1).split())
+        recent_defense_victories.pop(_defense_name_key(opponent_name), None)
         time_start = time.time()
         fighter_find = fighters_exit = fighter_exit = error = want_annul = False
         wait_fighter = connexion_error = False
@@ -1556,6 +1633,8 @@ def handle_invasion(text, path_video_simple, original_grey):
         time_result = time_end - time_start
         candidate_steam_name = _seal_pvp_participant()
         game_name = (opponent_name or '').strip()
+        if mode_select == 'Defense' and victory:
+            _remember_defense_victory(game_name)
         steam_name = candidate_steam_name if victory and not game_name else ''
         with open(path_video_simple, 'rb') as image_file:
             image = b64encode(image_file.read()).decode('utf-8')
@@ -1676,6 +1755,8 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
                     emit_tracking_event(message, mode_override='Unknown')
                 else:
                     emit_tracking_event(message)
+                if sighting['role'] == 'invader' and sighting['event'] == 'died' and sighting['relation'] != 'coinvader':
+                    _untracked_defense_victory(sighting, path_video_simple)
         except Exception:
             app.logger.exception('Unable to record player sighting')
     if fight and mode_select == 'Invasion':
@@ -1688,8 +1769,7 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
         return
     if handle_invasion(text_simple, path_video_simple, original_grey):
         return
-    if not fight and (any(kmp_search(detect_text_active[i], text_simple) != -1 for i in (0, 3, 7, 13)) or
-                      (kmp_search(detect_mod_active[0], text_simple) != -1 and kmp_search(detect_mod_active[1], text_simple) != -1)):
+    if not fight and any(kmp_search(detect_text_active[i], text_simple) != -1 for i in (0, 3, 7, 13)):
         mode_select = 'Arena'
         mode_detected = True
     
@@ -1763,27 +1843,6 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
                 stape = 0
                 apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
                 emit_tracking_event(correspondly_active[13])
-        if kmp_search(detect_text_active[6], text_simple) != -1 and error == False:
-            emit_tracking_event(correspondly_active[5])
-            error = True
-            mod_launch = 0
-            wait_fighter = False
-            stape = 0
-        if kmp_search(detect_text_active[5], text_simple) != -1 and error == False:
-            emit_tracking_event(correspondly_active[6])
-            error = True
-            mod_launch = 0
-            wait_fighter = False
-            stape = 0
-            fighter_exit = False
-            fighters_exit = False
-        if kmp_search(detect_text_active[4], text_simple) != -1 and want_annul == False:
-            emit_tracking_event(correspondly_active[7])
-            want_annul = True
-            error = False
-            mod_launch = 1
-            fighter_exit = False
-            fighters_exit = False
         if kmp_search(detect_text_active[3], text_simple) != -1 and fighter_find == False:
             if fight == False:
                 emit_tracking_event(correspondly_active[8])
@@ -1935,7 +1994,11 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
                 
             
                 finish_fight = cv2.imwrite(path_finish_fight, original_grey)
-                emit_tracking_event(correspondly_active[20]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
+                result_message = correspondly_active[20]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s"
+                if steam_name:
+                    emit_tracking_event(result_message, opponent=steam_name, opponent_source='steam', outcome='draw')
+                else:
+                    emit_tracking_event(result_message)
             time_start = time.time()
             time_end = time.time()
         if kmp_search(detect_text_active[12], text_simple) != -1 and fighter_exit == False and fight == True:
@@ -1952,35 +2015,7 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
             apply_score(0, 0, 0, 0, 0, 1, 0, 0, 0)
             emit_tracking_event(correspondly_active[0]+"<br> Time: "+ str(math.ceil(time_result - 5))+" s")
             
-        if kmp_search(detect_mod_active[0], text_simple) != -1 and mod_launch == 0:
-            if kmp_search(detect_mod_active[1], text_simple) != -1 and mod_launch == 0:
-                
-                
-                text_mod = "MODE : DUEL - "
-                text_mod = text_mod + correspondly_active[14]+" - "
-                if kmp_search(detect_mod_active[2], text_simple) != -1 and mod_launch == 0:
-                    text_mod = text_mod + correspondly_active[15]+" - "
-                if kmp_search(detect_mod_active[3], text_simple) != -1 and mod_launch == 0:
-                    text_mod = text_mod + correspondly_active[16]+" - "
-                if kmp_search(detect_mod_active[4], text_simple) != -1 and mod_launch == 0:
-                    text_mod = text_mod + correspondly_active[17]+" - "
-                if kmp_search(detect_mod_active[5], text_simple) != -1 and mod_launch == 0:
-                    text_mod = text_mod + correspondly_active[18]
-                
-                if fight == True :
-                    fight = False
-                    mod_launch = 0
-                    connexion_error = True
-                    wait_fighter = False
-                    want_annul = False
-                    fight = False
-                    stape = 0
-                    apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
-                    emit_tracking_event(correspondly_active[13])
-                else:
-                    emit_tracking_event(text_mod)
-                    mod_launch = 1
-                    
+
 
 
 
@@ -2054,7 +2089,7 @@ def monitor(ocr_executor):
 
             # Confirm the screen is available before declaring the game closed:
             # Windows may be showing its secure administrator prompt.
-            img_steam = screenshot_with_retry(
+            screenshot_with_retry(
                 path_steam, region=capture_display.steam_detection_region(width_screen, height_screen))
 
             windows = pygetwindow.getAllWindows()
@@ -2082,7 +2117,6 @@ def monitor(ocr_executor):
                         apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
                         emit_tracking_event(correspondly_active[13])
             
-            text_steam = ocr_runner.image_to_string(img_steam)
             try:
                 image_steam = cv2.imread(path_steam, cv2.IMREAD_GRAYSCALE)
                 result_steam = cv2.matchTemplate(image_steam, logo, cv2.TM_CCOEFF_NORMED)
@@ -2106,14 +2140,13 @@ def monitor(ocr_executor):
             steam_overlay_open = overlay_detector.update(foreground_hwnd if game_in_foreground else None,
                                                          overlay_window=overlay_window)
             # Pause immediately on a candidate overlay, before confirmation.
-            if game_in_foreground and not overlay_detector.capture_blocked and text_steam.find("STEAM") == -1 and max_val < 0.8:
+            if game_in_foreground and not overlay_detector.capture_blocked and max_val < 0.8:
                 ever_game_visible = True
         
                 if game_detected == False:
                     with preview_condition:
                         game_detected = True
                         preview_condition.notify_all()
-                    time.sleep(1)
                 else:
                    
                     
@@ -2127,75 +2160,52 @@ def monitor(ocr_executor):
                     path_notif_simple = os.path.join(base_dir, 'simple_notif_'+str(count)+'.jpg')       
                   
                     img_simple = capture_display.tracker_crop(screenshot_with_retry())
-                    img_simple.save(path_video_simple, 'JPEG', optimize=True, quality=95)
-                    original_grey = cv2.imread(path_video_simple, cv2.IMREAD_GRAYSCALE)
-                    with open(path_video_simple, "rb") as f:
-                        image_binary = f.read()
-                        image_b64 = b64encode(image_binary).decode("utf-8")
-                        with preview_condition:
-                            capture = image_b64
-                            capture_revision += 1
-                            frame_revision = capture_revision
-                            if preview_notification_box is not None:
-                                preview_notification_box = None
-                                preview_notification_version += 1
-                            preview_condition.notify_all()
-                
-
-                    
+                    # Result handling still needs this file; preview and OCR
+                    # reuse the bytes without reading it back from disk.
+                    image_binary = capture_display.write_tracker_frame(img_simple, path_video_simple)
+                    original_grey = cv2.imdecode(np.frombuffer(image_binary, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+                    if original_grey is None:
+                        raise ValueError('Unable to decode captured game frame')
+                    image_b64 = b64encode(image_binary).decode('utf-8')
                     #Extract text from image
                     game_model = game_language.LANGUAGES[game_locale][1]
                     ocr_data = game_ocr_data_config()
                     frame_manual = notification_manual_mode
                     frame_locked = None if frame_manual else notification_locked_bounds
-                    # If unlocked, full-image OCR remains the safe fallback.
+                    # Search the central capture only until automatic detection
+                    # has fixed a zone; manual and locked modes read that zone.
                     frame_bounds = notification_bounds if frame_manual else (frame_locked or (0.0, 1.0))
-                    notification_image = img_simple.crop(notification_region.crop_box(*img_simple.size, frame_bounds))
+                    crop_box = notification_region.crop_box(*img_simple.size, frame_bounds)
+                    notification_image = img_simple.crop(crop_box)
                     notification_grey = cv2.cvtColor(np.array(notification_image.convert('RGB')), cv2.COLOR_RGB2GRAY)
-                    text_simple, notification_text = recognize_game_frame(
-                        ocr_executor, original_grey, notification_grey, game_model, ocr_data)
-                    if fight and mode_select == 'Defense':
-                        frame = cv2.imread(path_video_simple)
-                        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                        death_mask = cv2.inRange(hsv, (0, 70, 40), (12, 255, 255)) | cv2.inRange(hsv, (165, 70, 40), (179, 255, 255))
-                        death_text = measured_game_ocr(death_mask, lang=game_model, config='--psm 6' + ocr_data)
-                        if 'vous avez peri' in normalise_ocr(death_text):
-                            text_simple += '\n' + death_text
+                    text_simple, positioned = recognize_game_frame(notification_grey, game_model, ocr_data)
+                    detected_box = None
                     try:
-                        combined = text_simple + '\n' + notification_text
+                        combined = text_simple
                         events = classify(combined, game_locale)
                         preview_key = (_notification_event_identity(game_locale, True, events), img_simple.size, frame_bounds) if events else None
                         same_pixels = bool(events and preview_key == last_preview_key and last_preview_box and
                                            last_preview_pixels is not None and
                                            np.array_equal(_preview_box_pixels(original_grey, last_preview_box), last_preview_pixels))
                         if _notification_localization_needed(events, game_locale, frame_manual, frame_locked) or (events and not same_pixels):
-                            positioned = ocr_runner.image_to_data(original_grey, lang=game_model,
-                                config="--psm 6 --oem 1" + ocr_data)
-                            located = notification_region.analyze_notification(positioned, img_simple.height, game_locale, original_grey, img_simple.width)
+                            located = locate_notification_crop(positioned, notification_grey, img_simple.height, crop_box[1], game_locale)
                             if located:
                                 last_preview_key, last_preview_box = preview_key, located.get('box')
                                 last_preview_pixels = _preview_box_pixels(original_grey, last_preview_box) if last_preview_box else None
                                 if not frame_manual and frame_locked is None:
-                                    crop = img_simple.crop(notification_region.crop_box(*img_simple.size, located['bounds'])).convert('RGB')
-                                    crop_grey = cv2.cvtColor(np.array(crop), cv2.COLOR_RGB2GRAY)
-                                    crop_text = measured_game_ocr(crop_grey, lang=game_model, config="--psm 6 --oem 1" + ocr_data)
-                                    # Never replace a recognized full-image message with an
-                                    # unreadable crop: preserve the broad fallback.
-                                    crop_recognized = bool(classify(crop_text, game_locale))
-                                    if crop_recognized:
-                                        notification_text = crop_text
-                                    _auto_lock_notification(located, crop_recognized)
+                                    _auto_lock_notification(located, bool(events))
                                 _remember_notification_event(image_b64, combined, game_locale, located['bounds'], located['lines'])
                             else:
                                 last_preview_key, last_preview_box, last_preview_pixels = None, None, None
                         elif not events:
                             last_preview_key, last_preview_box, last_preview_pixels = None, None, None
                         if events and preview_key == last_preview_key and last_preview_box:
-                            _publish_preview_notification(frame_revision, last_preview_box)
+                            detected_box = last_preview_box
                     except Exception:
                         # The optional automatic zone and preview must not interrupt tracking.
                         app.logger.exception('Unable to prepare notification event preview')
-                    process_game_text(text_simple, path_video_simple, original_grey, notification_text)
+                    _publish_preview_frame(image_b64, detected_box)
+                    process_game_text(text_simple, path_video_simple, original_grey)
                 
                 # try:
                 #     # Result(text_simple, "")
@@ -2208,9 +2218,6 @@ def monitor(ocr_executor):
                         
                        
                 
-                if cv2.waitKey(25) & 0xFF == ord('q'):
-                    cv2.destroyAllWindows()
-                    break
                 if count == count_limit:
                     cv2.destroyAllWindows()
                     break

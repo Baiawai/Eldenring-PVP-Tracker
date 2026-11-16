@@ -33,9 +33,11 @@ def mode_user(profile, mode):
 
 
 def add_mode_score(mode, victory, defeat, egality, combats, no_result, fight_exit,
-                   abandon, connexion_error, game_exit):
+                   abandon, connexion_error, game_exit, *, independent_victory=False):
     if mode not in ('Invasion', 'Defense'):
         raise ValueError('Unknown mode')
+    if independent_victory and (mode != 'Defense' or (victory, defeat, egality, combats, no_result, fight_exit, abandon, connexion_error, game_exit) != (1, 0, 0, 1, 0, 0, 0, 0, 0)):
+        raise ValueError('Invalid independent victory')
     with closing(_connect()) as con:
         con.execute('BEGIN IMMEDIATE')
         con.execute('INSERT OR IGNORE INTO mode_stats (mode) VALUES (?)', (mode,))
@@ -57,8 +59,11 @@ def add_mode_score(mode, victory, defeat, egality, combats, no_result, fight_exi
         con.execute('UPDATE mode_stats SET ' + ', '.join(name + '=?' for name in FIELDS) + ' WHERE mode=?',
                     [s[name] for name in FIELDS] + [mode])
         try:
-            from application.leaderboard_events import record_delta
-            record_delta(con, mode, (victory, defeat, egality, combats, no_result, fight_exit, abandon, connexion_error, game_exit), database_setting)
+            from application.leaderboard_events import record_delta, record_independent_victory
+            if independent_victory:
+                record_independent_victory(con, mode, database_setting)
+            else:
+                record_delta(con, mode, (victory, defeat, egality, combats, no_result, fight_exit, abandon, connexion_error, game_exit), database_setting)
         except Exception:
             from __main__ import app
             app.logger.exception('Unable to queue leaderboard event')

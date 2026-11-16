@@ -291,7 +291,9 @@ function startPreviewPolling() {
     poll();
 }
 
-var runApp = setInterval(intervall, 3000);
+const TRACKING_POLL_INTERVAL_MS = 1000;
+let trackingPollInFlight = false;
+var runApp = setInterval(intervall, TRACKING_POLL_INTERVAL_MS);
 clearInterval(runApp);
 var interface_en = window.interface_en;
 var interface_fr = window.interface_fr;
@@ -619,7 +621,7 @@ let start_ready = true;
     }
     profileCard.addEventListener('click', activateProfile);
     profileCard.addEventListener('keydown', function(event) {
-        if ((event.key === 'Enter' || event.key === ' ') && profileCard.classList.contains('profile-actionable')) {
+        if ((event.key === 'Enter' || event.key === ' ') && event.target === profileCard && profileCard.classList.contains('profile-actionable')) {
             event.preventDefault();
             activateProfile(event);
         }
@@ -744,7 +746,7 @@ function attachRunningMonitor() {
     $('.cadreStats .monitor-status').remove();
     $('.cadreStats').append($('<p class="elden-on simple monitor-status monitor-starting">').text(text_active[4]));
     clearInterval(runApp);
-    runApp = setInterval(intervall, 3000);
+    runApp = setInterval(intervall, TRACKING_POLL_INTERVAL_MS);
     sidebarTracking = true;
     sidebarGameRunning = null;
     sidebarMonitorReady = false;
@@ -834,7 +836,7 @@ $("#start").click(function(){
             $(".profile-card").show();
         }
     }, 200);
-    runApp = setInterval(intervall, 3000);
+    runApp = setInterval(intervall, TRACKING_POLL_INTERVAL_MS);
     sendTrackerAction($, {
         url: "/start",
         type :"POST",
@@ -945,10 +947,13 @@ $('#stats_mode_choice').on('change', function() {
 });
 
 function intervall(){
+    if (trackingPollInFlight) return;
+    trackingPollInFlight = true;
     const requestedPreviewStatusVersion = previewStatusVersion;
     $.ajax({
         url: "/interval",
         type :"GET",
+        headers: {'X-Tracker-Light': '1'},
         contentType: "application/json"
         , success: function(response){
             if (requestedPreviewStatusVersion === previewStatusVersion && response.monitor_running === true && typeof response.gameDetected === 'boolean') {
@@ -1196,7 +1201,7 @@ function intervall(){
             console.log("error");
             clearInterval(runApp);
             window.close();
-        }
+        }, complete:function(){ trackingPollInFlight = false; }
     })
 
 
@@ -1266,6 +1271,10 @@ document.addEventListener('ui-language-change', function() {
     document.querySelectorAll('.para_capture[data-capture-caption]').forEach(renderCaptureCaption);
 });
 // The event journal shows this detail; the capture title already renders it.
+function captureDuration(value) {
+    return value === '—' ? '—' : String(value) + ' s';
+}
+
 function captureTimeWithoutOpponentDetail(value) {
     if (typeof value !== 'string' || (!value.includes('victory-opponent-detail') && !value.includes('combat-result-text'))) return value;
     const fragment = document.createElement('template');
@@ -1376,7 +1385,18 @@ function renderSessionSummary(data) {
         draw: appT('draw', 'Égalité'), no_result: appT('no_result', 'Sans résultat'),
         connection_error: appT('session_connection_error', 'Erreur de connexion')
     };
-    label.textContent = [outcomes[last.result] || outcomes.no_result, statsModeLabel(last.mode), last.opponent || ''].filter(Boolean).join(' · ');
+    label.textContent = [outcomes[last.result] || outcomes.no_result, statsModeLabel(last.mode)].filter(Boolean).join(' · ');
+    if (typeof last.opponent === 'string' && last.opponent.trim()) {
+        const opponent = document.createElement('button');
+        opponent.type = 'button';
+        opponent.className = 'encounter-player-link';
+        opponent.textContent = last.opponent;
+        opponent.addEventListener('click', function(event) {
+            event.stopPropagation();
+            if (window.openEncounteredPlayer) window.openEncounteredPlayer(last.opponent, last.opponent_source || '', last.opponent_id || '');
+        });
+        label.append(document.createTextNode(' · '), opponent);
+    }
 }
 function renderProfileLegend(value) {
     const node = document.getElementById('sidebar_legend');
@@ -1871,7 +1891,7 @@ function init(){
                         let Time = response["captures"][0][i][5];
                         let base64 = response["captures"][0][i][8];
                         let capture_ID = response["captures"][0][i][0] ;
-                        const card = $("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> <em class='capture-duration-label' style='font-style:normal'></em>: "+Time+" s</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
+                        const card = $("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> <em class='capture-duration-label' style='font-style:normal'></em>: "+captureDuration(Time)+"</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
                         rememberCaptureCaption(card[0], response['captures'][0][i][7], class_text, response['captures'][0][i][1], captureSteamName(response.steam_names, capture_ID));
                         $(".capture-scroll").prepend(card);
                     
@@ -1932,7 +1952,7 @@ $('.capture-scroll').on('scroll', function() {
                         let Time = array_capture[i][5];
                         let base64 = array_capture[i][8];
                         let capture_ID = array_capture[i][0] ;
-                        const card = $("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> <em class='capture-duration-label' style='font-style:normal'></em>: "+Time+" s</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
+                        const card = $("<div class='para_capture "+class_text+"'><span><b>"+result+"</b><br> <em class='capture-duration-label' style='font-style:normal'></em>: "+captureDuration(Time)+"</span><div class='img'><img src='data:image/jpg;base64,"+base64+"'/> </div><div class='posted'>"+capture_ID+"</div><div class='datePosted'>"+date_select+"</div></div>");
                         rememberCaptureCaption(card[0], array_capture[i][7], class_text, array_capture[i][1], captureSteamName(response.steam_names, capture_ID));
                         $(".capture-scroll").append(card);
                        
@@ -2225,7 +2245,7 @@ function reloadFilteredCaptures() {
                 if (capture[7] !== 'Arena') result = (capture[7] === 'Defense' ? appT('defense', 'Monde envahi') : appT('invasion', 'Invasions')) + ' · ' + result;
                 if (capture[1]) result += ' · ' + capture[1];
                 const card = $('<div>').addClass('para_capture').addClass(resultClass);
-                const caption = $('<span>').append($('<b>').text(result), $('<br>'), document.createTextNode(' '), $('<em>').addClass('capture-duration-label').css('font-style', 'normal'), document.createTextNode(': ' + capture[5] + ' s'));
+                const caption = $('<span>').append($('<b>').text(result), $('<br>'), document.createTextNode(' '), $('<em>').addClass('capture-duration-label').css('font-style', 'normal'), document.createTextNode(': ' + captureDuration(capture[5])));
                 card.append(caption, $('<div>').addClass('img').append($('<img>').attr('src', 'data:image/jpg;base64,' + capture[8])),
                     $('<div>').addClass('posted').text(capture[0]), $('<div>').addClass('datePosted').text(capture[6]));
                 rememberCaptureCaption(card[0], capture[7], resultClass, capture[1], captureSteamName(response.steam_names, capture[0]));

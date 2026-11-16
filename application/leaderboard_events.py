@@ -71,5 +71,18 @@ def record_delta(db, mode, args, settings_path):
     _safely_record(db, _record_delta, mode, args, settings_path)
 
 
+def _record_independent_victory(db, mode, settings_path):
+    _schema(db)
+    if _enabled(settings_path):
+        match = str(uuid.uuid4())
+        _append(db, match, mode, 'start')
+        _append(db, match, mode, 'victory')
+
+
+def record_independent_victory(db, mode, settings_path):
+    """Queue a complete inferred encounter without replacing an active one."""
+    _safely_record(db, _record_independent_victory, mode, settings_path)
+
+
 def record_correction(db, mode, settings_path):
     _safely_record(db, _record_correction, mode, settings_path)

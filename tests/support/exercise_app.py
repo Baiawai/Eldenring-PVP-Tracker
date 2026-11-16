@@ -28,7 +28,7 @@ module.__dict__['__name__'] = 'isolated_tracker_test'
 sys.modules['__main__'] = module
 exec(compile(Path(module.__file__).read_bytes(), module.__file__, 'exec'), module.__dict__)
 
-from application import functions, init, multi, player_sightings, secur
+from application import functions, init, multi, player_sightings, secur, mode_stats
 from application.version import APP_VERSION
 from cryptography.fernet import Fernet
 client = module.app.test_client()
@@ -118,6 +118,9 @@ for store_build in (False, True):
         assert response.get_json()['development_build'] is (not store_build)
 state = client.get('/interval').get_json()
 assert state['fight'] is False and state['monitor_running'] is False
+with patch.object(functions, 'capture', 'synthetic-preview'):
+    assert client.get('/interval').get_json()['capture'] == 'synthetic-preview'
+    assert client.get('/interval', headers={'X-Tracker-Light':'1'}).get_json()['capture'] == ''
 
 # Exercise the monitor's first Steam probe on a short game display without
 # capturing the real screen or writing any images.
@@ -209,22 +212,24 @@ with patch.dict(functions.array_stats, {'text':'pending-event'}):
     assert functions.array_stats['text'] == 'pending-event'
 assert client.post('/capture-speed', data={'interval': '2'}).get_json()['interval'] == 2.0
 assert client.post('/capture-speed', data={'interval': '999'}).status_code == 400
-# Preview boxes are tied to the current frame and never consume tracking events.
+# Publish each preview frame and its own detected box atomically; changing
+# images must never consume tracking events or retain an old rectangle.
 with patch.object(functions, 'run_monitor', True), patch.object(functions, 'game_detected', True), \
      patch.object(functions, 'capture_revision', 90), patch.object(functions, 'capture', 'fake-frame'), \
      patch.object(functions, 'preview_notification_box', None), patch.object(functions, 'preview_notification_version', 3):
-    assert not functions._publish_preview_notification(89, (.1, .2, .8, .4))
-    assert functions._publish_preview_notification(90, (.1, .2, .8, .4))
+    assert functions._publish_preview_frame('next-frame', (.1, .2, .8, .4))
     before = dict(functions.array_stats)
     preview = client.get('/live-preview?after=90&boxAfter=3&wait=1').get_json()
-    assert preview['capture'] is None and preview['boxVersion'] == 4
-    assert preview['notification'] == {'frame':90, 'box':[.1, .2, .8, .4]}
+    assert preview['capture'] == 'next-frame' and preview['boxVersion'] == 4
+    assert preview['notification'] == {'frame':91, 'box':[.1, .2, .8, .4]}
     assert functions.array_stats == before
+    assert functions._publish_preview_frame('following-frame', None)
+    assert client.get('/live-preview?after=91').get_json()['notification'] is None
     with patch.object(functions, 'game_detected', False):
-        assert not functions._publish_preview_notification(90, (.1, .2, .8, .4))
+        assert not functions._publish_preview_frame('hidden-frame', (.1, .2, .8, .4))
         assert client.get('/live-preview?after=90').get_json()['notification'] is None
     with patch.object(functions, 'run_monitor', False):
-        assert not functions._publish_preview_notification(90, (.1, .2, .8, .4))
+        assert not functions._publish_preview_frame('stopped-frame', (.1, .2, .8, .4))
         assert client.get('/live-preview?after=90').get_json()['notification'] is None
 assert client.get('/live-preview?boxAfter=invalid').status_code == 400
 with patch.object(functions, 'run_monitor', True), patch.object(functions, 'monitor_ready', False), \
@@ -366,6 +371,13 @@ for locale, catalog in messages().items():
     left, top, right, bottom = detected_box['box']
     assert 0 <= left < right <= 1 and 0 <= top < bottom <= 1, locale
     assert left <= 100 / 1500 and top < .52 and bottom > .585, locale
+    # In a narrow locked crop, the original frame height still determines
+    # whether two recognized lines are close enough to form one message.
+    cropped = dict(positioned, top=[value - 505 for value in positioned['top']])
+    crop_image = np.full((120, 1500), 128, dtype=np.uint8)
+    localized = functions.locate_notification_crop(cropped, crop_image, 1000, 505, locale)
+    assert localized and localized['lines'] == 2 and localized.get('box'), locale
+    assert localized['box'][1] < .52 and localized['box'][3] > .585, locale
 # A dark two-line strip is detected close to its edges; a one-line strip
 # still receives enough height to fit a two-line message.
 two_line_text = messages()['frafr']['2341413'].replace('<?matchRemainingCount?>', '1').splitlines()
@@ -426,44 +438,26 @@ assert system['sync_ok'] == 0 and system['sync_failed'] == 0
 assert system['steam_ping_ms'] is None
 assert client.post('/usage-visit', data={'feature':'statistics'}, headers={'Origin':'https://example.com'}).status_code == 403
 
-# Both OCR views must overlap without swapping the full-frame and notification results.
-from threading import Barrier
-both_started = Barrier(2, timeout=5)
-def parallel_ocr(image, *, lang, config):
-    both_started.wait()
-    assert lang == 'fra'
-    return image + ':' + config
-with patch.object(functions, 'measured_game_ocr', side_effect=parallel_ocr):
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        full, notification = functions.recognize_game_frame(executor, 'full', 'notification', 'fra', '')
-assert full == 'full:--psm 12 --oem 1'
-assert notification == 'notification:--psm 6 --oem 1'
+# A single OCR invocation supplies both text and positions for the chosen zone.
+words = {'text':['Vous', 'avez', 'gagné', 'Deuxième', 'ligne'],
+         'block_num':[1, 1, 1, 1, 1], 'par_num':[1, 1, 1, 1, 1], 'line_num':[1, 1, 1, 2, 2]}
+with patch.object(functions.ocr_runner, 'image_to_data', return_value=words) as read:
+    text, data = functions.recognize_game_frame('notification crop', 'fra', '')
+    assert text == 'Vous avez gagné\nDeuxième ligne' and data is words
+    read.assert_called_once_with('notification crop', lang='fra', config='--psm 6 --oem 1')
+with patch.object(functions.ocr_runner, 'image_to_data', side_effect=RuntimeError('OCR failed')):
+    try:
+        functions.recognize_game_frame('notification crop', 'fra', '')
+        assert False, 'OCR error was lost'
+    except RuntimeError as error:
+        assert str(error) == 'OCR failed'
+with patch.object(functions.notification_region, 'analyze_notification',
+                  return_value={'bounds':(.2, .6), 'box':(.1, .25, .9, .5), 'lines':2}):
+    located = functions.locate_notification_crop({}, np.zeros((200, 300), dtype=np.uint8), 500, 100, 'frafr')
+    assert located['bounds'] == (.28, .44)
+    assert located['box'] == (.1, .3, .9, .4)
 
-# Preserve errors from either OCR task; the monitor must not process a partial frame.
-def failing_ocr(image, **kwargs):
-    if image == 'full':
-        raise RuntimeError('full OCR failed')
-    return 'ok'
-with patch.object(functions, 'measured_game_ocr', side_effect=failing_ocr):
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        try:
-            functions.recognize_game_frame(executor, 'full', 'notification', 'fra', '')
-            assert False, 'full-frame OCR error was lost'
-        except RuntimeError as error:
-            assert str(error) == 'full OCR failed'
-def failing_notification_ocr(image, **kwargs):
-    if image == 'notification':
-        raise RuntimeError('notification OCR failed')
-    return 'ok'
-with patch.object(functions, 'measured_game_ocr', side_effect=failing_notification_ocr):
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        try:
-            functions.recognize_game_frame(executor, 'full', 'notification', 'fra', '')
-            assert False, 'notification OCR error was lost'
-        except RuntimeError as error:
-            assert str(error) == 'notification OCR failed'
-
-# Tesseract must return the same texts for the same synthetic frame in both modes.
+# Real Tesseract reads the selected synthetic notification with one pass.
 from PIL import ImageDraw, ImageFont
 font_path = Path(os.environ.get('WINDIR', r'C:\Windows')) / 'Fonts' / 'arial.ttf'
 if Path(runtime_paths.tesseract_path()).is_file() and font_path.is_file():
@@ -474,13 +468,19 @@ if Path(runtime_paths.tesseract_path()).is_file() and font_path.is_file():
         ImageDraw.Draw(picture).text((20, 80), messages()[locale]['arena:88050'],
                                      fill='black', font=ImageFont.truetype(str(font_path), 48))
         gray = functions.cv2.cvtColor(np.array(picture), functions.cv2.COLOR_RGB2GRAY)
-        notification_gray = gray[60:180]
-        serial = (functions.pytesseract.image_to_string(gray, lang=model, config='--psm 12 --oem 1'),
-                  functions.pytesseract.image_to_string(notification_gray, lang=model, config='--psm 6 --oem 1'))
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            parallel = functions.recognize_game_frame(executor, gray, notification_gray, model, '')
-        assert parallel == serial
-        assert any(event['event'] == 'arena_victory' for event in functions.classify(parallel[1], locale))
+        text, data = functions.recognize_game_frame(gray[60:180], model, '')
+        assert any(event['event'] == 'arena_victory' for event in functions.classify(text, locale))
+        assert functions.locate_notification_crop(data, gray[60:180], gray.shape[0], 60, locale)
+        two_lines = messages()[locale]['2341413'].replace('<?matchRemainingCount?>', '1').splitlines()
+        picture = Image.new('RGB', (1800, 140), 'white')
+        draw = ImageDraw.Draw(picture)
+        font = ImageFont.truetype(str(font_path), 30)
+        for index, line in enumerate(two_lines):
+            draw.text((20, 10 + index * 48), line, fill='black', font=font)
+        gray = functions.cv2.cvtColor(np.array(picture), functions.cv2.COLOR_RGB2GRAY)
+        text, data = functions.recognize_game_frame(gray, model, '')
+        located = functions.locate_notification_crop(data, gray, 1000, 400, locale)
+        assert located and located['lines'] == 2 and located.get('box'), (locale, text, located)
 
 # System details are read from the isolated APPDATA and do not require Tesseract.
 with patch('application.system_details.tesseract_version', return_value=None):
@@ -600,20 +600,23 @@ with patch.object(functions, 'apply_score') as score, \
         functions.process_game_text(functions.detect_text_active[15], str(image_path), frame)
         assert score.call_count == score_count
 # An invader death can be observed even when its arrival was missed. A
-# repeated OCR frame must not add another sighting or invent a combat result.
+# repeated OCR frame must not add another sighting or victory.
 with patch.object(functions, 'game_locale', 'frafr'), \
      patch.object(functions, 'fight', False), patch.object(functions, 'mode_select', 'Arena'), \
      patch.object(functions, 'mode_detected', False), patch.object(functions, 'invasion_phase', None), \
      patch.object(functions, 'sighting_tracker', type(functions.sighting_tracker)()), \
      patch.object(functions, 'apply_score') as score, \
+     patch.object(functions, 'add_mode_score') as inferred_score, \
+     patch.object(functions, 'session_summary'), \
+     patch.object(functions, 'captures_stats', []), \
      patch.object(functions, 'add_capture') as capture, \
      patch.object(functions, 'emit_tracking_event') as event:
     death = 'Le Réfractaire MissingArrivalTest a péri.'
     functions.process_game_text(death, str(image_path), frame, death)
     functions.process_game_text(death, str(image_path), frame, death)
-    assert event.call_count == 1 and event.call_args.kwargs['mode_override'] == 'Unknown'
-    assert 'MissingArrivalTest' in event.call_args.args[0]
-    assert not score.called and not capture.called and not functions.fight
+    assert event.call_count == 2 and event.call_args.kwargs['mode_override'] == 'Defense'
+    assert 'MissingArrivalTest' in event.call_args.kwargs['opponent']
+    assert not score.called and capture.call_count == 1 and inferred_score.call_count == 1 and not functions.fight
 # Failed ally summons produce one history event per notification, never a combat.
 import html
 from application.locale_catalog import messages as game_messages
@@ -623,9 +626,29 @@ for ui_language, locale in functions.game_language.UI_TO_GAME.items():
         expected = html.escape(functions.display_game_text(expected), quote=False)
     assert functions.localize_counter("Impossible d'invoquer l'allié.", ui_language) == expected
 
+# Arena menu and matchmaking cancellation must not create events or terminate
+# an active fight, even when the broad discovery region contains the menu.
+with patch.object(functions, 'emit_tracking_event') as event, \
+     patch.object(functions, 'apply_score') as score, \
+     patch.object(functions.sighting_tracker, 'observe', return_value=[]):
+    functions.langue_select = 'fra'
+    functions.game_locale = 'frafr'
+    functions.detect_text_active = functions.detect_text_fr
+    functions.detect_mod_active = functions.detect_mod_fr
+    functions.mode_select = 'Arena'
+    functions.fight = True
+    functions.mod_launch = 0
+    for menu_text in ('Annuler le matchmaking', 'Matchmaking annulé', 'Le matchmaking a été annulé',
+                      'Duel 2 combattants Interdit'):
+        functions.process_game_text(menu_text, str(image_path), frame)
+        assert functions.fight, menu_text
+    event.assert_not_called()
+    score.assert_not_called()
+    functions.fight = False
+
 # Exercise the live multilingual adapter, not only the catalog in isolation.
-# Both OCR readings may contain the same message; repeated frames must not
-# start or score an invasion twice. All images and scoring are isolated.
+# Repeated frames must not start or score an invasion twice. All images and
+# scoring are isolated.
 with patch.object(functions, 'apply_score') as score, \
      patch.object(functions, 'emit_tracking_event', return_value=123), \
      patch.object(functions, 'add_capture') as capture, \
@@ -733,6 +756,94 @@ with patch.object(functions, 'apply_score') as score, \
 
 functions.detect_text_active = functions.detect_text_fr
 functions.detect_mod_active = functions.detect_mod_fr
+
+# A confirmed invader death without an observed arrival is a Defense win.
+# Repeated frames, another tracked fight and an invasion must not add duplicates.
+with patch.object(functions, 'add_capture') as missing_capture, \
+     patch.object(functions, 'add_mode_score') as missing_score, \
+     patch.object(functions, 'session_summary') as missing_session, \
+     patch.object(functions, 'record_sighting', return_value=True), \
+     patch.object(functions, '_recent_saved_defense_victory', return_value=False), \
+     patch.object(functions, 'emit_tracking_event'), \
+     patch.object(functions, 'captures_stats', []):
+    for locale, entries in game_messages().items():
+        functions.game_locale = locale
+        functions.fight = False
+        functions.mode_select = 'Arena'
+        functions.mode_detected = False
+        functions.invasion_phase = None
+        functions.recent_defense_victories.clear()
+        functions.sighting_tracker.pending.clear()
+        missing_capture.reset_mock(); missing_score.reset_mock(); missing_session.reset_mock()
+        death = entries['2620200'].replace('<?deadName?>', 'TestPlayer')
+        for _ in range(5):
+            functions.process_game_text(death, str(image_path), frame)
+        assert missing_capture.call_count == 1, (locale, missing_capture.call_args_list)
+        assert missing_capture.call_args.args[1:7] == (1, 0, 0, '—', missing_capture.call_args.args[5], 'Defense'), locale
+        missing_score.assert_called_once_with('Defense', 1, 0, 0, 1, 0, 0, 0, 0, 0, independent_victory=True)
+        missing_session.independent_victory.assert_called_once_with('Defense', 'TestPlayer')
+        assert not functions.fight and functions.mode_select == 'Defense', locale
+    for mode in ('Arena', 'Invasion', 'Defense'):
+        functions.fight = True
+        functions.mode_select = mode
+        functions.invasion_phase = 'fight'
+        functions.opponent_name = 'OtherPlayer'
+        functions.sighting_tracker.pending.clear()
+        functions.recent_defense_victories.clear()
+        missing_score.reset_mock()
+        for _ in range(3):
+            functions.process_game_text('Le Doigt sanglant TestPlayer est mort.', str(image_path), frame)
+        missing_score.assert_not_called()
+        assert functions.fight, mode
+    functions.fight = False
+    functions.invasion_phase = None
+    functions.game_locale = 'frafr'
+
+# A recently saved victory also suppresses a repeated notification after restart.
+with tempfile.TemporaryDirectory() as temporary:
+    recent_db = Path(temporary) / 'captures.db'
+    with closing(sqlite3.connect(recent_db)) as db, db:
+        db.execute('CREATE TABLE tabel_captures(id INTEGER PRIMARY KEY, name BLOB, victory BLOB, mode BLOB, date BLOB)')
+        db.execute('INSERT INTO tabel_captures VALUES(1,?,?,?,?)', tuple(secur.encrypt_value(value) for value in
+                   ('TestPlayer', '1', 'Defense', functions.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))))
+    with patch.object(init, 'database_capture', str(recent_db)):
+        assert functions._recent_saved_defense_victory(functions._defense_name_key('TestPlayer'))
+        assert not functions._recent_saved_defense_victory(functions._defense_name_key('OtherPlayer'))
+
+# Exercise actual isolated capture, mode counters and online outbox together.
+with tempfile.TemporaryDirectory() as temporary:
+    tmp = Path(temporary)
+    captures_db, user_db, settings_db = tmp / 'captures.db', tmp / 'user.db', tmp / 'settings.db'
+    with closing(sqlite3.connect(captures_db)) as db, db:
+        db.execute('CREATE TABLE tabel_captures(id INTEGER PRIMARY KEY, name BLOB, victory BLOB, defeat BLOB, egality BLOB, time BLOB, date BLOB, mode BLOB, base64 BLOB)')
+        db.execute('CREATE TABLE capture_steam_names(id INTEGER, steam_name BLOB)')
+        db.execute('CREATE TABLE tracker_first_game_event(id INTEGER PRIMARY KEY)')
+        db.execute('CREATE TABLE tracker_onboarding(id INTEGER PRIMARY KEY, first_capture INTEGER)')
+    with closing(sqlite3.connect(settings_db)) as db, db:
+        db.execute('CREATE TABLE online_leaderboard(id INTEGER PRIMARY KEY, enabled INTEGER, delete_pending INTEGER, event_permission INTEGER)')
+        db.execute('INSERT INTO online_leaderboard VALUES(1,1,0,1)')
+    with patch.object(init, 'database_capture', str(captures_db)), \
+         patch.object(mode_stats, 'DATABASE', str(user_db)), \
+         patch.object(mode_stats, 'database_setting', str(settings_db)), \
+         patch.object(functions, 'captures_stats', []), \
+         patch.object(functions, 'session_summary', functions.SessionSummary()), \
+         patch.object(functions, 'fight', False), patch.object(functions, 'invasion_phase', None), \
+         patch.object(functions, 'emit_tracking_event'):
+        functions.recent_defense_victories.clear()
+        item = {'name':'SavedInvader', 'role':'invader', 'event':'died', 'relation':'unknown', 'mode':'Unknown'}
+        assert functions._untracked_defense_victory(item, str(image_path))
+        assert not functions._untracked_defense_victory(item, str(image_path))
+        functions.recent_defense_victories.clear()
+        assert not functions._untracked_defense_victory(item, str(image_path))
+        with closing(sqlite3.connect(user_db)) as db:
+            assert db.execute("SELECT victory,combats FROM mode_stats WHERE mode='Defense'").fetchone() == (1, 1)
+            rows = db.execute('SELECT match_id,kind FROM leaderboard_event_outbox ORDER BY rowid').fetchall()
+            assert rows[0][0] == rows[1][0]
+            assert [secur.decrypt_value(row[1]).decode() for row in rows] == ['start', 'victory']
+        with closing(sqlite3.connect(captures_db)) as db:
+            row = db.execute('SELECT name,time,mode FROM tabel_captures').fetchone()
+            assert [secur.decrypt_value(value).decode() for value in row] == ['SavedInvader', '—', 'Defense']
+        assert functions.session_summary.snapshot()['victories'] == 1
 
 # Arena captures retain the start frame and keep an optional, explicitly
 # separate Steam name. Exercise real participant disambiguation with fake peers;
@@ -870,7 +981,9 @@ victory_cases = [
     ('arena-none', 'Arena', 'fra', [], '', '', 'win'),
     ('arena-ambiguous', 'Arena', 'fra', [named_peer, second_peer], '', '', 'win'),
     ('arena-defeat', 'Arena', 'fra', [named_peer], 'contre', steam_name, 'loss'),
-    ('arena-draw', 'Arena', 'fra', [named_peer], '', '', 'draw'),
+    ('arena-draw', 'Arena', 'fra', [named_peer], 'égalité avec', steam_name, 'draw'),
+    ('arena-draw-unknown', 'Arena', 'fra', [], '', '', 'draw'),
+    ('arena-draw-ambiguous', 'Arena', 'fra', [named_peer, second_peer], '', '', 'draw'),
     ('invasion-game', 'Invasion', 'fra', [named_peer], 'contre', game_name, 'win'),
     ('invasion-loss', 'Invasion', 'fra', [named_peer], 'contre', game_name, 'loss'),
     ('invasion-steam', 'Invasion', 'fra', [named_peer], 'contre', steam_name, 'win'),
@@ -950,7 +1063,9 @@ with patch.object(functions, 'apply_score') as score, \
             assert 'victory-opponent-detail' not in queue and 'Profil Steam :' not in queue, (label, queue)
             assert expected_name not in queue and '<Name>' not in queue, (label, queue)
             events = client.get('/detection-history', query_string={'mode':combat_mode}).get_json()['events']
-            assert any(expected_label + ' ' + expected_name in entry['message'] for entry in events), label
+            matching = [entry for entry in events if expected_label + ' ' + expected_name in entry['message']]
+            assert matching, label
+            assert matching[0]['metadata'] == {'opponent': expected_name, 'opponent_source': 'game' if expected_name == game_name else 'steam'}, label
         else:
             assert 'combat-result-text' not in queue and 'victory-opponent-detail' not in queue, (label, queue)
 functions.detect_text_active = functions.detect_text_fr
@@ -961,7 +1076,7 @@ functions.detect_mod_active = functions.detect_mod_fr
 with patch.object(functions, 'array_stats', dict(functions.array_stats)), \
      patch.object(functions, 'record_detection', return_value=1):
     for language, pack in functions.ui_packs().items():
-        for outcome, idx in (('victory', 8), ('defeat', 9)):
+        for outcome, idx in (('victory', 8), ('defeat', 9), ('draw', 12)):
             functions.langue_select = language
             functions.array_stats['text'] = ''
             functions.emit_tracking_event('result<br> Time: 17 s', opponent='A<B>, C', opponent_source='steam', outcome=outcome)

@@ -28,6 +28,16 @@ def tracker_crop(screenshot):
                                int(width - width / 3.2), int(height - height / 20)))
 
 
+def write_tracker_frame(image, path):
+    """Encode once for the existing capture file, OCR and live preview."""
+    with BytesIO() as buffer:
+        image.save(buffer, 'JPEG', quality=95)
+        data = buffer.getvalue()
+    with open(path, 'wb') as output:
+        output.write(data)
+    return data
+
+
 def game_display():
     """Return the game window's monitor, or None while it cannot be located."""
     try:

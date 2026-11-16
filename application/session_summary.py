@@ -37,6 +37,14 @@ class SessionSummary:
             if self._last and self._last['mode'] == 'Invasion' and self._last['result'] == 'no_result':
                 self._last['result'] = 'connection_error'
 
+    def independent_victory(self, mode, opponent):
+        """Record a separate result without disturbing an ongoing combat."""
+        with self._lock:
+            self._combats += 1
+            self._wins += 1
+            self._streak += 1
+            self._last = {'mode':mode, 'opponent':opponent or '', 'result':'victory'}
+
     def snapshot(self):
         with self._lock:
             return {'combats':self._combats, 'victories':self._wins, 'defeats':self._losses,

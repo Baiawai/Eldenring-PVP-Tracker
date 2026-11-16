@@ -11,6 +11,20 @@ from application.secur import decrypt_value
 
 
 class LeaderboardEventsTests(unittest.TestCase):
+    def test_inferred_victory_queues_one_complete_encounter(self):
+        with tempfile.TemporaryDirectory(prefix='leaderboard-inferred-') as temporary:
+            root = Path(temporary)
+            settings = root / 'settings.db'
+            with closing(sqlite3.connect(settings)) as db, db:
+                db.execute('CREATE TABLE online_leaderboard (id INTEGER PRIMARY KEY, enabled INTEGER, delete_pending INTEGER, event_permission INTEGER)')
+                db.execute('INSERT INTO online_leaderboard VALUES(1,1,0,1)')
+            with patch.dict(os.environ, {'APPDATA':temporary}), closing(sqlite3.connect(root / 'user.db')) as db, db:
+                leaderboard_events.record_independent_victory(db, 'Defense', settings)
+                rows = db.execute('SELECT match_id,mode,kind FROM leaderboard_event_outbox ORDER BY rowid').fetchall()
+                self.assertEqual([decrypt_value(row[2]).decode() for row in rows], ['start', 'victory'])
+                self.assertEqual([decrypt_value(row[1]).decode() for row in rows], ['Defense', 'Defense'])
+                self.assertEqual(rows[0][0], rows[1][0])
+
     def test_consent_start_finish_and_correction_use_a_durable_match_id(self):
         with tempfile.TemporaryDirectory(prefix='leaderboard-events-') as temporary:
             root = Path(temporary)

@@ -9,6 +9,7 @@
     let lastRequest = 0;
     let lastRevision = null;
     let unnamedCaptures = 0;
+    let requestedPlayer = null;
     const tr = (key, fallback) => window.uiT ? window.uiT(key, fallback) : fallback;
 
     function element(tag, className, text) {
@@ -19,7 +20,7 @@
     }
 
     function normalize(value) {
-        return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
+        return value.normalize('NFKC').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
     }
 
     function formatDate(value) {
@@ -150,7 +151,7 @@
     function render() {
         const query = normalize(search.value.trim());
         const filtered = players.filter(function(player) {
-            return normalize(player.name).includes(query) &&
+            return (normalize(player.name).includes(query) || (requestedPlayer && requestedPlayer.id && player.steam && String(player.steam.id) === requestedPlayer.id)) &&
                 (activeFilter === 'all' || (activeFilter === 'opponent' && player.relations.includes('opponent')) ||
                  (activeFilter === 'ally' && player.relations.includes('ally')) ||
                  (activeFilter === 'hunter' && player.roles.includes('hunter')) ||
@@ -171,8 +172,26 @@
             return;
         }
         const fragment = document.createDocumentFragment();
-        filtered.forEach(player => fragment.appendChild(playerCard(player)));
+        let exactMatches = [];
+        if (requestedPlayer) {
+            exactMatches = filtered.filter(function(player) {
+                if (requestedPlayer.id) return player.steam && String(player.steam.id) === requestedPlayer.id;
+                return normalize(player.name) === normalize(requestedPlayer.name) &&
+                    (requestedPlayer.source === 'steam' ? !!player.steam : requestedPlayer.source === 'game' ? !player.steam : true);
+            });
+        }
+        filtered.forEach(function(player) {
+            const card = playerCard(player);
+            if (exactMatches.length === 1 && exactMatches[0] === player) {
+                card.open = true;
+                card.dataset.requestedPlayer = 'true';
+            }
+            fragment.appendChild(card);
+        });
         list.appendChild(fragment);
+        const selected = list.querySelector('[data-requested-player="true"]');
+        if (selected && requestedPlayer) selected.scrollIntoView({block:'nearest'});
+        requestedPlayer = null;
     }
 
     function renderNotice() {
@@ -227,6 +246,46 @@
         menuButton.classList.add('active');
         loadPlayers();
     });
+    window.openEncounteredPlayer = function(name, source, id) {
+        if (!name && !id) return;
+        requestedPlayer = {name:String(name || ''), source:source || '', id:String(id || '')};
+        search.value = name || '';
+        activeFilter = 'all';
+        document.querySelectorAll('.players-filter').forEach(function(item) {
+            const active = item.dataset.filter === 'all';
+            item.classList.toggle('active', active);
+            item.setAttribute('aria-pressed', String(active));
+        });
+        if (panel.hidden) menuButton.click();
+        else loadPlayers();
+    };
+
+    // Result sentences are supplied as escaped text; create the button in the
+    // DOM so player names never become executable HTML.
+    function linkCombatResults(root) {
+        root.querySelectorAll('.combat-result-text[data-opponent]').forEach(function(result) {
+            if (result.dataset.playerLinked) return;
+            result.dataset.playerLinked = 'true';
+            const name = result.dataset.opponent;
+            if (!name) return;
+            const walker = document.createTreeWalker(result, NodeFilter.SHOW_TEXT);
+            let node;
+            while ((node = walker.nextNode())) {
+                const index = node.data.indexOf(name);
+                if (index < 0) continue;
+                const link = element('button', 'encounter-player-link', name);
+                link.type = 'button';
+                link.addEventListener('click', () => window.openEncounteredPlayer(name, result.dataset.opponentSource));
+                node.replaceWith(document.createTextNode(node.data.slice(0, index)), link, document.createTextNode(node.data.slice(index + name.length)));
+                break;
+            }
+        });
+    }
+    const liveResults = document.querySelector('.cadreStats');
+    if (liveResults) {
+        linkCombatResults(liveResults);
+        new MutationObserver(() => linkCombatResults(liveResults)).observe(liveResults, {childList:true, subtree:true});
+    }
     ['menu_button_captures', 'menu_button_multi', 'menu_button_settings', 'menu_button_history', 'menu_button_info', 'start'].forEach(function(id) {
         document.getElementById(id).addEventListener('click', closePlayers);
     });

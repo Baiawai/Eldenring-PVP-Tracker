@@ -6,10 +6,23 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 import numpy as np
 from PIL import Image
+import cv2
 from application import capture_display
 
 
 class CaptureDisplayTests(TestCase):
+    def test_frame_bytes_match_saved_file_and_previous_decoded_pixels(self):
+        image = Image.fromarray(np.random.default_rng(42).integers(0, 256, (120, 200, 3), dtype=np.uint8))
+        previous = BytesIO()
+        image.save(previous, 'JPEG', optimize=True, quality=95)
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'frame.jpg'
+            encoded = capture_display.write_tracker_frame(image, path)
+            self.assertEqual(path.read_bytes(), encoded)
+            old_pixels = cv2.imdecode(np.frombuffer(previous.getvalue(), dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+            new_pixels = cv2.imdecode(np.frombuffer(encoded, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+            np.testing.assert_array_equal(old_pixels, new_pixels)
+
     def test_steam_probe_stays_inside_displays_of_different_heights(self):
         for width, height in ((1366, 768), (1600, 900), (1920, 1080), (3840, 2160), (2, 1)):
             with self.subTest(size=(width, height)):

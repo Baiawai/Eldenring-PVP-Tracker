@@ -100,7 +100,7 @@
     syncing:['online_syncing','Synchronisation du classement…'], success:['online_success','Classement synchronisé.'],
     offline:['online_offline','Synchronisation indisponible. Tes statistiques restent enregistrées localement.'],
     not_configured:['online_not_configured','Serveur du classement non configuré.'],
-    profile_required:['online_profile_required','Ajoute un pseudo dans ton profil avant la synchronisation.'],
+    profile_required:['online_profile_required','Récupère et enregistre ton profil de personnage avant la synchronisation au classement.'],
     server_changed:['online_server_changed','Le serveur a changé. Rétablis le serveur précédent ou retire les données avant de changer de serveur.'],
     server_move_required:['online_server_move_required','Une ancienne connexion utilise un autre serveur. Utilise « Utiliser le serveur public » pour continuer sans la supprimer.'],
     partial_identity:['online_server_identity_incomplete','L’ancienne connexion est incomplète et reste conservée. Contacte l’assistance avant de changer de serveur.'],
