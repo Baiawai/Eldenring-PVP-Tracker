@@ -1,4 +1,4 @@
-from flask import Flask, session, jsonify, request
+from flask import Flask, session, jsonify, request, Response, abort
 from datetime import date, datetime
 from contextlib import closing
 from screeninfo import get_monitors
@@ -30,12 +30,15 @@ from __main__ import app
 from application.init import load_user, load_settings, initialize_display_settings, update_settings, verify_identity, get_selected_language, update_language, apply_score as add_arena_score, add_capture, get_capture_page, capture_steam_names, get_ratio, update_user_image, update_user_level
 from application.mode_stats import mode_user, add_mode_score, correct_invasion_no_result
 from application.player_sightings import SightingTracker, record_sighting
+from application.overlay_peer_roles import RoleTracker, annotate_arena_duelist
 from application.detection_history import record_detection, update_detection, message_text, read_steam_history
 from application.locale_catalog import tracker_notifications as game_notification_messages, classify, recognize, messages as game_messages
 from application import game_language, capture_speed, notification_region, peer_tracking, steam_history, steam_overlay, profile_legend, ocr_runner
+from application import overlay_settings
+from application import tracker_overlay_event, steam_encounter_counts
 from application.session_summary import SessionSummary
 from application.browser_language import browser_language
-from application.ui_localization import packs as ui_packs, localize_counter, display_game_text
+from application.ui_localization import packs as ui_packs, localize_counter, localize_overlay_time, display_game_text
 from application.runtime_paths import image_dir, RESOURCE_DIR, tesseract_path, data_dir, STORE_BUILD
 from application import usage_metrics
 from application import auto_tracking
@@ -60,9 +63,7 @@ settings = load_settings()[0]
 language_default = not str(user[5]).strip()
 langue_select = 'eng' if language_default else get_selected_language()
 first_language_lock = threading.Lock()
-game_locale = game_language.UI_TO_GAME.get(langue_select, 'engus')
-# Freeze the existing game language before the UI language can be changed.
-game_language.save(game_locale)
+game_locale = game_language.initialize(langue_select, first_run=language_default)
 capture_interval_seconds = capture_speed.load()
 _legacy_preview = os.path.join(image_dir(), 'template_notif.jpg')
 try:
@@ -78,6 +79,7 @@ current_game_geometry = None
 game_detected = True
 game_running = None  # Unknown until the monitor checks the game window.
 steam_overlay_open = False
+capture_available = False  # True only after the monitor confirms capture is permitted.
 mode_select = "Arena"
 mode_detected = False
 invasion_phase = None
@@ -96,6 +98,8 @@ monitor_ready = False
 monitor_error = False
 monitor_error_detail = ''
 sighting_tracker = SightingTracker()
+overlay_invasion_tracker = SightingTracker()
+overlay_peer_roles = RoleTracker()
 recent_defense_victories = {}
 ally_summoning_last_seen = None
 ally_summon_failure_last_seen = None
@@ -103,6 +107,10 @@ inventory_warning_seen = {}
 sightings_revision = 0
 def _observe_steam_peers(status, peers):
     global sightings_revision
+    try:
+        overlay_peer_roles.update_peers(status if run_monitor else 'stopped', peers)
+    except Exception:
+        app.logger.exception('Unable to update overlay peer roles')
     mode = mode_select if mode_detected and run_monitor else 'Unknown'
     if steam_history.observe(status, peers, mode):
         sightings_revision += 1
@@ -280,205 +288,84 @@ base_dir = str(image_dir())
 path_finish_fight = os.path.join(base_dir, 'finish_.jpg')   
 path_start_fight = os.path.join(base_dir, 'start_.jpg')          
         
-@app.route("/languages", methods={"POST"})
-def languages(requested_language=None):
-    global detect_mod_active
-    global detect_text_active
-    global langue_select
-    global detect_mod_fr
-    global detect_mod_en
-    global detect_text_fr
-    global detect_text_en
-    global correspondly_active
-    global language_default
-    requested_language = requested_language or request.form.get("language")
-    if requested_language != 'fra' and requested_language not in ui_packs():
-        return jsonify({'request':'error', 'reason':'invalid_language'}), 400
-    global game_locale, mode_detected, invasion_phase
-    locale = game_language.UI_TO_GAME[requested_language]
+def _apply_interface_language(language):
+    global langue_select, correspondly_active, language_default
+    langue_select = language
+    correspondly_active = correspondly_fr if language == 'fra' else ui_packs()[language]['backend']
+    update_language(language)
+    language_default = False
+
+
+def _set_game_language(locale):
+    global game_locale, detect_mod_active, detect_text_active, mode_detected, invasion_phase
+    if locale not in game_language.LANGUAGES:
+        return 'invalid_language', 400
     if fight:
-        return jsonify({'request':'error', 'reason':'combat_active'}), 409
+        return 'combat_active', 409
     model = game_language.LANGUAGES[locale][1]
-    path = os.path.join(RESOURCE_DIR, 'locales', 'tessdata', model + '.traineddata')
-    if not os.path.isfile(path):
-        return jsonify({'request':'error', 'reason':'model_missing'}), 503
+    if not os.path.isfile(os.path.join(RESOURCE_DIR, 'locales', 'tessdata', model + '.traineddata')):
+        return 'model_missing', 503
     game_language.save(locale)
     if locale != game_locale:
         mode_detected = False
         invasion_phase = None
         sighting_tracker.pending.clear()
+        overlay_invasion_tracker.pending.clear()
+        overlay_peer_roles.clear()
     game_locale = locale
-    langue_select = requested_language
-   
-    if langue_select == "eng":
-        detect_mod_active = detect_mod_en
-        detect_text_active = detect_text_en
-        correspondly_active = ui_packs()['eng']['backend']
-        langue_select = "eng"
-        language_default = False 
-    elif langue_select == "fra":
-        detect_mod_active = detect_mod_fr
-        detect_text_active = detect_text_fr
-        correspondly_active = correspondly_fr
-        langue_select = "fra"
-        language_default = False
-    else:
-        correspondly_active = ui_packs()[langue_select]['backend']
-        language_default = False
-    # elif langue_select == "spa":
-    #     detect_mod_active = detect_mod_es
-    #     detect_text_active = detect_text_es
-    #     correspondly_active = correspondly_es
-    #     langue_select = "spa"
-    #     language_default = False
-    # elif langue_select == "ita":
-    #     detect_mod_active = detect_mod_it
-    #     detect_text_active = detect_text_it
-    #     correspondly_active = correspondly_it
-    #     langue_select = "ita"
-    #     language_default = False
-    # elif langue_select == "deu":
-    #     detect_mod_active = detect_mod_de
-    #     detect_text_active = detect_text_de
-    #     correspondly_active = correspondly_de
-    #     langue_select = "deu"
-    #     language_default = False
-    # elif langue_select == "rus":
-    #     detect_mod_active = detect_mod_ru
-    #     detect_text_active = detect_text_ru
-    #     correspondly_active = correspondly_ru
-    #     langue_select = "rus"
-    #     language_default = False
-    # elif langue_select == "jap":
-    #     detect_mod_active = detect_mod_ja
-    #     detect_text_active = detect_text_ja
-    #     correspondly_active = correspondly_ja
-    #     langue_select = "jap"
-    #     language_default = False
-    # elif langue_select == "chi":
-    #     detect_mod_active = detect_mod_zh
-    #     detect_text_active = detect_text_zh
-    #     correspondly_active = correspondly_zh
-    #     langue_select = "chi"
-    #     language_default = False
-    # elif langue_select == "por":
-    #     detect_mod_active = detect_mod_pt
-    #     detect_text_active = detect_text_pt
-    #     correspondly_active = correspondly_pt
-    #     langue_select = "por"
-    #     language_default = False
-    # elif langue_select == "nld":
-    #     detect_mod_active = detect_mod_nl
-    #     detect_text_active = detect_text_nl
-    #     correspondly_active = correspondly_nl
-    #     langue_select = "nld"
-    #     language_default = False
-    # elif langue_select == "swe":
-    #     detect_mod_active = detect_mod_sv
-    #     detect_text_active = detect_text_sv
-    #     correspondly_active = correspondly_sv
-    #     langue_select = "swe"
-    #     language_default = False
-    # elif langue_select == "nor":
-    #     detect_mod_active = detect_mod_no
-    #     detect_text_active = detect_text_no
-    #     correspondly_active = correspondly_no
-    #     langue_select = "nor"
-    #     language_default = False
-    # elif langue_select == "fin":
-    #     detect_mod_active = detect_mod_fi
-    #     detect_text_active = detect_text_fi
-    #     correspondly_active = correspondly_fi
-    #     langue_select = "fin"
-    #     language_default = False
-    # elif langue_select == "dan":
-    #     detect_mod_active = detect_mod_da
-    #     detect_text_active = detect_text_da
-    #     correspondly_active = correspondly_da
-    #     langue_select = "dan"
-    #     language_default = False
-    # elif langue_select == "tur":
-    #     detect_mod_active = detect_mod_tr
-    #     detect_text_active = detect_text_tr
-    #     correspondly_active = correspondly_tr
-    #     langue_select = "tur"
-    #     language_default = False
-    # elif langue_select == "tur":
-    #     detect_mod_active = detect_mod_tr
-    #     detect_text_active = detect_text_tr
-    #     correspondly_active = correspondly_tr
-    #     langue_select = "tur"
-    #     language_default = False 
-    # elif langue_select == "kor":
-    #     detect_mod_active = detect_mod_ko
-    #     detect_text_active = detect_text_ko
-    #     correspondly_active = correspondly_ko
-    #     langue_select = "kor"
-    #     language_default = False 
-    # elif langue_select == "ell":
-    #     detect_mod_active = detect_mod_el
-    #     detect_text_active = detect_text_el
-    #     correspondly_active = correspondly_el
-    #     langue_select = "ell"
-    #     language_default = False 
-    # elif langue_select == "pol":
-    #     detect_mod_active = detect_mod_pl
-    #     detect_text_active = detect_text_pl
-    #     correspondly_active = correspondly_pl
-    #     langue_select = "pol"
-    #     language_default = False 
-    # elif langue_select == "ces":
-    #     detect_mod_active = detect_mod_cs
-    #     detect_text_active = detect_text_cs
-    #     correspondly_active = correspondly_cs
-    #     langue_select = "ces"
-    #     language_default = False 
-    # elif langue_select == "hun":
-    #     detect_mod_active = detect_mod_hu
-    #     detect_text_active = detect_text_hu
-    #     correspondly_active = correspondly_hu
-    #     langue_select = "hun"
-    #     language_default = False 
-    # elif langue_select == "ron":
-    #     detect_mod_active = detect_mod_ro
-    #     detect_text_active = detect_text_ro
-    #     correspondly_active = correspondly_ro
-    #     langue_select = "ron"
-    #     language_default = False 
-    # elif langue_select == "ara":
-    #     detect_mod_active = detect_mod_ar
-    #     detect_text_active = detect_text_ar
-    #     correspondly_active = correspondly_ar
-    #     langue_select = "ara"
-    #     language_default = False 
-    # elif langue_select == "heb":
-    #     detect_mod_active = detect_mod_he
-    #     detect_text_active = detect_text_he
-    #     correspondly_active = correspondly_he
-    #     langue_select = "heb"
-    #     language_default = False 
-
-  
-    update_language(langue_select)
-    if game_locale == 'engus':
+    if locale == 'engus':
         detect_mod_active, detect_text_active = detect_mod_en, detect_text_en
     else:
         detect_mod_active, detect_text_active = detect_mod_fr, detect_text_fr
-    return jsonify({"request": "success", "language":langue_select, "game_language":game_locale})
+    return None
+
+
+def _game_correspondence():
+    code = next((key for key, locale in game_language.UI_TO_GAME.items() if locale == game_locale), 'eng')
+    return correspondly_fr if code == 'fra' else ui_packs()[code]['backend']
+
+
+@app.route('/languages', methods={'POST'})
+def languages():
+    # Compatibility with older cached clients: this endpoint selects the game language.
+    locale = game_language.UI_TO_GAME.get(request.form.get('language', ''))
+    error = _set_game_language(locale)
+    if error:
+        return jsonify(request='error', reason=error[0]), error[1]
+    return jsonify(request='success', language=langue_select, game_language=game_locale)
+
+
+INTERFACE_LANGUAGES = {
+    'fra':'Français', 'eng':'English', 'deu':'Deutsch', 'ita':'Italiano',
+    'spaes':'Español (España)', 'spaar':'Español (Latinoamérica)', 'por':'Português (Brasil)',
+    'pol':'Polski', 'rus':'Русский', 'jap':'日本語', 'kor':'한국어', 'chi':'简体中文',
+    'zht':'繁體中文', 'tha':'ไทย', 'ara':'العربية', 'nld':'Nederlands', 'tur':'Türkçe',
+    'ukr':'Українська', 'ces':'Čeština', 'ron':'Română', 'hun':'Magyar', 'ell':'Ελληνικά',
+    'swe':'Svenska', 'dan':'Dansk', 'nor':'Norsk bokmål', 'fin':'Suomi',
+    'ind':'Bahasa Indonesia', 'vie':'Tiếng Việt', 'hin':'हिन्दी', 'ptpt':'Português (Portugal)',
+}
+
+
+@app.route('/interface-language', methods={'GET', 'POST'})
+def interface_language_setting():
+    if request.method == 'POST':
+        language = request.form.get('language', '')
+        if language not in INTERFACE_LANGUAGES or (language != 'fra' and language not in ui_packs()):
+            return jsonify(request='error', reason='invalid_language'), 400
+        with first_language_lock:
+            _apply_interface_language(language)
+    return jsonify(request='success', language=langue_select,
+                   languages=[{'id': key, 'name': name} for key, name in INTERFACE_LANGUAGES.items()
+                              if key == 'fra' or key in ui_packs()])
 
 
 @app.before_request
 def configure_first_browser_language():
-    # Only the first page/init request may establish the shared preference.
     if request.method != 'GET' or request.path not in ('/', '/init') or not language_default:
         return None
     with first_language_lock:
-        if not language_default:
-            return None
-        selected = browser_language(request.accept_languages)
-        response = languages(selected)
-        if isinstance(response, tuple) and response[1] == 503 and selected != 'eng':
-            languages('eng')
+        if language_default:
+            _apply_interface_language(browser_language(request.accept_languages))
     return None
 
 
@@ -491,6 +378,45 @@ def steam_peers():
             return jsonify({'request':'error', 'reason':'invalid_setting'}), 400
         peer_tracking.set_enabled(value == 'true')
     result = peer_tracking.snapshot()
+    # Copy the local peer snapshot before adding presentation data: the Steam
+    # monitor owns the original dictionaries and must not receive UI fields.
+    peers = result.get('peers')
+    if isinstance(peers, list):
+        peers = [dict(peer) for peer in peers if isinstance(peer, dict)]
+    else:
+        peers = []
+    for peer in peers:
+        for key in ('role', 'rank', 'wins', 'losses', 'draws', 'combats', 'ratio', 'history_unverified', 'encounters'):
+            peer.pop(key, None)
+    active = result.get('enabled') is True and result.get('status') == 'active'
+    detected_mode = (mode_select if run_monitor and monitor_ready and not monitor_error and mode_detected
+                     and mode_select in ('Arena', 'Invasion', 'Defense') else '')
+    if active and run_monitor and monitor_ready and not monitor_error:
+        try:
+            peers = overlay_peer_roles.annotate(peers)
+            participant_id = (steam_history.active_arena_participant_id()
+                              if detected_mode == 'Arena' and fight and len(peers) == 1 else '')
+            peers = annotate_arena_duelist(peers, mode=mode_select, mode_detected=mode_detected,
+                running=run_monitor, ready=monitor_ready, error=monitor_error, fight=fight,
+                participant_id=participant_id)
+        except Exception:
+            app.logger.exception('Unable to prepare Steam peer roles')
+            for peer in peers:
+                peer['role'] = None
+    else:
+        for peer in peers:
+            peer['role'] = None
+    if active and peers:
+        try:
+            counts = steam_encounter_counts.snapshot(
+                [peer.get('id') for peer in peers],
+                enabled=bool(overlay_settings.options().get('show_player_stats')))
+            for peer in peers:
+                peer['encounters'] = counts.get(peer.get('id'))
+        except Exception:
+            app.logger.exception('Unable to read Steam encounter counts')
+    result['peers'] = peers
+    result['mode_id'] = detected_mode
     # The first Steam peer is an observed convention, not a verified identity.
     # Keep it stable during the invasion rather than promoting another peer
     # if that connection disappears or the list changes order.
@@ -507,6 +433,19 @@ def steam_peers():
     return jsonify(result)
 
 
+@app.route('/steam-peer-avatar/<steam_id>', methods={'GET'})
+def steam_peer_avatar(steam_id):
+    # Only a currently observed peer is eligible; never proxy arbitrary URLs.
+    if len(steam_id) != 17 or not steam_id.isascii() or not steam_id.isdigit() or not peer_tracking.enabled():
+        abort(404)
+    data = peer_tracking.avatar_png(steam_id)
+    if not data:
+        abort(404)
+    response = Response(data, mimetype='image/png')
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
 @app.route('/steam-log-auto', methods={'GET', 'POST'})
 def steam_log_auto_setting():
     if request.method == 'POST':
@@ -515,6 +454,27 @@ def steam_log_auto_setting():
             return jsonify({'request': 'error', 'reason': 'invalid_setting'}), 400
         steam_log_auto.set_enabled(value == 'true')
     return jsonify({'request': 'success', 'enabled': steam_log_auto.get_enabled()})
+
+
+@app.route('/overlay-settings', methods={'GET', 'POST'})
+def overlay_setting():
+    if request.method == 'POST':
+        if request.is_json:
+            body = request.get_json(silent=True)
+            if not isinstance(body, dict) or set(body) != {'options'}:
+                return jsonify({'request': 'error', 'reason': 'invalid_setting'}), 400
+            try:
+                overlay_settings.set_options(body['options'])
+            except ValueError:
+                return jsonify({'request': 'error', 'reason': 'invalid_setting'}), 400
+        else:
+            value = request.form.get('enabled')
+            if value not in ('true', 'false'):
+                return jsonify({'request': 'error', 'reason': 'invalid_setting'}), 400
+            overlay_settings.set_enabled(value == 'true')
+    from application import tracker_overlay
+    return jsonify({'request': 'success', 'enabled': overlay_settings.enabled(),
+                    'status': tracker_overlay.status(), 'options': overlay_settings.options()})
 
 
 @app.route('/steam-profile', methods={'POST'})
@@ -793,13 +753,9 @@ def capture_speed_setting():
 def game_language_setting():
     global game_locale, detect_mod_active, detect_text_active, mode_detected, invasion_phase
     if request.method == 'POST':
-        locale = request.form.get('language', '')
-        ui_language = next((key for key, value in game_language.UI_TO_GAME.items() if value == locale), None)
-        if ui_language is None:
-            return jsonify({'request':'error', 'reason':'invalid_language'}), 400
-        result = languages(ui_language)
-        if isinstance(result, tuple):
-            return result
+        error = _set_game_language(request.form.get('language', ''))
+        if error:
+            return jsonify(request='error', reason=error[0]), error[1]
     return jsonify({'request':'success', 'language':game_locale,
                     'languages':[{'id':key,'name':value[0]} for key,value in game_language.LANGUAGES.items()]})
 
@@ -823,6 +779,8 @@ def reset_monitor_state():
     invasion_return_message = None
     opponent_name = ''
     sighting_tracker.pending.clear()
+    overlay_invasion_tracker.pending.clear()
+    overlay_peer_roles.clear()
     ally_summoning_last_seen = None
     ally_summon_failure_last_seen = None
     inventory_warning_seen.clear()
@@ -840,8 +798,10 @@ def reset_monitor_state():
     global tampo_text
     global run_monitor
     global game_detected
+    global capture_available
     global captur_send
     game_detected = True
+    capture_available = False
     run_monitor = False
     fighter_find = False
     fight = False
@@ -893,10 +853,10 @@ def init():
         notif_base64 = base64.b64encode(cv2.imencode('.jpg', image_notif)[1]).decode()
         
 
-        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "size_notification":size_notification, "settings":settings, "language_default": language_default, "development_build":not STORE_BUILD})
+        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "size_notification":size_notification, "settings":settings, "language_default": language_default, "interface_language":langue_select, "development_build":not STORE_BUILD})
     else:                  
         notif_base64 = ""               
-        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "settings":settings, "language_default": language_default, "development_build":not STORE_BUILD})
+        return jsonify({"request": "success", "captures":captures, "steam_names":steam_names, "user":user, "notif": notif_base64, "settings":settings, "language_default": language_default, "interface_language":langue_select, "development_build":not STORE_BUILD})
 
 @app.route("/nextCaptures", endpoint="nextCaptures", methods={"GET"})
 def next_captures():
@@ -916,6 +876,7 @@ class _CaptureStopped(Exception):
 def screenshot_with_retry(*args, **kwargs):
     # The secure desktop used by UAC temporarily prevents ImageGrab from
     # accessing the screen. Retry only this known transient failure.
+    global capture_available
     while run_monitor:
         try:
             if active_capture_display is None:
@@ -925,6 +886,7 @@ def screenshot_with_retry(*args, **kwargs):
         except OSError as exc:
             if 'screen grab failed' not in str(exc).lower():
                 raise
+            capture_available = False
             time.sleep(0.25)
     raise _CaptureStopped()
 
@@ -963,7 +925,7 @@ def _auto_lock_notification(located, crop_recognized):
 
 
 def _run_monitor():
-    global run_monitor, monitor_ready, monitor_error, monitor_error_detail, steam_overlay_open
+    global run_monitor, monitor_ready, monitor_error, monitor_error_detail, steam_overlay_open, capture_available
     try:
         monitor(None)
     except _CaptureStopped:
@@ -985,8 +947,11 @@ def _run_monitor():
             app.logger.exception('Unable to save capture error log')
     finally:
         run_monitor = False
+        overlay_invasion_tracker.pending.clear()
+        overlay_peer_roles.clear()
         monitor_ready = False
         steam_overlay_open = False
+        capture_available = False
         tracker_notifications.notify('monitor_error' if monitor_error else 'monitor_stop',
                                      monitor_error_detail if monitor_error else '')
         try:
@@ -1005,6 +970,7 @@ def start():
     global run_monitor, monitor_ready, monitor_error, monitor_error_detail, capture, capture_revision, game_running
     global preview_notification_box, preview_notification_version
     global active_capture_display, width_screen, height_screen
+    global capture_available
     if not monitor_lock.acquire(blocking=False):
         if run_monitor:
             return jsonify({"request": "already_running"})
@@ -1013,8 +979,17 @@ def start():
         active_capture_display = None
         width_screen, height_screen = legacy_screen_size
         session_summary.start()
+        tracker_overlay_event.clear()
+        overlay_invasion_tracker.pending.clear()
+        overlay_peer_roles.clear()
         game_running = None
+        capture_available = False
         run_monitor = True
+        try:
+            current_peers = peer_tracking.passive_snapshot()
+            overlay_peer_roles.update_peers(current_peers.get('status'), current_peers.get('peers'))
+        except Exception:
+            app.logger.exception('Unable to initialize overlay peer roles')
         monitor_ready = False
         monitor_error = False
         monitor_error_detail = ''
@@ -1209,7 +1184,7 @@ legacy_screen_size = (width_screen, height_screen)
 active_capture_display = None
         
 
-def emit_tracking_event(text, mode_override=None, *, opponent='', opponent_source='', outcome=''):
+def emit_tracking_event(text, mode_override=None, *, opponent='', opponent_source='', outcome='', show_in_overlay=True):
     global array_stats, invasion_search_history_id
     marker = ''
     for candidate in ('<!--search-start-->', '<!--search-update-->', '<!--invasion-no-result-->', '<!--connection-correction-->'):
@@ -1248,6 +1223,11 @@ def emit_tracking_event(text, mode_override=None, *, opponent='', opponent_sourc
     if(len(array_stats["text"].split(",")[0]) == "Lets go !" and text == "Lets go !"):
         array_stats["text"] = array_stats["text"]
     else:
+        if show_in_overlay:
+            try:
+                tracker_overlay_event.publish_html(localize_overlay_time(text, langue_select))
+            except Exception:
+                app.logger.exception('Unable to prepare tracker overlay event')
         if array_stats["text"] == "":
             array_stats["text"] = text
         else:
@@ -1435,6 +1415,16 @@ def _defense_name_key(name):
     return ''.join(c for c in normalise_ocr(name or '') if c.isalnum())
 
 
+def _is_recent_defense_start_sighting(sighting):
+    """Do not report the same defense start again as a generic arrival."""
+    if not (fight and mode_select == 'Defense' and sighting['mode'] == 'Defense'
+            and sighting['role'] == 'invader' and sighting['relation'] == 'opponent'
+            and sighting['event'] == 'invaded' and 0 <= time.time() - time_start < 45):
+        return False
+    key = lambda value: ' '.join(unicodedata.normalize('NFKC', value or '').split()).casefold()
+    return bool(opponent_name and key(opponent_name) == key(sighting['name']))
+
+
 def _remember_defense_victory(name):
     now = time.monotonic()
     for key, timestamp in list(recent_defense_victories.items()):
@@ -1531,7 +1521,7 @@ def handle_invasion(text, path_video_simple, original_grey):
         cv2.imwrite(path_start_fight, original_image[0:int(height / 3), int(width / 4):int(width - width / 4)])
         apply_score(0, 0, 0, 1, 0, 0, 1, 0, 0)
         safe_name = html.escape(opponent_name.replace(',', ' '))
-        emit_tracking_event('Monde envahi : combat contre ' + safe_name)
+        emit_tracking_event(safe_name + ' a envahi votre monde')
         return True
     if not fight and "vous tentez d'envahir un autre monde" in text:
         mode_select = 'Invasion'
@@ -1702,14 +1692,16 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
     global fighters_exit
     global fighter_exit
     global mode_select, mode_detected, invasion_phase, invasion_search_extent, invasion_search_history_id
+    global invasion_return_pending, invasion_return_message
     global sightings_revision, ally_summoning_last_seen, ally_summon_failure_last_seen, inventory_warning_seen
     global connexion_error
     # The original invasion/player detectors understand French notifications.
     # Preserve the source OCR as well: arena and on-screen capture logic still
     # consume the original language, while translated IDs supply PvP events.
-    summon_failed = any(event['event'] == 'ally_summon_failed'
-                        for text in (text_simple, notification_text) if text
-                        for event in classify(text, game_locale))
+    recognized = [classify(text, game_locale) if text else []
+                  for text in (text_simple, notification_text)]
+    events_by_source = [{item['event'] for item in events} for events in recognized]
+    summon_failed = any('ally_summon_failed' in events for events in events_by_source)
     if game_locale != 'frafr':
         first = game_notification_messages(text_simple or '', game_locale)
         second = game_notification_messages(notification_text or '', game_locale)
@@ -1717,6 +1709,32 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
             text_simple = (text_simple or '') + '\n' + '\n'.join(first)
         if second:
             notification_text = (notification_text or '') + '\n' + '\n'.join(second)
+    arena_markers = {'arena_started', 'arena_assembled', 'arena_waiting'}
+    primary_arena = bool(events_by_source[0] & arena_markers)
+    secondary_arena = bool(events_by_source[1] & arena_markers)
+    defense_result = bool((events_by_source[0] | events_by_source[1]) &
+                          {'invader_died', 'player_died', 'invasion_defeat', 'connection_error'})
+    if (primary_arena or secondary_arena) and not defense_result:
+        if fight and mode_select == 'Defense':
+            # A complete, catalogued arena notification identifies a new
+            # activity even if the preceding defense result was missed.
+            # Close the earlier combat without inventing its outcome.
+            _seal_pvp_participant()
+            apply_score(0, 0, 0, 0, 1, 0, 0, 0, 0)
+            fight = False
+            stape = 0
+            invasion_phase = 'finished'
+            invasion_return_pending = None
+            invasion_return_message = None
+            fighter_find = fighters_exit = fighter_exit = False
+            error = want_annul = wait_fighter = connexion_error = False
+            mod_launch = 0
+            emit_tracking_event(correspondly_active[13])
+        # The arena detector below historically reads only the main OCR text.
+        # Use a separately recognized second reading when it is the only one
+        # that contains a complete arena notification.
+        if not fight and secondary_arena and not primary_arena:
+            text_simple = (text_simple or '') + '\n' + (notification_text or '')
     item = inventory_limit_item(notification_text) or inventory_limit_item(text_simple)
     if item:
         key = normalise_ocr(item)
@@ -1726,6 +1744,17 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
             emit_tracking_event('Impossible d’acquérir ' + safe_item + '.<br><span class="inventory-warning">Pensez à retirer une partie de cet objet de votre inventaire ou de votre stockage pour ne pas gêner la détection.</span>')
         inventory_warning_seen[key] = now
     combined_ocr = normalise_ocr((text_simple or "") + "\n" + (notification_text or "")).replace("’", "'")
+    if run_monitor and 'a envahi votre monde' in combined_ocr:
+        # This explicit notification identifies an invader even before the
+        # tracking mode has been established. Keep it separate from tracking
+        # decisions and require the same OCR confirmation as other sightings.
+        try:
+            arrivals = overlay_invasion_tracker.observe(text_simple, notification_text, 'Defense', True, in_combat=True)
+            for arrival in arrivals:
+                if arrival['role'] == 'invader' and arrival['event'] == 'invaded':
+                    overlay_peer_roles.observe(arrival)
+        except Exception:
+            app.logger.exception('Unable to identify overlay invader')
     search_visible = "vous tentez d'envahir un autre monde" in combined_ocr
     if invasion_search_visibility.observe(invasion_phase == 'search' and not fight, search_visible, time.monotonic()):
         invasion_phase = None
@@ -1745,6 +1774,11 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
             emit_tracking_event("Invocation de l’allié…")
         ally_summoning_last_seen = now
     for sighting in sighting_tracker.observe(text_simple, notification_text, mode_select, mode_detected, in_combat=fight):
+        if run_monitor:
+            try:
+                overlay_peer_roles.observe(sighting)
+            except Exception:
+                app.logger.exception('Unable to update overlay player role')
         try:
             if sighting['role'] == 'ally' and not fight:
                 mode_select = 'Defense'
@@ -1757,11 +1791,16 @@ def process_game_text(text_simple, path_video_simple, original_grey, notificatio
                     role = 'Autre envahisseur'
                 role += {'joined': ' arrivé', 'summoning': ' en cours d’invocation',
                          'left': ' reparti', 'dismissed': ' renvoyé dans son monde', 'died': ' mort', 'invaded': ' arrivé'}.get(sighting['event'], ' observé')
-                message = role + ' : ' + html.escape(sighting['name'].replace(',', ' '))
-                if sighting['mode'] == 'Unknown':
-                    emit_tracking_event(message, mode_override='Unknown')
+                if sighting['role'] == 'hunter' and sighting['event'] == 'completed':
+                    message = ("Son objectif accompli, le Chasseur " + html.escape(sighting['name']) +
+                               " s'en est retourné dans son monde.")
                 else:
-                    emit_tracking_event(message)
+                    message = role + ' : ' + html.escape(sighting['name'].replace(',', ' '))
+                if not _is_recent_defense_start_sighting(sighting):
+                    if sighting['mode'] == 'Unknown':
+                        emit_tracking_event(message, mode_override='Unknown')
+                    else:
+                        emit_tracking_event(message)
                 if sighting['role'] == 'invader' and sighting['event'] == 'died' and sighting['relation'] != 'coinvader':
                     _untracked_defense_victory(sighting, path_video_simple)
         except Exception:
@@ -2041,7 +2080,7 @@ def monitor(ocr_executor):
    
 
     now = datetime.now()
-    emit_tracking_event("Let's gooo ! [ "+str(now.strftime("%Y-%m-%d %H:%M:%S"))+" ]")
+    emit_tracking_event("Let's gooo ! [ "+str(now.strftime("%Y-%m-%d %H:%M:%S"))+" ]", show_in_overlay=False)
     global count
     global count_limit
     global cout_total
@@ -2050,7 +2089,7 @@ def monitor(ocr_executor):
     global run_monitor, monitor_ready
     global capture, capture_revision
     global preview_notification_box, preview_notification_version
-    global game_detected, game_running, steam_overlay_open
+    global game_detected, game_running, steam_overlay_open, capture_available
     global langue_select
     global mod_launch
     global mode_select
@@ -2147,7 +2186,8 @@ def monitor(ocr_executor):
             steam_overlay_open = overlay_detector.update(foreground_hwnd if game_in_foreground else None,
                                                          overlay_window=overlay_window)
             # Pause immediately on a candidate overlay, before confirmation.
-            if game_in_foreground and not overlay_detector.capture_blocked and max_val < 0.8:
+            capture_available = bool(game_in_foreground and not overlay_detector.capture_blocked and max_val < 0.8)
+            if capture_available:
                 ever_game_visible = True
         
                 if game_detected == False:
@@ -2286,7 +2326,7 @@ def sub_monitor():
                         
                         text_user = pytesseract.image_to_string(img_user_panel, lang=game_language.LANGUAGES[game_locale][1], config=game_ocr_data_config())
                      
-                        if (text_user.find(correspondly_active[19]) != -1 or text_user.find(correspondly_active[22]) != -1) and monitor_user_img == True:
+                        if (text_user.find(_game_correspondence()[19]) != -1 or text_user.find(_game_correspondence()[22]) != -1) and monitor_user_img == True:
                             
                                 width_crop_left = 2
                                 width_crop_right = 4.5
@@ -2314,7 +2354,7 @@ def sub_monitor():
                                         user_img_tampo = image_b64_bis
                                         monitor_user_img = False
                                         
-                        if (text_user.find(correspondly_active[19]) != -1 or text_user.find(correspondly_active[22]) != -1) and monitor_user_lvl == True:
+                        if (text_user.find(_game_correspondence()[19]) != -1 or text_user.find(_game_correspondence()[22]) != -1) and monitor_user_lvl == True:
                         
                             width_crop_left = 5
                             height_crop_top = 2.5

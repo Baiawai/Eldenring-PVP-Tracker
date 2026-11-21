@@ -1,3 +1,38 @@
+// Adapt a running server's cached settings template before binding the tabs.
+(function () {
+    const nav = document.querySelector('.contente_header_settings');
+    const parent = document.querySelector('.cadre_settings_sub');
+    if (!nav || !parent) return;
+    if (!nav.querySelector('[menu="8"]')) {
+        const tab = document.createElement('button');
+        tab.type = 'button'; tab.className = 'btn_menu_settings overlay-settings-tab';
+        tab.setAttribute('menu', '8');
+        tab.dataset.i18nTitle = tab.dataset.i18nAria = 'settings_overlay_section';
+        tab.dataset.i18nTitleFr = tab.dataset.i18nAriaFr = 'Overlay en jeu';
+        tab.title = window.uiT ? window.uiT('settings_overlay_section', 'Overlay en jeu') : 'Overlay en jeu';
+        tab.setAttribute('aria-label', tab.title);
+        const icon = document.createElement('img'); icon.src = '/static/icon-overlay-bronze.svg'; icon.alt = '';
+        tab.appendChild(icon);
+        nav.insertBefore(tab, nav.querySelector('[menu="3"]'));
+    }
+    let section = parent.querySelector('.contente_settings[setting="8"]');
+    if (!section) {
+        section = document.createElement('section');
+        section.className = 'contente_settings hide overlay-settings'; section.setAttribute('setting', '8');
+        section.dataset.i18nAria = 'settings_overlay_section'; section.dataset.i18nAriaFr = 'Overlay en jeu';
+        section.setAttribute('aria-label', window.uiT ? window.uiT('settings_overlay_section', 'Overlay en jeu') : 'Overlay en jeu');
+        const control = document.getElementById('game_overlay_enabled');
+        if (control) section.appendChild(control.closest('.form_single'));
+        else section.innerHTML = '<div class="form_single"><label class="form_single_left" for="game_overlay_enabled" data-i18n="game_overlay_enabled" data-i18n-fr="Overlay en jeu">Overlay en jeu</label><div class="form_single_right"><input type="checkbox" id="game_overlay_enabled" disabled><span id="game_overlay_status" role="status" aria-live="polite"></span></div></div>';
+        parent.insertBefore(section, parent.querySelector('.contente_settings[setting="3"]'));
+    }
+    // A template cached before the overlay existed has no script tag for it.
+    document.addEventListener('DOMContentLoaded', function () {
+        if (document.querySelector('script[src*="/overlay-settings.js"]')) return;
+        const script = document.createElement('script'); script.src = '/static/overlay-settings.js'; document.body.appendChild(script);
+    }, {once:true});
+})();
+
 // Keep graph labels as readable as the rest of the interface.
 Chart.defaults.font.size = 18;
 
@@ -389,8 +424,9 @@ var days_active = "";
 // Ignore late translation responses after the user changes languages again.
 function createTableLanguageSetter(jquery) {
     const files = {fra:'fra', spa:'spa', spaes:'spa', spaar:'spa', ita:'ita', deu:'deu',
-        rus:'rus', jap:'jap', chi:'chi', por:'por', nld:'nld', nor:'nor', fin:'fin',
-        dan:'dan', tur:'tur', kor:'kor', ell:'ell', pol:'pol', ces:'ces', ron:'ron',
+        rus:'rus', jap:'jap', chi:'chi', por:'por', ptpt:'por', nld:'nld', nor:'nor', fin:'fin', swe:'swe',
+        ukr:'ukr', ind:'ind', vie:'vie', hin:'hin',
+        dan:'dan', tur:'tur', kor:'kor', ell:'ell', pol:'pol', ces:'ces', ron:'ron', hun:'hun',
         ara:'ara', heb:'heb', zht:'zht', tha:'tha'};
     let generation = 0;
     function apply(data) {
@@ -1853,7 +1889,7 @@ function init(){
                     $(".panel_user p span").text(user[7]);
                 }
 
-                let langue_select = user[5];
+                let langue_select = window.selectedInterfaceLanguage || response.interface_language || user[5];
         
                 launchLanguages(langue_select);
 
@@ -2667,7 +2703,10 @@ $(window).on('load', function() {
         card.querySelector('span').textContent = t('onboarding_hint', 'Découvre comment préparer ta première capture.');
         dialog.querySelector('h3').textContent = t(headings[step][0], headings[step][1]);
         dialog.querySelector('.onboarding-description').textContent = t(descriptions[step][0], descriptions[step][1]);
-        dialog.querySelector('.onboarding-progress').textContent = (step + 1) + ' / ' + descriptions.length;
+        const progress = dialog.querySelector('.onboarding-progress');
+        // Keep the current/total order stable inside right-to-left languages.
+        progress.dir = 'ltr';
+        progress.textContent = (step + 1) + ' / ' + descriptions.length;
         previous.textContent = t('online_previous', 'Précédent');
         next.textContent = step === descriptions.length - 1 ? t('initialization_close', 'Fermer') : t('online_next', 'Suivant');
         close.setAttribute('aria-label', t('initialization_close', 'Fermer'));

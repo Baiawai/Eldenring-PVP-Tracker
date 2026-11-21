@@ -21,19 +21,22 @@ from contextlib import closing
 from pathlib import Path
 from application.init import database_setting
 from application.geoip_country import country_code
+from application.runtime_paths import STORE_BUILD
+from application.steam_peer_enrichment import PeerCache
 
-HELPER = Path(__file__).with_name('steam_peers') / 'TrackerSteamPeersV4.exe'
+HELPER = Path(__file__).with_name('steam_peers') / 'TrackerSteamPeersV6.exe'
 _lock = threading.Lock()
 _started = False
 _process = None
 _command_writer = None
 _command_lock = threading.Lock()
-_snapshot = {'status': 'starting', 'ping_mode': 'admin_required', 'peers': []}
+_snapshot = {'status': 'starting', 'ping_mode': 'steam_only' if STORE_BUILD else 'admin_required', 'peers': []}
 _ask_elevation = False
 _auto_ping_pending = False
 _last_elevation_failure = None
 _seed_ids = []
 _observer = None
+_peer_cache = PeerCache()
 
 def enabled():
     with closing(sqlite3.connect(database_setting, timeout=10)) as db:
@@ -67,11 +70,14 @@ def set_observer(callback):
 
 def _publish(status, peers=None, ping_mode='admin_required'):
     global _snapshot
+    if STORE_BUILD:
+        ping_mode = 'steam_only'
     with _lock:
-        _snapshot = {'status': status, 'ping_mode': ping_mode, 'peers': peers or []}
+        safe = _peer_cache.update(peers or [])
+        _snapshot = {'status': status, 'ping_mode': ping_mode, 'peers': safe}
     if _observer:
         try:
-            _observer(status, peers or [])
+            _observer(status, safe)
         except Exception:
             logging.getLogger(__name__).exception('Unable to record Steam observations')
 
@@ -79,6 +85,9 @@ def activate_ping():
     global _ask_elevation, _auto_ping_pending, _seed_ids, _last_elevation_failure
     if not enabled() or not ctypes.windll.user32.FindWindowW(None, 'ELDEN RING™'):
         return False
+    if STORE_BUILD:
+        snapshot()
+        return True
     with _lock:
         if _snapshot.get('ping_mode') in ('active', 'requesting') or _ask_elevation:
             return True
@@ -101,6 +110,8 @@ def request_auto_ping():
     if not enabled():
         return False
     snapshot()  # Start the supervisor even if the page has not requested its status.
+    if STORE_BUILD:
+        return True
     with _lock:
         if _snapshot.get('ping_mode') in ('active', 'requesting') or _ask_elevation:
             return True
@@ -202,7 +213,7 @@ def _worker():
             time.sleep(5)
             continue
         with _lock:
-            elevated = _ask_elevation
+            elevated = _ask_elevation and not STORE_BUILD
             seeds = list(_seed_ids)
             _ask_elevation = False
             _auto_ping_pending = False
@@ -228,14 +239,16 @@ def _worker():
                         _process.stdin.flush()
                     _command_writer = write_stdin
             for line in stream:
-                if not enabled() or _ask_elevation:
+                if not enabled() or (_ask_elevation and not STORE_BUILD):
                     break
                 try:
                     data = json.loads(line)
                     peers = data.get('peers', [])
                     if not isinstance(peers, list):
                         peers = []
-                    safe = [{'id':str(p.get('id', '')), 'name':str(p.get('name', '')), 'ping':p.get('ping'), 'country_code':country_code(p.get('ip'))}
+                    safe = [{'id':str(p.get('id', '')), 'name':str(p.get('name', '')), 'ping':p.get('ping'),
+                             'average_ping':p.get('average_ping'), 'jitter':p.get('jitter'), 'quality':p.get('quality'),
+                             'avatar_png':p.get('avatar_png'), 'country_code':country_code(p.get('ip'))}
                             for p in peers if isinstance(p, dict)][:16]
                     ping_mode = str(data.get('ping_mode', 'admin_required'))
                     if elevated and ping_mode == 'active':
@@ -274,4 +287,25 @@ def snapshot():
         result = dict(_snapshot)
     result['enabled'] = enabled()
     return result
+
+
+def passive_snapshot():
+    """Read existing observations without starting the Steam supervisor."""
+    with closing(sqlite3.connect(database_setting, timeout=10)) as db:
+        exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='steam_peers_setting'").fetchone()
+        row = db.execute('SELECT enabled FROM steam_peers_setting WHERE id=1').fetchone() if exists else None
+    is_enabled = bool(row[0]) if row else True
+    with _lock:
+        result = dict(_snapshot)
+        result['peers'] = [dict(peer) for peer in _snapshot.get('peers', [])] if is_enabled else []
+    result['enabled'] = is_enabled
+    if not is_enabled:
+        result['status'] = 'disabled'
+    return result
+
+
+def avatar_png(steam_id):
+    """Return an in-memory PNG for a currently observed Steam peer only."""
+    with _lock:
+        return _peer_cache.avatar(steam_id)
 

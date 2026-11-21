@@ -1,7 +1,10 @@
-"""Choose a supported interface/game locale from browser language preferences."""
+"""Choose a supported interface locale from browser language preferences."""
 LANGUAGE_CODES = {
     'fr':'fra', 'en':'eng', 'de':'deu', 'it':'ita', 'pt':'por', 'pl':'pol',
-    'ru':'rus', 'ja':'jap', 'ko':'kor', 'th':'tha', 'ar':'ara',
+    'nl':'nld', 'tr':'tur', 'ru':'rus', 'ja':'jap', 'ko':'kor', 'th':'tha', 'ar':'ara',
+    'uk':'ukr', 'cs':'ces', 'ro':'ron', 'hu':'hun', 'el':'ell',
+    'sv':'swe', 'da':'dan', 'no':'nor', 'nb':'nor', 'nn':'nor', 'fi':'fin',
+    'id':'ind', 'vi':'vie', 'hi':'hin',
 }
 
 def browser_language(preferences):
@@ -13,6 +16,8 @@ def browser_language(preferences):
         language = parts[0]
         if language == 'zh':
             return 'zht' if any(p in ('hant', 'tw', 'hk', 'mo') for p in parts[1:]) else 'chi'
+        if language == 'pt' and 'pt' in parts[1:]:
+            return 'ptpt'
         if language == 'es':
             region = next((p for p in parts[1:] if (len(p) == 2 and p.isalpha()) or p == '419'), '')
             return 'spaes' if region in ('', 'es') else 'spaar'

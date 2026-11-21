@@ -634,6 +634,7 @@ with patch.object(online, '_settings', return_value=(True, None, None, False, No
         patch.object(online.time, 'monotonic', side_effect=[100.0, 109.9, 109.9, 110.0, 110.0]):
     online._RUNNING = False
     online._LAST_SYNC_START = None
+    online._LAST_SYNC_FINISH = None
     assert online.start_sync() == 'syncing'
     online._RUNNING = False
     blocked = client.post('/online-leaderboard/sync').json
@@ -649,6 +650,272 @@ with patch.object(online, '_settings', return_value=(False, None, None, True, No
     online._RUNNING = False
     assert client.post('/online-leaderboard/sync').json['state'] == 'syncing'
     assert thread.call_count == 1
+
+# A long automatic upload must not overlap a manual upload, and its completion
+# starts the same ten-second cooldown seen by the manual endpoint.
+real_thread_class = threading.Thread
+clock = [100.0]
+upload_started = threading.Event()
+finish_upload = threading.Event()
+def long_automatic_upload():
+    upload_started.set()
+    assert finish_upload.wait(5)
+    return 'success'
+
+with patch.object(online, '_settings', return_value=(True, None, None, False, None)), \
+     patch.object(online, '_steam_settings', return_value=(False, False)), \
+     patch.object(online, '_language_remove_pending', return_value=False), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_RUNNING', False), \
+     patch.object(online, '_LAST_SYNC_START', None), \
+     patch.object(online, '_LAST_SYNC_FINISH', None), \
+     patch.object(online, '_STATUS', {'state':'syncing'}), \
+     patch.object(online, '_SERVER_RETRY_UNTIL', 0.0), \
+     patch.object(online, '_SCHEDULED_RETRY', None), \
+     patch.object(online.time, 'monotonic', side_effect=lambda: clock[0]), \
+     patch.object(online, '_sync', side_effect=long_automatic_upload) as upload, \
+     patch.object(online.threading, 'Thread') as scheduled_thread:
+    assert online.start_sync(rate_limit=True) == 'syncing'
+    worker = real_thread_class(target=online._worker, daemon=True)
+    worker.start()
+    assert upload_started.wait(5)
+    clock[0] = 111.0  # More than ten seconds after the start, still running.
+    assert client.post('/online-leaderboard/sync').json['state'] == 'syncing'
+    assert upload.call_count == 1 and scheduled_thread.call_count == 1
+    finish_upload.set()
+    worker.join(5)
+    assert not worker.is_alive() and not online._RUNNING
+    blocked = client.post('/online-leaderboard/sync').json
+    assert blocked['state'] == 'rate_limited' and blocked['retry_after_ms'] == 10000, blocked
+    clock[0] = 120.9
+    blocked = client.post('/online-leaderboard/sync').json
+    assert blocked['state'] == 'rate_limited' and 99 <= blocked['retry_after_ms'] <= 101, blocked
+    clock[0] = 121.0
+    assert client.post('/online-leaderboard/sync').json['state'] == 'syncing'
+    assert upload.call_count == 1 and scheduled_thread.call_count == 2
+
+# While the first snapshot waits for an ongoing fight, poll only local state.
+# Stop waiting as soon as the fight ends or the user withdraws participation.
+import sys
+for outcome in ('fight_finished', 'withdraw', 'disable', 'event_consent'):
+    tracker = SimpleNamespace(fight=True)
+    state = {'enabled':True, 'pending':False, 'event_consent':True}
+    sync_calls = []
+    local_polls = []
+    def current_settings():
+        return (state['enabled'], 'fixture-id', b'fixture-token', state['pending'], 'https://example.invalid')
+    def fake_sync():
+        sync_calls.append((tracker.fight, state['enabled'], state['pending']))
+        if len(sync_calls) == 1:
+            online._STATUS['state'] = 'baseline_wait'
+            return None
+        if outcome == 'fight_finished':
+            assert not tracker.fight
+            online._STATUS['state'] = 'success'
+            return 'success'
+        if outcome == 'event_consent':
+            assert tracker.fight and state['enabled'] and not state['event_consent']
+            online._STATUS['state'] = 'event_consent_required'
+            return None
+        assert tracker.fight and not state['enabled']
+        if outcome == 'withdraw':
+            assert state['pending']
+            state['pending'] = False
+            online._STATUS['state'] = 'deleted'
+            return 'deleted'
+        assert not state['pending']
+        online._STATUS['state'] = 'disabled'
+        return None
+    def poll_local(seconds):
+        assert seconds == 2 and len(sync_calls) == 1
+        local_polls.append(seconds)
+        if outcome == 'fight_finished' and len(local_polls) == 3:
+            tracker.fight = False
+        elif outcome == 'withdraw':
+            state.update(enabled=False, pending=True)
+        elif outcome == 'disable':
+            state['enabled'] = False
+        elif outcome == 'event_consent':
+            state['event_consent'] = False
+    with patch.dict(sys.modules, {'application.functions':tracker}), \
+         patch.object(online, '_settings', side_effect=current_settings), \
+         patch.object(online, '_event_permission', side_effect=lambda: state['event_consent']), \
+         patch.object(online, '_steam_settings', return_value=(False, False)), \
+         patch.object(online, '_language_remove_pending', return_value=False), \
+         patch.object(online, '_login_cancel_pending', return_value=False), \
+         patch.object(online, '_RUNNING', True), \
+         patch.object(online, '_STATUS', {'state':'syncing'}), \
+         patch.object(online, '_PERIODIC_WAKE', unittest.mock.Mock()), \
+         patch.object(online, '_sync', side_effect=fake_sync), \
+         patch.object(online.time, 'sleep', side_effect=poll_local):
+        online._worker()
+        assert len(sync_calls) == 2 and not online._RUNNING, (outcome, sync_calls)
+        assert len(local_polls) == (3 if outcome == 'fight_finished' else 1), outcome
+
+# Unexpected local SQLite errors cannot strand the synchronization gate or
+# discard an already requested removal, including while awaiting a fight.
+for failure_stage in ('sync_start', 'baseline_wait'):
+    tracker = SimpleNamespace(fight=True)
+    state = {'enabled':True, 'pending':failure_stage == 'sync_start', 'fail_next_settings':False}
+    calls = []
+    def error_settings():
+        if state['fail_next_settings']:
+            state['fail_next_settings'] = False
+            raise online.sqlite3.OperationalError('test database busy')
+        return (state['enabled'], 'fixture-id', b'fixture-token', state['pending'], 'https://example.invalid')
+    def error_sync():
+        calls.append(failure_stage)
+        if len(calls) == 1:
+            if failure_stage == 'sync_start':
+                raise online.sqlite3.OperationalError('test database busy')
+            online._STATUS['state'] = 'baseline_wait'
+            return None
+        assert state['pending'], (failure_stage, state)
+        state.update(enabled=False, pending=False)
+        online._STATUS['state'] = 'deleted'
+        return 'deleted'
+    def fail_during_local_wait(seconds):
+        assert failure_stage == 'baseline_wait' and seconds == 2
+        state.update(enabled=False, pending=True, fail_next_settings=True)
+    with patch.dict(sys.modules, {'application.functions':tracker}), \
+         patch.object(online, '_settings', side_effect=error_settings), \
+         patch.object(online, '_event_permission', return_value=True), \
+         patch.object(online, '_steam_settings', return_value=(False, False)), \
+         patch.object(online, '_language_remove_pending', return_value=False), \
+         patch.object(online, '_login_cancel_pending', return_value=False), \
+         patch.object(online, '_RUNNING', True), \
+         patch.object(online, '_STATUS', {'state':'syncing'}), \
+         patch.object(online, '_LAST_SYNC_START', None), \
+         patch.object(online, '_LAST_SYNC_FINISH', None), \
+         patch.object(online, '_SERVER_RETRY_UNTIL', 0.0), \
+         patch.object(online, '_SCHEDULED_RETRY', None), \
+         patch.object(online, '_PERIODIC_WAKE', unittest.mock.Mock()), \
+         patch.object(online, '_sync', side_effect=error_sync), \
+         patch.object(online.time, 'sleep', side_effect=fail_during_local_wait), \
+         patch.object(online.threading, 'Thread') as worker_thread, \
+         patch.object(online.threading, 'Timer') as local_timer, \
+         patch.object(online.app.logger, 'exception'):
+        online._worker()
+        assert not online._RUNNING, failure_stage
+        assert state['pending'] and len(calls) == 1, (failure_stage, state, calls)
+        assert local_timer.call_args.args[0] == 60, local_timer.call_args
+        assert online._SCHEDULED_RETRY is local_timer.return_value
+        local_timer.return_value.start.assert_called_once()
+        callback = local_timer.call_args.args[1]
+        arguments = local_timer.call_args.kwargs['args']
+        callback(*arguments)
+        worker_thread.assert_called_once()
+        assert online._RUNNING, failure_stage
+        online._worker()
+        assert not online._RUNNING and not state['pending'] and len(calls) == 2
+        assert online._STATUS['state'] == 'deleted'
+        callback(*arguments)
+        worker_thread.assert_called_once()
+
+# An automatic worker starts only once and waits ten minutes after the latest
+# completed sync, even if a manual sync completes just before the first deadline.
+class EndPeriodicTest(Exception):
+    pass
+
+clock = [0.0]
+waits = []
+class SimulatedWake:
+    def wait(self, delay):
+        waits.append(delay)
+        if len(waits) == 1:
+            assert delay == 600
+            clock[0] = 500
+            online._LAST_SYNC_FINISH = clock[0]
+            return True
+        if len(waits) == 2:
+            assert delay == 600, waits
+            clock[0] = 1100
+            return False
+        assert len(waits) == 3 and delay == 600, waits
+        raise EndPeriodicTest()
+    def clear(self):
+        pass
+
+with patch.object(online, '_settings', return_value=(True, None, None, False, None)), \
+     patch.object(online, '_steam_settings', return_value=(False, False)), \
+     patch.object(online, '_language_remove_pending', return_value=False), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_RUNNING', False), \
+     patch.object(online, '_LAST_SYNC_START', None), \
+     patch.object(online, '_LAST_SYNC_FINISH', None), \
+     patch.object(online, '_SERVER_RETRY_UNTIL', 0.0), \
+     patch.object(online, '_SCHEDULED_RETRY', None), \
+     patch.object(online, '_PERIODIC_WAKE', SimulatedWake()), \
+     patch.object(online.time, 'monotonic', side_effect=lambda: clock[0]), \
+     patch.object(online.threading, 'Thread') as scheduled_thread:
+    try:
+        online._periodic_worker()
+        raise AssertionError('Simulated periodic worker should have stopped')
+    except EndPeriodicTest:
+        pass
+    assert waits == [600, 600, 600], waits
+    assert scheduled_thread.call_count == 1
+    assert online._LAST_SYNC_START == 1100
+
+# A transient local failure must not permanently kill the scheduler or spin.
+clock = [0.0]
+waits = []
+class FailureWake:
+    def wait(self, delay):
+        waits.append(delay)
+        if len(waits) == 1:
+            clock[0] = 600
+            return False
+        if len(waits) == 2:
+            clock[0] = 660
+            return False
+        raise EndPeriodicTest()
+    def clear(self):
+        pass
+
+with patch.object(online, '_LAST_SYNC_FINISH', None), \
+     patch.object(online, '_PERIODIC_WAKE', FailureWake()), \
+     patch.object(online.time, 'monotonic', side_effect=lambda: clock[0]), \
+     patch.object(online, '_periodic_tick', side_effect=[RuntimeError('local failure'), 'syncing']) as tick, \
+     patch.object(online.app.logger, 'exception') as log:
+    try:
+        online._periodic_worker()
+        raise AssertionError('Simulated periodic worker should have stopped')
+    except EndPeriodicTest:
+        pass
+    assert waits == [600, 60, 600], waits
+    assert tick.call_count == 2
+    log.assert_called_once()
+
+with patch.object(online, '_PERIODIC_STARTED', False), \
+     patch.object(online.threading, 'Thread') as thread:
+    online.start_periodic_sync()
+    online.start_periodic_sync()
+    thread.assert_called_once_with(target=online._periodic_worker, name='leaderboard-periodic-sync', daemon=True)
+    thread.return_value.start.assert_called_once()
+
+# A scheduled automatic upload must honor disabled consent, the server's
+# Retry-After, and an existing scheduled retry without cancelling its backoff.
+with patch.object(online, '_settings', return_value=(False, None, None, False, None)) as settings, \
+     patch.object(online, '_steam_settings', return_value=(False, False)), \
+     patch.object(online, '_language_remove_pending', return_value=False), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_RUNNING', False), \
+     patch.object(online, '_LAST_SYNC_START', None), \
+     patch.object(online, '_LAST_SYNC_FINISH', None), \
+     patch.object(online, '_SERVER_RETRY_UNTIL', 700.0), \
+     patch.object(online, '_SCHEDULED_RETRY', unittest.mock.Mock()) as pending_retry, \
+     patch.object(online.time, 'monotonic', return_value=600.0), \
+     patch.object(online.threading, 'Thread') as thread:
+    assert online._periodic_tick() == 'disabled'
+    settings.return_value = (True, None, None, False, None)
+    assert online._periodic_tick() == 'rate_limited'
+    assert online.sync_cooldown_remaining_ms() == 100000
+    online._SERVER_RETRY_UNTIL = 0.0
+    assert online._periodic_tick() == 'retry_scheduled'
+    assert online._SCHEDULED_RETRY is pending_retry
+    pending_retry.cancel.assert_not_called()
+    thread.assert_not_called()
 
 # Existing participants explicitly choose whether their game language is public.
 language_calls = []
@@ -698,7 +965,10 @@ with patch.object(online.init, 'load_user', return_value=[profile]), patch.objec
         profile[1] = '가' * 80
         assert online._profile()['name'] == '가' * 80
     profile[5] = '../fr'
-    assert online._profile()['language'] is None
+    with patch.object(online.game_language, 'selected', return_value='deude'):
+        assert online._profile()['language'] == 'deu'
+    with patch.object(online.game_language, 'selected', return_value='unknown'):
+        assert online._profile()['language'] is None
 
 # A language decision during an in-flight upload causes a second upload.
 upload_started = threading.Event()
@@ -1008,13 +1278,222 @@ with patch.object(online, '_sync', return_value=('retry_transient', 120, 'fixtur
     assert timer.call_args.args[0] >= 120
     assert online.sync_cooldown_remaining_ms() >= 120000
     assert online.start_sync(rate_limit=True) == 'rate_limited'
-    with patch.object(online, 'start_sync') as start:
+    with patch.object(online, '_start_sync_locked', return_value='syncing') as start:
         online._retry_scheduled('fixture-id', b'wrong-token', online._RETRY_GENERATION)
         start.assert_not_called()
         online._retry_scheduled('fixture-id', b'fixture-token', online._RETRY_GENERATION - 1)
         start.assert_not_called()
         online._retry_scheduled('fixture-id', b'fixture-token', online._RETRY_GENERATION)
-        start.assert_called_once()
+        start.assert_called_once_with(rate_limit=True)
+
+# A scheduled retry that arrives during the shared cooldown is rearmed for
+# exactly the remaining local or server delay, then starts just one worker.
+for server_until, expected_delay in ((0.0, 9.0), (130.0, 29.0)):
+    clock = [101.0]
+    fixture_timer = unittest.mock.Mock()
+    with patch.object(online, '_settings', return_value=(True, 'fixture-id', b'fixture-token', False, 'https://example.invalid')), \
+         patch.object(online, '_steam_settings', return_value=(False, False)), \
+         patch.object(online, '_language_remove_pending', return_value=False), \
+         patch.object(online, '_login_cancel_pending', return_value=False), \
+         patch.object(online, '_RUNNING', False), \
+         patch.object(online, '_STATUS', {'state':'success'}), \
+         patch.object(online, '_LAST_SYNC_START', 99.0), \
+         patch.object(online, '_LAST_SYNC_FINISH', 100.0), \
+         patch.object(online, '_SERVER_RETRY_UNTIL', server_until), \
+         patch.object(online, '_SCHEDULED_RETRY', fixture_timer), \
+         patch.object(online, '_RETRY_GENERATION', 5), \
+         patch.object(online.time, 'monotonic', side_effect=lambda: clock[0]), \
+         patch.object(online.threading, 'Timer') as timer, \
+         patch.object(online.threading, 'Thread') as worker_thread:
+        online._retry_scheduled('fixture-id', b'fixture-token', 5)
+        worker_thread.assert_not_called()
+        assert timer.call_args.args[0] == expected_delay, timer.call_args
+        assert online._SCHEDULED_RETRY is timer.return_value
+        timer.return_value.start.assert_called_once()
+        callback = timer.call_args.args[1]
+        arguments = timer.call_args.kwargs['args']
+        clock[0] += expected_delay
+        callback(*arguments)
+        worker_thread.assert_called_once()
+        assert online._RUNNING and online._SCHEDULED_RETRY is None
+
+# A local failure to create a worker must restore the gate and preserve an
+# existing scheduled retry, so an outbox cannot be stranded indefinitely.
+fixture_timer = unittest.mock.Mock()
+with patch.object(online, '_settings', return_value=(True, 'fixture-id', b'fixture-token', False, 'https://example.invalid')), \
+     patch.object(online, '_steam_settings', return_value=(False, False)), \
+     patch.object(online, '_language_remove_pending', return_value=False), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_RUNNING', False), \
+     patch.object(online, '_STATUS', {'state':'success'}), \
+     patch.object(online, '_LAST_SYNC_START', 90.0), \
+     patch.object(online, '_LAST_SYNC_FINISH', 95.0), \
+     patch.object(online, '_SERVER_RETRY_UNTIL', 0.0), \
+     patch.object(online, '_SCHEDULED_RETRY', fixture_timer), \
+     patch.object(online, '_RETRY_GENERATION', 10), \
+     patch.object(online.time, 'monotonic', return_value=120.0), \
+     patch.object(online.threading, 'Thread') as worker_thread:
+    worker_thread.return_value.start.side_effect = RuntimeError('thread unavailable')
+    try:
+        online.start_sync(rate_limit=True)
+        raise AssertionError('Worker start unexpectedly succeeded')
+    except RuntimeError as error:
+        assert str(error) == 'thread unavailable'
+    assert not online._RUNNING and online._LAST_SYNC_START == 90.0
+    assert online._STATUS['state'] == 'success'
+    assert online._SCHEDULED_RETRY is fixture_timer and online._RETRY_GENERATION == 10
+    fixture_timer.cancel.assert_not_called()
+
+# A locally recovered worker also honors the server cooldown, and a stale
+# callback cannot cause a second upload once that retry has been consumed.
+clock = [110.0]
+with patch.object(online, '_settings', return_value=(True, 'fixture-id', b'fixture-token', False, 'https://example.invalid')), \
+     patch.object(online, '_steam_settings', return_value=(False, False)), \
+     patch.object(online, '_language_remove_pending', return_value=False), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_RUNNING', False), \
+     patch.object(online, '_STATUS', {'state':'offline'}), \
+     patch.object(online, '_LAST_SYNC_START', 90.0), \
+     patch.object(online, '_LAST_SYNC_FINISH', 100.0), \
+     patch.object(online, '_SERVER_RETRY_UNTIL', 130.0), \
+     patch.object(online, '_SCHEDULED_RETRY', unittest.mock.Mock()), \
+     patch.object(online, '_RETRY_GENERATION', 5), \
+     patch.object(online.time, 'monotonic', side_effect=lambda: clock[0]), \
+     patch.object(online.threading, 'Timer') as local_timer, \
+     patch.object(online.threading, 'Thread') as worker_thread:
+    online._retry_after_local_failure(4)
+    local_timer.assert_not_called()
+    online._retry_after_local_failure(5)
+    assert local_timer.call_args.args[0] == 20.0
+    worker_thread.assert_not_called()
+    callback = local_timer.call_args.args[1]
+    arguments = local_timer.call_args.kwargs['args']
+    clock[0] = 130.0
+    callback(*arguments)
+    worker_thread.assert_called_once()
+    callback(*arguments)
+    worker_thread.assert_called_once()
+
+# A callback from a timer invalidated by a manual sync is harmless even if it
+# reaches the synchronization gate after that manual worker has already ended.
+fixture_timer = unittest.mock.Mock()
+clock = [100.0]
+with patch.object(online, '_settings', return_value=(True, 'fixture-id', b'fixture-token', False, 'https://example.invalid')), \
+     patch.object(online, '_steam_settings', return_value=(False, False)), \
+     patch.object(online, '_language_remove_pending', return_value=False), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_RUNNING', False), \
+     patch.object(online, '_STATUS', {'state':'idle'}), \
+     patch.object(online, '_LAST_SYNC_START', None), \
+     patch.object(online, '_LAST_SYNC_FINISH', None), \
+     patch.object(online, '_SERVER_RETRY_UNTIL', 0.0), \
+     patch.object(online, '_SCHEDULED_RETRY', fixture_timer), \
+     patch.object(online, '_RETRY_GENERATION', 10), \
+     patch.object(online, '_PERIODIC_WAKE', unittest.mock.Mock()), \
+     patch.object(online, '_sync', return_value='success') as upload, \
+     patch.object(online.time, 'monotonic', side_effect=lambda: clock[0]), \
+     patch.object(online.threading, 'Timer') as timer, \
+     patch.object(online.threading, 'Thread') as worker_thread:
+    assert client.post('/online-leaderboard/sync').json['state'] == 'syncing'
+    fixture_timer.cancel.assert_called_once()
+    assert online._RETRY_GENERATION != 10
+    clock[0] = 112.0
+    online._worker()
+    assert not online._RUNNING and online._LAST_SYNC_FINISH == 112.0
+    online._retry_scheduled('fixture-id', b'fixture-token', 10)
+    assert worker_thread.call_count == 1 and upload.call_count == 1
+    timer.assert_not_called()
+    blocked = client.post('/online-leaderboard/sync').json
+    assert blocked['state'] == 'rate_limited' and blocked['retry_after_ms'] == 10000
+
+# A retry paused while checking its identity keeps the same gate locked. A
+# simultaneous manual request cannot start and finish another worker in between.
+retry_checked = threading.Event()
+allow_retry = threading.Event()
+manual_started = threading.Event()
+manual_finished = threading.Event()
+manual_results = []
+settings_calls = [0]
+def blocked_retry_settings():
+    if threading.current_thread().name == 'test-scheduled-retry' and settings_calls[0] == 0:
+        settings_calls[0] += 1
+        retry_checked.set()
+        assert allow_retry.wait(5)
+    return (True, 'fixture-id', b'fixture-token', False, 'https://example.invalid')
+def request_manual_sync():
+    with app.test_client() as local_client:
+        manual_started.set()
+        manual_results.append(local_client.post('/online-leaderboard/sync').json['state'])
+        manual_finished.set()
+
+with patch.object(online, '_settings', side_effect=blocked_retry_settings), \
+     patch.object(online, '_steam_settings', return_value=(False, False)), \
+     patch.object(online, '_language_remove_pending', return_value=False), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_RUNNING', False), \
+     patch.object(online, '_STATUS', {'state':'idle'}), \
+     patch.object(online, '_LAST_SYNC_START', None), \
+     patch.object(online, '_LAST_SYNC_FINISH', None), \
+     patch.object(online, '_SERVER_RETRY_UNTIL', 0.0), \
+     patch.object(online, '_SCHEDULED_RETRY', unittest.mock.Mock()), \
+     patch.object(online, '_RETRY_GENERATION', 10), \
+     patch.object(online.time, 'monotonic', return_value=100.0), \
+     patch.object(online.threading, 'Thread') as worker_thread:
+    retry_thread = real_thread_class(target=online._retry_scheduled,
+                                     args=('fixture-id', b'fixture-token', 10),
+                                     name='test-scheduled-retry')
+    manual_thread = real_thread_class(target=request_manual_sync, name='test-manual-sync')
+    retry_thread.start()
+    assert retry_checked.wait(5)
+    manual_thread.start()
+    assert manual_started.wait(5)
+    assert not manual_finished.wait(.1), 'Manual sync bypassed the retry gate'
+    allow_retry.set()
+    retry_thread.join(5)
+    manual_thread.join(5)
+    assert not retry_thread.is_alive() and not manual_thread.is_alive()
+    assert manual_results == ['syncing']
+    worker_thread.assert_called_once()
+
+# A failed Timer.start must never publish a nonexistent scheduled retry.
+# If another retry was already present, it must remain untouched.
+for helper, arguments in ((online._schedule_retry_locked, ('fixture-id', b'fixture-token', 7, 60)),
+                          (online._schedule_local_retry_locked, (7, 60))):
+    for existing in (None, unittest.mock.Mock()):
+        with patch.object(online, '_SCHEDULED_RETRY', existing), \
+             patch.object(online.threading, 'Timer') as timer:
+            timer.return_value.start.side_effect = RuntimeError('timer unavailable')
+            try:
+                with online._START_LOCK:
+                    helper(*arguments)
+                raise AssertionError('Timer start unexpectedly succeeded')
+            except RuntimeError as error:
+                assert str(error) == 'timer unavailable'
+            assert online._SCHEDULED_RETRY is existing
+            if existing is not None:
+                existing.cancel.assert_not_called()
+
+# If both the network retry timer and local fallback fail to start, the gate is
+# still released and the periodic worker can attempt synchronization again.
+with patch.object(online, '_settings', return_value=(True, 'fixture-id', b'fixture-token', False, 'https://example.invalid')), \
+     patch.object(online, '_steam_settings', return_value=(False, False)), \
+     patch.object(online, '_language_remove_pending', return_value=False), \
+     patch.object(online, '_login_cancel_pending', return_value=False), \
+     patch.object(online, '_RUNNING', True), \
+     patch.object(online, '_STATUS', {'state':'syncing'}), \
+     patch.object(online, '_SCHEDULED_RETRY', None), \
+     patch.object(online, '_RETRY_GENERATION', 0), \
+     patch.object(online, '_SERVER_RETRY_UNTIL', 0.0), \
+     patch.object(online, '_PERIODIC_WAKE', unittest.mock.Mock()), \
+     patch.object(online, '_sync', return_value=('retry_transient', None, 'fixture-id', b'fixture-token')), \
+     patch.object(online.time, 'monotonic', return_value=100.0), \
+     patch.object(online.threading, 'Timer') as timer, \
+     patch.object(online.app.logger, 'exception'):
+    timer.return_value.start.side_effect = RuntimeError('timer unavailable')
+    online._worker()
+    assert timer.call_count == 2
+    assert not online._RUNNING and online._SCHEDULED_RETRY is None
+    assert online._STATUS['state'] == 'offline'
 
 # Replay-safe API calls retry on transient failures; registration never replays.
 with patch.object(online, 'build_opener') as make_opener, \

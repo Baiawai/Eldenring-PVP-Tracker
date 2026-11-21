@@ -340,6 +340,15 @@ p{
     overflow-y:auto;
     overflow-x:hidden;
 }
+.capture-scroll:has(.para_capture) {
+    scroll-padding-bottom:90px;
+}
+.capture-scroll:has(.para_capture)::after {
+    /* Leave room to scroll the last capture above the fixed sidebar button. */
+    content:"";
+    display:block;
+    height:90px;
+}
 .para_capture{
     width:auto;
     height:calc(100% - 40px);
@@ -2060,8 +2069,8 @@ font-family: optimus princeps;
 [data-environment="data_path"] { white-space:pre-line; overflow-wrap:anywhere; }
 
 .game-language-setting select { width:min(300px, 95%); max-width:100%; }
-#game_language_status { display:block; margin-top:7px; color:#e8c37d; font:18px/1.4 Arial,sans-serif; }
-#game_language_status.error { color:#ff9292; }
+#game_language_status, #interface_language_status { display:block; margin-top:7px; color:#e8c37d; font:18px/1.4 Arial,sans-serif; }
+#game_language_status.error, #interface_language_status.error { color:#ff9292; }
 
 .capture-speed-setting select { width:min(300px, 95%); max-width:100%; }
 #capture_speed_status { display:block; margin-top:7px; color:#d0c2a3; font:18px/1.4 Arial,sans-serif; }
@@ -2229,7 +2238,7 @@ font-family: optimus princeps;
 .setting_user .profile-instructions li + li { margin-top: 5px; }
 .live { height: auto; max-height: 85%; }
 .live img { height: auto; width: auto; max-width: 100%; max-height: 29vh; object-fit: contain; }
-.steam-peer-card { margin-top: 12px; padding: 12px 9%; background: linear-gradient(90deg, transparent, rgba(0,0,0,.55) 10%, rgba(0,0,0,.55) 90%, transparent); color: #e8dfcd; text-align: left; }
+.steam-peer-card { margin-top: 12px; padding: 12px 9%; color: #e8dfcd; text-align: left; }
 .steam-peer-card h2 { margin: 0 0 7px; font: 19px 'optimus princeps', serif; color: #d4bd8f; }
 .steam-world-host { margin: 0 0 9px; color: #d4bd8f; font: 18px/1.35 "Agmena Tracker", serif; overflow-wrap: anywhere; }
 #steam_peer_status { margin: 0; font: 18px/1.4 Arial, sans-serif; color: #c5b99f; text-align: center; }
@@ -2273,6 +2282,50 @@ font-family: optimus princeps;
 #steam_peer_list .steam-peer-name:focus-visible { outline:2px solid #d4bd8f; outline-offset:3px; }
 .steam-peer-country, #steam_profile_status { margin: 3px 0 7px; color: #b7ab96; font: 18px/1.35 Arial,sans-serif; overflow-wrap: anywhere; }
 #steam_profile_status { text-align: center; }
+/* Compact Steam P2P cards keep player identity and network metrics distinct. */
+.steam-peer-card { box-sizing:border-box; margin-top:14px; padding:12px; border:0; background:none; }
+.steam-peer-card:has(#steam_peer_list:empty) { display:flex; flex-direction:column; justify-content:center; gap:6px; }
+.steam-peer-card:has(#steam_peer_list:empty) > p { margin:0; text-align:center; }
+.steam-peer-card:has(#steam_peer_list:empty) > :is(p:empty, #steam_peer_list) { display:none; }
+/* Keep the wider Steam card centered under the live preview. */
+@media (min-width:761px) {
+    .live .steam-peer-card {
+        width:max(100%, 240px);
+        position:relative;
+        left:50%;
+        transform:translateX(-50%);
+    }
+}
+#steam_peer_list { display:grid; gap:8px; }
+#steam_peer_list li.steam-peer-item { display:grid; grid-template-columns:44px minmax(0,1fr); align-items:start; gap:8px; margin:0; padding:8px; border:0; border-top:1px solid rgba(255,255,255,.05); border-bottom:1px solid rgba(255,255,255,.05); border-radius:0; box-shadow:0 5px 10px rgba(0,0,0,.1); background:linear-gradient(90deg,rgba(0,0,0,.05) 0%,rgba(255,255,255,.05) 10%,rgba(255,255,255,.05) 90%,rgba(0,0,0,.05) 100%); opacity:.8; }
+#steam_peer_list .steam-peer-item [hidden] { display:none !important; }
+#steam_peer_list li.steam-peer-item:has(.steam-peer-identity[hidden]) { grid-template-columns:minmax(0,1fr); }
+.steam-peer-identity { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
+.steam-peer-avatar { position:relative; box-sizing:border-box; width:44px; height:44px; overflow:hidden; border:1px solid rgba(201,169,109,.38); border-radius:6px; background:#181510; color:#8c7b5b; }
+.steam-peer-avatar svg { display:block; width:100%; height:100%; padding:6px; box-sizing:border-box; fill:currentColor; opacity:.72; }
+.live .steam-peer-avatar img { display:block; position:absolute; inset:0; width:100%; height:100%; max-width:none; max-height:none; object-fit:cover; box-shadow:none; }
+.steam-peer-avatar.has-image svg { visibility:hidden; }
+.steam-peer-info { min-width:0; display:flex; flex-direction:column; gap:2px; }
+.steam-peer-heading { display:flex; align-items:baseline; gap:8px; min-width:0; }
+#steam_peer_list .steam-peer-name { flex:1 1 auto; min-width:0; color:#f0dfbe; font-family:"Agmena Tracker",serif; }
+.steam-peer-network { display:flex; flex-direction:row; flex-wrap:wrap; align-items:baseline; gap:3px 10px; min-width:0; }
+.steam-peer-network:has(.steam-peer-quality[hidden]) { display:none; }
+.steam-peer-ping { flex:none; margin-left:auto; font:19px/1.25 "Agmena Tracker",serif; color:#ebd4a6; }
+.steam-peer-ping.is-good { color:#85cda4; }
+.steam-peer-ping.is-fair { color:#e1c16e; }
+.steam-peer-ping.is-poor { color:#de7777; }
+.steam-peer-quality { color:#b9b3a6; font:18px/1.25 "Agmena Tracker",serif; text-align:left; overflow-wrap:anywhere; }
+.steam-peer-quality::before { content:""; display:inline-block; width:7px; height:7px; margin-right:5px; border-radius:50%; background:#9a9a92; vertical-align:middle; }
+.steam-peer-quality.is-good::before { background:#82d7a1; }
+.steam-peer-quality.is-fair::before { background:#e6be72; }
+.steam-peer-quality.is-poor::before { background:#e07878; }
+.steam-peer-details { display:flex; flex-direction:column; gap:2px; color:#c0b8a5; font:18px/1.3 "Agmena Tracker",serif; overflow-wrap:anywhere; }
+.steam-peer-role, .steam-peer-id, .steam-peer-encounters { color:#c0b8a5; font:18px/1.3 "Agmena Tracker",serif; overflow-wrap:anywhere; }
+.steam-peer-details:empty, .steam-peer-country:empty { display:none; }
+.steam-peer-country { grid-column:1 / -1; min-width:0; margin:0; }
+.steam-peer-country .ip-country, .steam-peer-info :is(.steam-peer-host, .steam-peer-quality, .steam-peer-details span) { margin-left:0; }
+.steam-peer-country .ip-country { max-width:100%; }
+.live .steam-peer-country img { display:block; flex:none; width:24px; height:18px; max-width:100%; object-fit:cover; box-shadow:none; }
 .live-preview { position: relative; }
 .live-preview-loader { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .live-preview-ripple { position: absolute; width: 125px; height: 125px; border-radius: 50%; background: rgb(140,119,81); opacity: 0; animation: ripple 1.8s infinite; }
@@ -2329,7 +2382,9 @@ font-family: optimus princeps;
 body.hide-sidebar-legend .sidebar-legend { display:none; }
 body.hide-steam-name .steam-peer-name { visibility:hidden; }
 body.hide-steam-country .ip-country { display:none !important; }
+body.hide-steam-country .steam-peer-country { display:none; }
 body.hide-steam-ping .steam-peer-ping { display:none !important; }
+body.hide-steam-ping .steam-peer-ping-detail { display:none !important; }
 .steam-display-preferences { display:grid; gap:10px; margin:16px 0; text-align:left; }
 .setting_user > .form_single[inert] { opacity:.55; }
 body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {

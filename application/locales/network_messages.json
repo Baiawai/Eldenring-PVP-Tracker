@@ -63,7 +63,9 @@
     "2611010": "ﺣﻘﻖ ﻣﺿﻳﻑ اﻷﺻﺎﺑﻊ ﻫﺩﻓﻪ ﻓﻲ ﻣﻭﻗﻊ ﺑﻌﻳﺩ.\nﺟﺎر اﻟﻌﻭدة إﻟﻰ ﻋﺎﻟﻣﻙ.",
     "2661210": "ﺣﻘﻖ ﻣﺿﻳﻑ اﻷﺻﺎﺑﻊ ﻫﺩﻓﻪ.\nﺟﺎر اﻟﻌﻭدة إﻟﻰ ﻋﺎﻟﻣﻙ.",
     "2661220": "ﺣﻘﻖ ﻣﺿﻳﻑ اﻷﺻﺎﺑﻊ ﻫﺩﻓﻪ.\nﺟﺎر اﻟﻌﻭدة إﻟﻰ ﻋﺎﻟﻣﻙ.",
-    "2661225": "ﺣﻘﻖ ﻣﺿﻳﻑ اﻷﺻﺎﺑﻊ ﻫﺩﻓﻪ.\nﺟﺎر اﻟﻌﻭدة إﻟﻰ ﻋﺎﻟﻣﻙ."
+    "2661225": "ﺣﻘﻖ ﻣﺿﻳﻑ اﻷﺻﺎﺑﻊ ﻫﺩﻓﻪ.\nﺟﺎر اﻟﻌﻭدة إﻟﻰ ﻋﺎﻟﻣﻙ.",
+    "2610304": "ﻣﻊ ﺗﺣﻘﻳﻖ اﻟﻬﺩف،\nﻋﺎد اﻟﺻﻳﺎد <?leaveName?> إﻟﻰ ﻋﺎﻟﻣﻪ.",
+    "2612304": "ﻣﻊ ﺗﺣﻘﻳﻖ اﻟﻬﺩف،\nﻋﺎد اﻟﺻﻳﺎد <?leaveName?> إﻟﻰ ﻋﺎﻟﻣﻪ."
   },
   "deude": {
     "2300000": "Gast wird herbeigerufen ...",
@@ -129,7 +131,9 @@
     "2611010": "Der Wirt der Finger hat das Ziel an einem fernen Ort erreicht.\nIhr kehrt in Eure Welt zurück.",
     "2661210": "Der Wirt der Finger hat sein Ziel erreicht.\nIhr kehrt in Eure Welt zurück.",
     "2661220": "Der Wirt der Finger hat sein Ziel erreicht.\nIhr kehrt in Eure Welt zurück.",
-    "2661225": "Der Wirt der Finger hat sein Ziel erreicht.\nIhr kehrt in Eure Welt zurück."
+    "2661225": "Der Wirt der Finger hat sein Ziel erreicht.\nIhr kehrt in Eure Welt zurück.",
+    "2610304": "Nach dem Erreichen des Ziels ist\nJäger <?leaveName?> nach Hause zurückgekehrt.",
+    "2612304": "Nach dem Erreichen des Ziels ist\nJäger <?leaveName?> nach Hause zurückgekehrt."
   },
   "engus": {
     "2300000": "Summoning cooperator...",
@@ -195,7 +199,9 @@
     "2611010": "The Host of Fingers accomplished their objective in a distant location.\nReturning to your world.",
     "2661210": "The Host of Fingers has accomplished their objective.\nReturning to your world.",
     "2661220": "The Host of Fingers has accomplished their objective.\nReturning to your world.",
-    "2661225": "The Host of Fingers has accomplished their objective.\nReturning to your world."
+    "2661225": "The Host of Fingers has accomplished their objective.\nReturning to your world.",
+    "2610304": "With their objective accomplished,\nHunter <?leaveName?> returned to their world",
+    "2612304": "With their objective accomplished,\nHunter <?leaveName?> returned to their world"
   },
   "frafr": {
     "2300000": "Invocation de l'allié…",
@@ -261,7 +267,9 @@
     "2611010": "L'Hôte des Doigts a accompli son objectif.\nRetour dans votre monde.",
     "2661210": "L'Hôte des Doigts a accompli son objectif.\nRetour dans votre monde…",
     "2661220": "L'Hôte des Doigts a accompli son objectif.\nRetour dans votre monde…",
-    "2661225": "L'Hôte des Doigts a accompli son objectif.\nRetour dans votre monde…"
+    "2661225": "L'Hôte des Doigts a accompli son objectif.\nRetour dans votre monde…",
+    "2610304": "Son objectif accompli, le Chasseur <?leaveName?> s'en est retourné dans son monde.",
+    "2612304": "Son objectif accompli, le Chasseur <?leaveName?> s'en est retourné dans son monde."
   },
   "itait": {
     "2300000": "Evocazione alleato in corso...",
@@ -327,7 +335,9 @@
     "2611010": "L'ospite di Dita ha raggiunto l'obiettivo in un luogo remoto.\nTornerai nel tuo mondo.",
     "2661210": "L'ospite di Dita ha completato il suo obiettivo.\nTornerai nel tuo mondo...",
     "2661220": "L'ospite di Dita ha completato il suo obiettivo.\nTornerai nel tuo mondo...",
-    "2661225": "L'ospite di Dita ha completato il suo obiettivo.\nTornerai nel tuo mondo..."
+    "2661225": "L'ospite di Dita ha completato il suo obiettivo.\nTornerai nel tuo mondo...",
+    "2610304": "Compiuta la propria missione di caccia,\n<?leaveName?> torna nel suo mondo",
+    "2612304": "Compiuta la propria missione di caccia,\n<?leaveName?> torna nel suo mondo"
   },
   "jpnjp": {
     "2300000": "協力者を召喚しています",
@@ -393,7 +403,9 @@
     "2611010": "遠い場所で、鉤指の主が目的を達成しました\n元の世界に戻ります",
     "2661210": "鉤指の主が目的を達成しました。元の世界に戻ります",
     "2661220": "鉤指の主が目的を達成しました。元の世界に戻ります",
-    "2661225": "鉤指の主が目的を達成しました。元の世界に戻ります"
+    "2661225": "鉤指の主が目的を達成しました。元の世界に戻ります",
+    "2610304": "目的を果たし、狩人<?leaveName?>が元の世界に戻りました",
+    "2612304": "目的を果たし、狩人<?leaveName?>が元の世界に戻りました"
   },
   "korkr": {
     "2300000": "협력자를 소환하고 있습니다.",
@@ -459,7 +471,9 @@
     "2611010": "먼 곳에서 손가락의 주인이 목적을 달성했습니다.\n원래 세계로 돌아갑니다.",
     "2661210": "손가락의 주인이 목표를 달성했습니다.\n원래 세계로 돌아갑니다.",
     "2661220": "손가락의 주인이 목표를 달성했습니다.\n원래 세계로 돌아갑니다.",
-    "2661225": "손가락의 주인이 목표를 달성했습니다.\n원래 세계로 돌아갑니다."
+    "2661225": "손가락의 주인이 목표를 달성했습니다.\n원래 세계로 돌아갑니다.",
+    "2610304": "사냥꾼 <?leaveName?>이(가)\n목적을 달성하고 원래 세계로 돌아갔습니다.",
+    "2612304": "사냥꾼 <?leaveName?>이(가)\n목적을 달성하고 원래 세계로 돌아갔습니다."
   },
   "polpl": {
     "2300000": "Przyzywanie sojusznika…",
@@ -525,7 +539,9 @@
     "2611010": "Gospodarz palców osiągnął cel w odległym miejscu.\nWracasz do swojego świata.",
     "2661210": "Gospodarz palców osiągnął swój cel.\nWracasz do swojego świata.",
     "2661220": "Gospodarz palców osiągnął swój cel.\nWracasz do swojego świata.",
-    "2661225": "Gospodarz palców osiągnął swój cel.\nWracasz do swojego świata."
+    "2661225": "Gospodarz palców osiągnął swój cel.\nWracasz do swojego świata.",
+    "2610304": "Łowca imieniem <?leaveName?> osiągnął cel\ni powrócił do swojego świata.",
+    "2612304": "Łowca imieniem <?leaveName?> osiągnął cel\ni powrócił do swojego świata."
   },
   "porbr": {
     "2300000": "Invocando cooperador...",
@@ -591,7 +607,9 @@
     "2611010": "O Anfitrião de Dedos cumpriu seu objetivo num local distante.\nRetornando ao seu mundo.",
     "2661210": "O Anfitrião de Dedos cumpriu seu objetivo.\nRetornando ao seu mundo.",
     "2661220": "O Anfitrião de Dedos cumpriu seu objetivo.\nRetornando ao seu mundo.",
-    "2661225": "O Anfitrião de Dedos cumpriu seu objetivo.\nRetornando ao seu mundo."
+    "2661225": "O Anfitrião de Dedos cumpriu seu objetivo.\nRetornando ao seu mundo.",
+    "2610304": "Com seu objetivo cumprido,\no Caçador <?leaveName?> retornou ao seu mundo",
+    "2612304": "Com seu objetivo cumprido,\no Caçador <?leaveName?> retornou ao seu mundo"
   },
   "rusru": {
     "2300000": "Призыв помощника...",
@@ -657,7 +675,9 @@
     "2611010": "Хозяин Пальцев достиг цели в далёком месте.\nВы возвращаетесь в свой мир.",
     "2661210": "Хозяин Пальцев достиг своей цели.\nВозвращение в ваш мир.",
     "2661220": "Хозяин Пальцев достиг своей цели.\nВозвращение в ваш мир.",
-    "2661225": "Хозяин Пальцев достиг своей цели.\nВозвращение в ваш мир."
+    "2661225": "Хозяин Пальцев достиг своей цели.\nВозвращение в ваш мир.",
+    "2610304": "Охотник <?leaveName?> достиг цели\nи вернулся в свой мир",
+    "2612304": "Охотник <?leaveName?> достиг цели\nи вернулся в свой мир"
   },
   "spaar": {
     "2300000": "Invocando ayudante…",
@@ -723,7 +743,9 @@
     "2611010": "El Anfitrión de Dedos alcanzó su objetivo en una ubicación lejana.\nRegresando a tu mundo…",
     "2661210": "El Anfitrión de Dedos ha alcanzado su objetivo.\nRegresarás a tu mundo.",
     "2661220": "El Anfitrión de Dedos ha alcanzado su objetivo.\nRegresarás a tu mundo.",
-    "2661225": "El Anfitrión de Dedos ha alcanzado su objetivo.\nRegresarás a tu mundo."
+    "2661225": "El Anfitrión de Dedos ha alcanzado su objetivo.\nRegresarás a tu mundo.",
+    "2610304": "Habiendo cumplido su objetivo,\nel cazador <?leaveName?> volvió a su mundo.",
+    "2612304": "Habiendo cumplido su objetivo,\nel cazador <?leaveName?> volvió a su mundo."
   },
   "spaes": {
     "2300000": "Invocando al cooperador...",
@@ -789,7 +811,9 @@
     "2611010": "El Poseedor de Dedos ha cumplido su objetivo en una ubicación lejana.\nRegresando a tu mundo.",
     "2661210": "El Poseedor de Dedos ha cumplido su objetivo.\nRegresando a tu mundo.",
     "2661220": "El Poseedor de Dedos ha cumplido su objetivo.\nRegresando a tu mundo.",
-    "2661225": "El Poseedor de Dedos ha cumplido su objetivo.\nRegresando a tu mundo."
+    "2661225": "El Poseedor de Dedos ha cumplido su objetivo.\nRegresando a tu mundo.",
+    "2610304": "Una vez cumplido su objetivo,\nel cazador <?leaveName?> ha regresado a su mundo.",
+    "2612304": "Una vez cumplido su objetivo,\nel cazador <?leaveName?> ha regresado a su mundo."
   },
   "thath": {
     "2300000": "กําลัง​อัญเชิญ​พันธมิตร",
@@ -855,7 +879,9 @@
     "2611010": "ณ ​สถาน​ที​ห่าง​ไกล ​นิว​งอ​ผู้​เปน​นาย​ได้​บรรลุ​เปา​หมาย​แล้ว\n​กําลัง​กลับ​สู่​โลก​เดิม",
     "2661210": "นิว​งอ​ผู้​เปน​นาย​บรรลุ​เปา​หมาย​แล้ว ​กําลัง​กลับ​สู่​โลก​เดิม",
     "2661220": "นิว​งอ​ผู้​เปน​นาย​บรรลุ​เปา​หมาย​แล้ว ​กําลัง​กลับ​สู่​โลก​เดิม",
-    "2661225": "นิว​งอ​ผู้​เปน​นาย​บรรลุ​เปา​หมาย​แล้ว ​กําลัง​กลับ​สู่​โลก​เดิม"
+    "2661225": "นิว​งอ​ผู้​เปน​นาย​บรรลุ​เปา​หมาย​แล้ว ​กําลัง​กลับ​สู่​โลก​เดิม",
+    "2610304": "บรรลุ​เปา​หมาย ​นัก​ล่า <?leaveName?> ​กลับ​สู่​โลก​เดิม​แล้ว",
+    "2612304": "บรรลุ​เปา​หมาย ​นัก​ล่า <?leaveName?> ​กลับ​สู่​โลก​เดิม​แล้ว"
   },
   "zhocn": {
     "2300000": "正在召唤协助者。",
@@ -921,7 +947,9 @@
     "2611010": "勾指主人已在远方达成目标。\n将返回原本的世界。",
     "2661210": "勾指主人已达成目标。\n将返回原本的世界。",
     "2661220": "勾指主人已达成目标。\n将返回原本的世界。",
-    "2661225": "勾指主人已达成目标。\n将返回原本的世界。"
+    "2661225": "勾指主人已达成目标。\n将返回原本的世界。",
+    "2610304": "猎人<?leaveName?>达成目标，\n已返回原本的世界。",
+    "2612304": "猎人<?leaveName?>达成目标，\n已返回原本的世界。"
   },
   "zhotw": {
     "2300000": "正在召喚協助者。",
@@ -987,6 +1015,8 @@
     "2611010": "勾指主人已在遠方達成目標。\n將返回原本的世界。",
     "2661210": "勾指主人已達成目標。\n將返回原本的世界。",
     "2661220": "勾指主人已達成目標。\n將返回原本的世界。",
-    "2661225": "勾指主人已達成目標。\n將返回原本的世界。"
+    "2661225": "勾指主人已達成目標。\n將返回原本的世界。",
+    "2610304": "獵人<?leaveName?>達成目標，\n已返回原本的世界。",
+    "2612304": "獵人<?leaveName?>達成目標，\n已返回原本的世界。"
   }
 }

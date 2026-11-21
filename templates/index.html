@@ -111,7 +111,7 @@
                 <div class="faq-list">
                     <details class="faq-item"><summary data-i18n="faq_q_12">Faut-il installer Python ou Tesseract ?</summary><p data-i18n="faq_a_12">La version Store comprend les composants nécessaires. Pour lancer le projet depuis ses sources, installe Python et prépare la distribution locale de Tesseract ou utilise une installation existante ; consulte le README du projet.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_01">Comment démarrer le suivi ?</summary><p data-i18n="faq_a_01">Lance le tracker et Elden Ring. Vérifie que la langue choisie correspond à celle du jeu, puis clique sur Start. Stop arrête le suivi ; le redémarrer remet la session en mémoire à zéro.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_05">Comment choisir la langue ?</summary><p data-i18n="faq_a_05">Au premier lancement, le tracker utilise automatiquement la langue du navigateur si elle est prise en charge, sinon l’anglais. Tu peux la modifier dans Configuration pour qu’elle corresponde à celle du jeu : elle règle l’interface et la reconnaissance des notifications sans changer la langue du jeu. Ton choix est conservé.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_05">Comment choisir la langue ?</summary><p data-i18n="faq_a_05">Au premier lancement, l’interface utilise la langue du navigateur si elle est prise en charge, sinon l’anglais. Le tracker essaie de détecter la langue du jeu dans les réglages Steam ; à défaut, il utilise l’anglais. Tu peux choisir ces deux langues séparément dans Configuration. Tes choix sont conservés.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_03">Quels modes sont suivis ?</summary><p data-i18n="faq_a_03">L’arène 1v1, les invasions et les défenses sont séparées. Les égalités concernent uniquement l’arène.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_19">Comment le tracker établit-il les statistiques ?</summary><p data-i18n="faq_a_19">Il capture l’écran du jeu et lit les notifications grâce à l’OCR, ou reconnaissance optique de caractères : cette technologie transforme le texte d’une image en texte lisible. Il identifie les événements et résultats pour mettre à jour les statistiques du mode concerné. L’OCR peut mal lire ou manquer une notification.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_02">Le jeu doit-il rester visible ?</summary><p data-i18n="faq_a_02">Garde Elden Ring au premier plan pendant la détection. Les notifications masquées ou absentes ne peuvent pas être lues.</p></details>
@@ -122,7 +122,7 @@
                     <details class="faq-item"><summary data-i18n="faq_q_15">Comment récupérer mon profil de personnage ?</summary><p data-i18n="faq_a_15">Dans Configuration → Profil, lance la capture. En jeu, ouvre Configuration → Quitter la partie sans confirmer la sortie et garde le jeu visible. Le tracker récupère ensemble pseudo, niveau et image : vérifie-les avant d’enregistrer ou annule si nécessaire.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_08">Que montre la page Joueurs ?</summary><p data-i18n="faq_a_08">Elle regroupe les noms reconnus et les profils Steam observés. Un nom de personnage et un profil Steam ne sont pas automatiquement associés.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_17">Comment activer la détection Steam ?</summary><p data-i18n="faq_a_17">Dans Configuration → P2P, active la détection des joueurs. L’activation automatique du journal Steam est proposée par défaut : elle demande à Steam d’activer le journal nécessaire au démarrage du tracker ou de Steam. Si elle échoue, la commande manuelle reste disponible. Les profils observés ne sont pas automatiquement associés aux personnages en jeu.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_09">Comment fonctionne le ping ?</summary><p data-i18n="faq_a_09">Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. La mesure avancée du ping peut demander une autorisation administrateur Windows. En cas de refus ou d’indisponibilité, le ping Steam est utilisé lorsqu’il est disponible.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_09">Comment fonctionne le ping ?</summary><p data-i18n="faq_a_09">Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. La mesure avancée du ping peut demander une autorisation administrateur Windows. En cas de refus ou d’indisponibilité, le ping Steam est utilisé lorsqu’il est disponible. La mesure avancée est disponible uniquement dans la version de développement ; la version Store utilise le ping Steam.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_11">Le classement est-il disponible ?</summary><p data-i18n="faq_a_11">Pour afficher les joueurs dans l’application, active la participation et accepte les conditions. Le classement utilise le serveur configuré, par défaut eldenringpvp.com. La participation est facultative et nécessite un compte Steam.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_18">Comment connecter Steam et participer au classement ?</summary><p data-i18n="faq_a_18">Dans Configuration → Classement en ligne, active la participation, accepte les conditions et connecte-toi à Steam. La confirmation peut être automatique ; si un code apparaît, saisis-le dans le tracker sans le partager. La publication du lien vers ton profil Steam est facultative.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_21">Mes anciens combats sont-ils importés dans le classement ?</summary><p data-i18n="faq_a_21">Les statistiques locales existantes sont reprises pour chaque mode. Les nouveaux combats sont synchronisés et les événements en attente sont réessayés.</p></details>
@@ -397,6 +397,7 @@
                     <div class="btn_menu_settings active_setting" menu="0"><img  src="{{ url_for('static', filename='icon-setting.png') }}"/></div>
                     <div class="btn_menu_settings" menu="1"><img  src="{{ url_for('static', filename='icon-ecrant.png') }}"/></div>
                     <div class="btn_menu_settings" menu="2"><img  src="{{ url_for('static', filename='icon-picture.png') }}"/></div>
+                    <button type="button" class="btn_menu_settings overlay-settings-tab" menu="8" aria-label="Overlay en jeu" data-i18n-aria="settings_overlay_section"><img src="{{ url_for('static', filename='icon-overlay-bronze.svg') }}" alt=""></button>
                     <div class="btn_menu_settings" menu="3"><img  src="{{ url_for('static', filename='icon-multi.png') }}"/></div>
                     <div class="btn_menu_settings steam-peer-tab" menu="5" title="Steam P2P">P2P</div>
                     <button type="button" class="btn_menu_settings steam-peer-tab diagnostics-tab" menu="6" aria-label="Diagnostic" data-i18n-aria="diagnostics_title"><span class="diagnostics-icon"><img src="{{ url_for('static', filename='icon-diagnostics.png') }}" alt=""></span></button>
@@ -405,10 +406,17 @@
                 <div class="contente_settings" setting="0">
                   
                     <div class="form_single game-language-setting">
-                        <label class="form_single_left" for="game_language" id="game_language_label">Langue</label>
+                        <label class="form_single_left" for="game_language" id="game_language_label" data-i18n="game_language_label">Langue du jeu</label>
                         <div class="form_single_right">
                             <select id="game_language" aria-labelledby="game_language_label" disabled></select>
                             <span id="game_language_status" role="status" aria-live="polite"></span>
+                        </div>
+                    </div>
+                    <div class="form_single game-language-setting interface-language-setting">
+                        <label class="form_single_left" for="interface_language" id="interface_language_label" data-i18n="interface_language_label">Langue de l’interface</label>
+                        <div class="form_single_right">
+                            <select id="interface_language" aria-labelledby="interface_language_label" disabled></select>
+                            <span id="interface_language_status" role="status" aria-live="polite"></span>
                         </div>
                     </div>
                     <div class="form_single capture-speed-setting">
@@ -521,6 +529,12 @@
                     </div>
 
                 </div>
+                <section class="contente_settings hide overlay-settings" setting="8" aria-label="Overlay en jeu" data-i18n-aria="settings_overlay_section">
+                    <div class="form_single">
+                        <label class="form_single_left" for="game_overlay_enabled" data-i18n="game_overlay_enabled">Overlay en jeu</label>
+                        <div class="form_single_right"><input type="checkbox" id="game_overlay_enabled" disabled><span id="game_overlay_status" role="status" aria-live="polite"></span></div>
+                    </div>
+                </section>
                 <div class="contente_settings hide setting_user" setting="3">
                     <div class="form_single">
                         <span class="form_single_left" data-i18n="profile_capture_title">Profil du personnage</span>
@@ -730,12 +744,12 @@
             <div class="sidebar-guidance">
             <div class="carde_info" info="languages">
                 <div class="header_carde_info">
-                        <h5 class="btr_1">Choisir la langue du jeu</h5>
+                        <h5 class="btr_1" data-i18n="game_language_label" data-i18n-fr="Langue du jeu">Langue du jeu</h5>
                         <div class="carde_banner_info">
                             <img src="{{ url_for('static', filename='icon-settings-bronze.png') }}" alt=""/>
                         </div>
                 </div>
-                <p class="btr_2">Sélectionne la langue utilisée dans ton jeu pour reconnaître les messages.</p>
+                <p class="btr_2" data-i18n="help_game_language" data-i18n-fr="Choisit la langue utilisée pour reconnaître les messages du jeu sans modifier ses réglages.">Choisit la langue utilisée pour reconnaître les messages du jeu sans modifier ses réglages.</p>
                 <p class="sidebar-guidance-action" data-i18n="sidebar_guidance_hint">Clique dans le cadre pour accéder à cette option.</p>
          
             </div>
@@ -812,6 +826,7 @@
     <script src="{{ url_for('static', filename='settings-yes-no.js') }}"></script>
     <script src="{{ url_for('static', filename='steam-log-auto.js') }}"></script>
     <script src="{{ url_for('static', filename='game-language.js') }}"></script>
+    <script src="{{ url_for('static', filename='overlay-settings.js') }}"></script>
     <script src="{{ url_for('static', filename='capture-speed.js') }}"></script>
     <script src="{{ url_for('static', filename='notification-region.js') }}"></script>
     <script src="{{ url_for('static', filename='country.js') }}"></script>

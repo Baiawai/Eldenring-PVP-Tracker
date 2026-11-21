@@ -14,6 +14,10 @@ error_reports.start = lambda: None
 test_images = Path(os.environ['APPDATA']) / 'test-runtime-images'
 test_images.mkdir(parents=True, exist_ok=True)
 runtime_paths.image_dir = lambda: test_images
+if os.environ.get('TRACKER_TEST_NO_STEAM') == '1':
+    # Demo screenshots must not read the current user's Steam configuration.
+    from application import steam_game_language
+    steam_game_language.detect = lambda: None
 webbrowser.open_new = lambda *args, **kwargs: True
 module = types.ModuleType('__main__')
 module.__file__ = str(root / 'ELDENRING_Tracker.py')

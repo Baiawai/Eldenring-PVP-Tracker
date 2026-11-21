@@ -61,11 +61,15 @@ def observe(status, peers, mode='Unknown'):
                     update_detection(state['id'], 'Joueur Steam rencontré : ' + item['name'], updated_mode, item)
                     state.update(steam=item, mode=updated_mode)
                     changed += 1
-        if _arena is not None and not _arena.get('sealed') and status == 'active':
-            for sid, state in _known.items():
-                _arena['participants'][sid] = state
-            if len(_arena['participants']) > 1:
-                _arena['ambiguous'] = True
+        if _arena is not None and not _arena.get('sealed'):
+            # A reconnected network peer is a new observation; do not reuse
+            # its old overlay role during this encounter.
+            _arena.setdefault('departed', set()).update(set(_arena['participants']) - set(current))
+            if status == 'active':
+                for sid, state in _known.items():
+                    _arena['participants'][sid] = state
+                if len(_arena['participants']) > 1:
+                    _arena['ambiguous'] = True
         if _pvp_encounter is not None and status == 'active':
             for sid in current:
                 _pvp_encounter['participants'][sid] = dict(_known[sid]['steam'])
@@ -121,6 +125,22 @@ def arena_opponent_name():
         if not _arena or _arena['ambiguous'] or len(_arena['participants']) != 1:
             return ''
         return next(iter(_arena['participants'].values()))['steam']['name']
+
+
+def active_arena_participant_id():
+    """Return the sole still-connected candidate in the current unsealed duel.
+
+    This is a probable network participant, not a proven game identity. An
+    encounter that has ever contained multiple peers remains ambiguous.
+    """
+    with _lock:
+        if not _arena or _arena.get('sealed') or _arena.get('ambiguous') or len(_arena['participants']) != 1:
+            return ''
+        ident, state = next(iter(_arena['participants'].items()))
+        current = _known.get(ident)
+        if ident in _arena.get('departed', ()) or not current or current['id'] != state['id'] or state['mode'] not in ('Unknown', 'Arena'):
+            return ''
+        return ident
 
 
 def finish_arena(outcome, match_date):

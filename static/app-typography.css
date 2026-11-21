@@ -35,8 +35,14 @@
     font-display: swap;
 }
 :root {
-    --menu-font: "Mantinia Tracker", "Agmena Tracker", Georgia, serif;
-    --app-font: "Agmena Tracker", Georgia, serif;
+    --menu-font: "Mantinia Tracker", "Agmena Tracker", "Nirmala UI", Georgia, serif;
+    --app-font: "Agmena Tracker", "Nirmala UI", Georgia, serif;
+}
+
+/* Agmena and Mantinia lack Vietnamese glyphs; one font avoids detached accents. */
+html[lang|="vi"] {
+    --app-font: "Times New Roman", serif;
+    --menu-font: "Times New Roman", serif;
 }
 
 /* Les anciennes feuilles définissent des polices propres à certaines sections. */

@@ -126,7 +126,8 @@
         const description = helpText(key, fallback);
         attachInfo(row, [description].concat(extras || []), 'settings_info_' + selector.replace(/[^a-z0-9]+/gi, '_'));
     }
-    fieldInfo('#game_language', 'help_language_specific', 'Choisit la langue de l’interface et celle utilisée pour reconnaître les messages du jeu. Cela ne change pas la langue du jeu.');
+    fieldInfo('#game_language', 'help_game_language', 'Choisit la langue utilisée pour reconnaître les messages du jeu, sans modifier ses réglages.');
+    fieldInfo('#interface_language', 'help_interface_language', 'Choisit la langue de l’interface indépendamment de celle du jeu.');
     fieldInfo('#capture_speed', 'help_capture_interval', 'Fixe le délai minimum entre deux analyses de l’écran. Un délai plus long réduit la fréquence de capture et peut manquer des notifications brèves.');
     fieldInfo('#auto_game_start', 'help_auto_game_specific', 'Lance le suivi lorsque la fenêtre du jeu apparaît. Le tracker ne lance pas le jeu.', [document.getElementById('auto_game_start_help')].filter(Boolean));
     fieldInfo('.auto_start', 'help_auto_tracker_specific', 'Démarre le suivi au chargement de l’interface du tracker, sans lancer le jeu.');

@@ -1,0 +1,21 @@
+{
+  "processing": "Bearbetar...",
+  "lengthMenu": "Visa _MENU_ poster",
+  "zeroRecords": "Inga matchande poster hittades",
+  "info": "Visar _START_ till _END_ av _TOTAL_ poster",
+  "infoEmpty": "Visar 0 till 0 av 0 poster",
+  "infoFiltered": "(filtrerade från totalt _MAX_ poster)",
+  "search": "Sök:",
+  "emptyTable": "Tabellen innehåller inga poster",
+  "loadingRecords": "Laddar...",
+  "paginate": {
+    "first": "Första",
+    "last": "Sista",
+    "next": "Nästa",
+    "previous": "Föregående"
+  },
+  "aria": {
+    "sortAscending": ": aktivera för att sortera kolumnen i stigande ordning",
+    "sortDescending": ": aktivera för att sortera kolumnen i fallande ordning"
+  }
+}

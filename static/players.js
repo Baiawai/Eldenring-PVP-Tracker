@@ -131,7 +131,7 @@
                 if (match.role === 'invader') label = match.relation === 'coinvader' ?
                     (match.event === 'died' ? tr('coinvader_died', 'Autre envahisseur mort') : tr('coinvader_arrived', 'Autre envahisseur arrivé')) :
                     (match.event === 'died' ? tr('invader_died', 'Envahisseur mort') : tr('invasion_detected', 'Invasion détectée'));
-                else if (match.role === 'hunter') label = ({summoning: tr('hunter_summoning', 'Invocation de chasseur observée'), joined: tr('hunter_arrived', 'Chasseur arrivé'), left: tr('hunter_left', 'Chasseur reparti'), dismissed: tr('hunter_dismissed', 'Chasseur renvoyé'), died: tr('hunter_died', 'Chasseur mort')})[match.event] || tr('hunter_observed', 'Chasseur observé');
+                else if (match.role === 'hunter') label = ({summoning: tr('hunter_summoning', 'Invocation de chasseur observée'), joined: tr('hunter_arrived', 'Chasseur arrivé'), left: tr('hunter_left', 'Chasseur reparti'), dismissed: tr('hunter_dismissed', 'Chasseur renvoyé'), died: tr('hunter_died', 'Chasseur mort'), completed: tr('hunter_objective_completed', 'Objectif du chasseur accompli')})[match.event] || tr('hunter_observed', 'Chasseur observé');
                 else if (match.event === 'died') label = match.role === 'cooperator' ? tr('cooperator_died', 'Allié adverse mort') : tr('ally_died', 'Allié mort');
                 else if (match.event === 'dismissed') label = match.role === 'cooperator' ? tr('cooperator_dismissed', 'Allié adverse renvoyé dans son monde') : tr('ally_dismissed', 'Allié renvoyé dans son monde');
                 else if (match.event === 'left') label = match.role === 'cooperator' ? tr('cooperator_left', 'Allié adverse reparti') : tr('ally_left', 'Allié reparti');

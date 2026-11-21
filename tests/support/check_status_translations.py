@@ -3,6 +3,7 @@
 The browser server uses private APPDATA and runtime images. Requests that
 would change settings, test OCR, or purge history are fulfilled by Playwright.
 """
+import json
 import os
 import socket
 import subprocess
@@ -16,6 +17,8 @@ from playwright.sync_api import sync_playwright
 
 from check_online_profile_notice import CHROME, ROOT, scenario
 
+LANGUAGES = ['fra', *json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))]
+
 
 def check(browser, url):
     context, page, _, errors = scenario(browser, url)
@@ -26,9 +29,10 @@ def check(browser, url):
             node = page.locator(selector)
             page.wait_for_function("([selector, key]) => document.querySelector(selector).dataset.i18n === key", arg=[selector, key])
             assert node.text_content() == french, (selector, node.text_content())
-            page.evaluate("() => uiApplyLanguage('eng')")
-            english = page.evaluate('(key) => ELDEN_UI_PACKS.eng.modern[key]', key)
-            assert node.text_content() == english, (selector, node.text_content(), english)
+            for language in LANGUAGES[1:]:
+                page.evaluate('(language) => uiApplyLanguage(language)', language)
+                expected = page.evaluate('([language, key]) => ELDEN_UI_PACKS[language].modern[key]', [language, key])
+                assert node.text_content() == expected, (language, selector, node.text_content(), expected)
             page.evaluate("() => uiApplyLanguage('fra')")
             assert node.text_content() == french, (selector, node.text_content())
 
@@ -109,8 +113,7 @@ def check(browser, url):
             'unnamed_captures': 0}))
         page.evaluate("() => document.getElementById('menu_button_players').click()")
         page.wait_for_selector('.player-record .draw')
-        for language in ['fra', 'eng', 'deu', 'ita', 'spaes', 'spaar', 'por', 'pol',
-                         'rus', 'jap', 'kor', 'chi', 'zht', 'tha', 'ara']:
+        for language in LANGUAGES:
             page.evaluate('(language) => uiApplyLanguage(language)', language)
             expected = page.evaluate('''language => {
                 const words = ELDEN_UI_PACKS[language]?.modern;
@@ -132,7 +135,7 @@ def main():
         port = sock.getsockname()[1]
     with tempfile.TemporaryDirectory(prefix='tracker-status-i18n-', ignore_cleanup_errors=True) as directory:
         env = os.environ.copy()
-        env.update(APPDATA=directory, TRACKER_TEST_PORT=str(port))
+        env.update(APPDATA=directory, LOCALAPPDATA=directory, TRACKER_TEST_PORT=str(port))
         server = subprocess.Popen([sys.executable, str(ROOT / 'tests/support/browser_server.py')],
                                   cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         url = 'http://127.0.0.1:' + str(port)

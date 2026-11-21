@@ -1,4 +1,5 @@
 """Check capture captions across languages without using real tracker data."""
+import json
 import os
 import re
 import socket
@@ -14,6 +15,7 @@ from playwright.sync_api import sync_playwright
 from check_online_profile_notice import CHROME
 
 ROOT = Path(__file__).resolve().parents[2]
+LANGUAGES = ['fra', *json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))]
 
 
 def check_captions(page, code):
@@ -69,8 +71,7 @@ def check(browser, url, viewport):
         # Scroll-paginated cards are localized in place too.
         page.locator('.capture-scroll').evaluate('(el) => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event("scroll")); }')
         page.wait_for_function("() => document.querySelectorAll('.capture-scroll .para_capture').length === 72")
-        for code in ['fra', 'eng', 'deu', 'ita', 'spaes', 'spaar', 'por', 'pol',
-                     'rus', 'jap', 'kor', 'chi', 'zht', 'tha', 'ara']:
+        for code in LANGUAGES:
             page.evaluate('(code) => launchLanguages(code)', code)
             check_captions(page, code)
         duration = page.locator('.capture-scroll .capture-duration-label').first
@@ -79,6 +80,10 @@ def check(browser, url, viewport):
 
         # The viewer copy keeps the same metadata, including its translated
         # duration and accessible labels, even with an old cached template.
+        # The last card can scroll above the fixed sidebar button at any width.
+        page.locator('.capture-scroll').evaluate('(el) => { el.scrollTop = el.scrollHeight; }')
+        assert page.locator('#sidebar_toggle').evaluate(
+            '(el) => { const style = getComputedStyle(el); return style.position === "fixed" && style.bottom === "16px"; }')
         page.locator('.capture-scroll .para_capture').last.click()
         assert page.locator('#capture_viewer_overlay').is_visible()
         page.evaluate("launchLanguages('eng')")
@@ -128,7 +133,7 @@ def main():
         port = sock.getsockname()[1]
     with tempfile.TemporaryDirectory(prefix='tracker-capture-translations-', ignore_cleanup_errors=True) as directory:
         env = os.environ.copy()
-        env.update(APPDATA=directory, TRACKER_TEST_PORT=str(port))
+        env.update(APPDATA=directory, LOCALAPPDATA=directory, TRACKER_TEST_PORT=str(port))
         seed = '''from flask import Flask
 app=Flask(__name__)
 from application.init import create_tables, add_capture

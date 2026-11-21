@@ -6,7 +6,7 @@ import socket
 import secrets
 import pystray
 from PIL import Image
-from application.runtime_paths import tesseract_path, RESOURCE_DIR, FROZEN, accessible_data_directories
+from application.runtime_paths import tesseract_path, RESOURCE_DIR, STORE_BUILD, accessible_data_directories
 from application.version import APP_VERSION
 from application.local_security import is_allowed_request
 from application import store_update
@@ -88,6 +88,9 @@ from application import first_run
 try:
     first_run.begin()
     from application import init
+    from application import overlay_settings
+    overlay_settings.initialize_defaults(first_run.uses_new_overlay_defaults(),
+                                         generation=first_run.overlay_defaults_generation())
     from application import functions
     from application import multi
     from application import online_leaderboard
@@ -304,7 +307,7 @@ def index():
     else:
         from application.ui_localization import packs
         langue_select = packs().get(langue_select, {}).get('html_lang', 'en')
-    return render_template("index.html", lang=langue_select, store_build=FROZEN, app_version=APP_VERSION)
+    return render_template("index.html", lang=langue_select, store_build=STORE_BUILD, app_version=APP_VERSION)
 
 
 # Packaging smoke test: no web browser, listening socket, tray or game tracking.
@@ -314,10 +317,13 @@ if getattr(sys, 'frozen', False) and len(sys.argv) == 3 and sys.argv[1] == '--di
     from pathlib import Path
     from unittest.mock import patch
     from PIL import ImageDraw, ImageFont
-    from application import online_leaderboard, ocr_runner
+    from application import online_leaderboard, ocr_runner, store_smoke
     with app.test_client() as client:
         response = client.get('/')
-        result = {'status': response.status_code, 'tesseract': os.path.isfile(path_to_tesseract),
+        result = {'status': response.status_code, 'application_version': APP_VERSION,
+                  'version_matches_interface': APP_VERSION.encode('utf-8') in response.data,
+                  'steam_ping_store_no_elevation': store_smoke.ping_without_elevation(peer_tracking),
+                  'tesseract': os.path.isfile(path_to_tesseract),
                   'interface': b'id="game_language"' in response.data and response.status_code == 200,
                   'store_mode': b'data-store-build="true"' in response.data,
                   'legacy_leaderboard_disabled': client.get('/syncMulti').status_code == 404,
@@ -446,8 +452,14 @@ if __name__ == '__main__' and app_started == True:
         from application import error_reports
         error_reports.start()
         online_leaderboard.start_sync()
+        online_leaderboard.start_periodic_sync()
         auto_tracking.start_worker(app, functions)
         steam_log_auto.start_worker(peer_tracking.enabled)
+        try:
+            from application import tracker_overlay
+            tracker_overlay.start(functions)
+        except Exception:
+            app.logger.exception('Unable to start tracker overlay')
     flask_thread.start()
     threading.Thread(target=open_initial_browser, name='initial-browser', daemon=True).start()
     start_pystray()
