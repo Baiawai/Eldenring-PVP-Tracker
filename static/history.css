@@ -2,6 +2,9 @@
 .history-panel { position:absolute; inset:0; z-index:1450; overflow:auto; text-align:left; color:#e8dfcd; background:#000 linear-gradient(rgba(255, 0, 0, 0), rgb(161, 143, 111)); }
 .history-header { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; flex-wrap:wrap; }
 .history-header > div:first-child { min-width:0; flex:1 1 360px; }
+.history-data-settings { box-sizing:border-box; width:90%; max-width:900px; margin:0 auto; padding:0 0 24px; color:#e8dfcd; text-align:left; }
+.history-data-settings > h2 { margin:0; color:#e2c995; font-size:24px; font-weight:normal; }
+.history-data-settings .history-storage-section { margin-top:16px; }
 .history-storage-section { margin-top:32px; padding-top:20px; border-top:1px solid #695a3c; }
 .history-storage-controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; color:#d4c2a0; font-size:18px; }
 .history-storage-controls button { margin-left:auto; }
@@ -18,13 +21,14 @@
 .history-archives-list { display:grid; gap:10px; margin-top:18px; }
 .history-archive-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:14px 18px; }
 .history-archive-details { display:grid; gap:5px; min-width:0; overflow-wrap:anywhere; }
+.history-archive-actions { display:flex; flex-wrap:wrap; gap:10px; }
 .history-archive-details time { color:#f0dfbd; font-size:18px; }
 .history-archive-details span, .history-archives-empty { color:#c5b99f; font-size:18px; }
 @media (max-width:700px) { .history-storage-controls button { margin-left:0; } }
 .history-controls { display:flex; align-items:center; gap:14px; margin-top:26px; color:#e1d8c9; font:18px Arial,sans-serif; }
 .history-controls { flex-wrap:wrap; }
 .history-controls select { box-sizing:border-box; flex:0 1 280px; width:280px; max-width:100%; min-height:42px; padding:8px 38px 8px 12px; border:1px solid #806b45; border-radius:2px; color:#f0e1c4; font-size:18px; line-height:1.2; }
-.history-list { display:grid; gap:10px; }
+.history-list { display:grid; align-content:start; gap:10px; max-height:min(65vh, 720px); overflow-y:auto; }
 .history-entry { display:grid; grid-template-columns:140px minmax(0,1fr) 130px; align-items:start; gap:18px; padding:17px 10%; }
 .history-entry time, .history-mode { color:#ded1b7; text-shadow:0 1px 3px #000; font:18px/1.5 Arial,sans-serif; }
 .history-mode { text-align:right; color:#e2c995; }

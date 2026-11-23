@@ -1,6 +1,7 @@
 """Minimal installation heartbeat independent of the optional leaderboard."""
 import json
 import sqlite3
+import sys
 import threading
 import time
 import uuid
@@ -12,7 +13,7 @@ from application.runtime_paths import database_path
 from application import network_retry
 
 ENDPOINT = 'https://eldenringpvp.com/api/v1/tracker-presence'
-INTERVAL_SECONDS = 480
+INTERVAL_SECONDS = 300
 TIMEOUT_SECONDS = 5
 _start_lock = threading.Lock()
 _started = False
@@ -45,13 +46,19 @@ def send_heartbeat(active=False):
 def _send_safely(active):
     try:
         network_retry.execute(lambda: send_heartbeat(active), safe=True)
-    except (OSError, ValueError, sqlite3.Error, HTTPError, URLError):
+    except HTTPError as error:
+        delay = network_retry.retry_after(error)
+        error.close()
+        return delay
+    except (OSError, ValueError, sqlite3.Error, URLError):
         pass
 
 
 def _run():
     # Register an installation without treating the background process as use.
     _send_safely(False)
+    next_anonymous_attempt = 0.0
+    next_leaderboard_attempt = 0.0
     while True:
         signalled = _pulse.wait(INTERVAL_SECONDS)
         _pulse.clear()
@@ -60,7 +67,26 @@ def _run():
         except Exception:
             tracking = False
         if signalled or tracking:
-            _send_safely(True)
+            now = time.monotonic()
+            if now >= next_anonymous_attempt:
+                next_anonymous_attempt = now + INTERVAL_SECONDS
+                delay = _send_safely(True)
+                if isinstance(delay, (int, float)) and delay > INTERVAL_SECONDS:
+                    next_anonymous_attempt = now + delay
+            if now >= next_leaderboard_attempt:
+                next_leaderboard_attempt = now + INTERVAL_SECONDS
+                leaderboard = sys.modules.get('application.online_leaderboard')
+                if leaderboard is not None:
+                    try:
+                        leaderboard.send_tracker_activity()
+                    except HTTPError as error:
+                        delay = network_retry.retry_after(error)
+                        error.close()
+                        if delay is not None:
+                            next_leaderboard_attempt = max(next_leaderboard_attempt, time.monotonic() + delay)
+                    except Exception:
+                        # A failed, private presence signal must not interrupt tracking.
+                        pass
 
 
 def notify_browser():

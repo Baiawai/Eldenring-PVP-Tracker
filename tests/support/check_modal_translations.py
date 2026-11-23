@@ -1,4 +1,5 @@
 """Check guide and leaderboard dialog translations in an isolated browser."""
+import json
 import os
 import socket
 import subprocess
@@ -11,9 +12,8 @@ from playwright.sync_api import sync_playwright
 
 from check_online_profile_notice import CHROME, ROOT
 
-LANGUAGES = ['fra', 'eng', 'deu', 'ita', 'spaes', 'spaar', 'por', 'pol',
-             'rus', 'jap', 'kor', 'chi', 'zht', 'tha', 'ara']
-CONSENT_KEYS = ['online_consent_text', 'online_steam_login_required',
+LANGUAGES = ['fra', *json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))]
+CONSENT_KEYS = ['online_consent_text', 'online_presence_notice', 'tracker_member_privacy', 'online_steam_login_required',
                 'online_steam_identity_consent', 'online_event_notice',
                 'online_event_new_only', 'online_player_content_risk']
 
@@ -172,7 +172,7 @@ def main():
         port = sock.getsockname()[1]
     with tempfile.TemporaryDirectory(prefix='tracker-modal-i18n-', ignore_cleanup_errors=True) as directory:
         env = os.environ.copy()
-        env.update(APPDATA=directory, TRACKER_TEST_PORT=str(port))
+        env.update(APPDATA=directory, LOCALAPPDATA=directory, TRACKER_TEST_PORT=str(port))
         server = subprocess.Popen([sys.executable, str(ROOT / 'tests/support/browser_server.py')],
                                   cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         url = 'http://127.0.0.1:' + str(port)
@@ -205,7 +205,7 @@ def main():
                         check_consent(page)
                         check_guide(page)
                         assert not errors, errors
-                        print(f'{width}x{height}: consent and guide translated in all 15 languages')
+                        print(f'{width}x{height}: consent and guide translated in all {len(LANGUAGES)} languages')
                         context.close()
 
                         context = browser.new_context(viewport={'width': width, 'height': height})
@@ -215,7 +215,7 @@ def main():
                         page.goto(url, wait_until='load')
                         page.wait_for_selector('.sprit', state='detached', timeout=30000)
                         check_disabling(page)
-                        print(f'{width}x{height}: disable dialog translated in all 15 languages')
+                        print(f'{width}x{height}: disable dialog translated in all {len(LANGUAGES)} languages')
                         context.close()
                 finally:
                     browser.close()

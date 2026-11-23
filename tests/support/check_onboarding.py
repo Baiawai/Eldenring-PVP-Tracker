@@ -1,4 +1,5 @@
 """Exercise the guide in a headless browser with an isolated test server."""
+import json
 import os
 import socket
 import subprocess
@@ -17,7 +18,7 @@ with socket.socket() as sock:
     port = sock.getsockname()[1]
 with tempfile.TemporaryDirectory(prefix='tracker-onboarding-browser-', ignore_cleanup_errors=True) as directory:
     env = os.environ.copy()
-    env.update(APPDATA=directory, TRACKER_TEST_PORT=str(port))
+    env.update(APPDATA=directory, LOCALAPPDATA=directory, TRACKER_TEST_PORT=str(port), TRACKER_TEST_NO_STEAM='1')
     server = subprocess.Popen([sys.executable, str(ROOT / 'tests/support/browser_server.py')], cwd=ROOT, env=env,
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -105,7 +106,8 @@ with tempfile.TemporaryDirectory(prefix='tracker-onboarding-browser-', ignore_cl
                 assert page.locator('.sidebar-profile-level-value').inner_text() == '170'
                 assert not page.locator('.sidebar-profile-level-label').is_hidden()
                 page.evaluate("window.updateSidebarProfile('', 0)")
-                languages = ['fra'] if os.environ.get('TRACKER_GUIDE_QUICK') else ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']
+                languages = (['fra'] if os.environ.get('TRACKER_GUIDE_QUICK') else
+                             ['fra', *json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))])
                 for code in languages:
                     page.evaluate('(language) => launchLanguages(language)', code)
                     page.wait_for_timeout(150)
@@ -121,6 +123,9 @@ with tempfile.TemporaryDirectory(prefix='tracker-onboarding-browser-', ignore_cl
                         dialog = page.locator('.onboarding-dialog')
                         assert dialog.is_visible(), (width, code, index)
                         assert dialog.locator('h2').count() == 0
+                        progress = dialog.locator('.onboarding-progress')
+                        assert progress.text_content() == f'{index + 1} / 3', (width, code, index)
+                        assert progress.evaluate('node => getComputedStyle(node).direction') == 'ltr', (width, code, index)
                         assert float(dialog.locator('.onboarding-progress').evaluate('node => parseFloat(getComputedStyle(node).fontSize)')) >= 24
                         assert float(dialog.locator('.onboarding-close').evaluate('node => parseFloat(getComputedStyle(node).borderTopWidth)')) == 0
                         nav = dialog.locator('nav')
@@ -144,8 +149,8 @@ with tempfile.TemporaryDirectory(prefix='tracker-onboarding-browser-', ignore_cl
                         assert dialog.locator('.onboarding-visual').locator('li, .form_single').count() > 0, (width, code, index)
                         assert dialog.locator('.onboarding-visual').evaluate('(node) => node.scrollWidth <= node.clientWidth + 2'), (width, code, index, 'overflow')
                         screenshot_dir = os.environ.get('TRACKER_GUIDE_SCREENSHOT_DIR')
-                        if screenshot_dir and width == 1440 and code == 'fra':
-                            dialog.screenshot(path=str(Path(screenshot_dir) / ('guide-' + str(index) + '.png')))
+                        if screenshot_dir:
+                            dialog.screenshot(path=str(Path(screenshot_dir) / f'guide-{width}-{code}-{index + 1}.png'))
                         if index < 2:
                             dialog.locator('.onboarding-next').click()
                     page.locator('.onboarding-close').click()

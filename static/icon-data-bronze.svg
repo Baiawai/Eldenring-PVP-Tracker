@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#e8d4a0"/><stop offset=".32" stop-color="#a58b60"/>
+      <stop offset=".65" stop-color="#d0b780"/><stop offset="1" stop-color="#6e5939"/>
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#6c593d"/><stop offset=".25" stop-color="#b8a277"/>
+      <stop offset=".6" stop-color="#8e7853"/><stop offset="1" stop-color="#57482f"/>
+    </linearGradient>
+  </defs>
+  <path d="M11 15v21c0 4 6.7 7 15 7s15-3 15-7V15" fill="#17130d" stroke="#1c170f" stroke-width="3"/>
+  <path d="M11 15v21c0 4 6.7 7 15 7s15-3 15-7V15" fill="url(#surface)" stroke="url(#metal)" stroke-width="1.4"/>
+  <path d="M11 22c0 4 6.7 7 15 7s15-3 15-7M11 29c0 4 6.7 7 15 7s15-3 15-7" fill="none" stroke="#4f4029" stroke-width="2"/>
+  <path d="M11 21c0 4 6.7 7 15 7s15-3 15-7M11 28c0 4 6.7 7 15 7s15-3 15-7" fill="none" stroke="url(#metal)" stroke-width="1.1"/>
+  <ellipse cx="26" cy="15" rx="15" ry="7" fill="#3a3020" stroke="url(#metal)" stroke-width="1.5"/>
+  <ellipse cx="26" cy="14.5" rx="11.8" ry="4.5" fill="url(#surface)" stroke="#cfbb8e" stroke-width=".6"/>
+  <path d="M15 34v2M15 27v2M37 34v2M37 27v2" stroke="#e0c998" stroke-width=".7" opacity=".55"/>
+</svg>

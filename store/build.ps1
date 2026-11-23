@@ -2,7 +2,7 @@ param(
     [string]$Identity,
     [string]$Publisher,
     [string]$PublisherDisplay,
-    [string]$Version = '1.0.9.0',
+    [string]$Version = '1.0.11.0',
     [string]$TesseractDir = '',
     [string]$MakeAppx = '',
     [string]$OutputDir = '',
@@ -19,6 +19,8 @@ if (!$TesseractDir) {
 }
 $python = Join-Path $root '.venv\Scripts\python.exe'
 if (!(Test-Path $python)) { throw 'Python environment missing: see README.md.' }
+& $python (Join-Path $PSScriptRoot 'check_release_version.py') --version $Version
+if ($LASTEXITCODE -ne 0) { throw 'Package version or executable version metadata is invalid or differs from application/version.py.' }
 if (!(Test-Path (Join-Path $TesseractDir 'tesseract.exe'))) { throw 'Tesseract executable not found.' }
 if (!(Test-Path (Join-Path $TesseractDir 'doc\LICENSE'))) { throw 'Tesseract license not found.' }
 if (-not $ExecutableOnly -and (!$Identity -or !$Publisher -or !$PublisherDisplay)) {

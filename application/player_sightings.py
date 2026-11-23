@@ -56,23 +56,41 @@ def parse_sightings(text, mode, mode_detected, in_combat=True):
             relation = 'opponent' if context == 'Invasion' else 'ally' if context == 'Defense' else 'unknown'
             result.append({'name': name, 'role': 'hunter', 'relation': relation,
                            'mode': context, 'event': 'summoning'})
+    completed_hunter = re.search(
+        r"\bson\s+objectif\s+accompli\s*,?\s*le\s+chasseur\s+([^\r\n]{1,64}?)\s+"
+        r"s['’]en\s+est\s+retourn[ée]\s+dans\s+son\s+monde\b", text, re.IGNORECASE)
     hunter_event = re.search(r'\bchasseur\s+([^\r\n]{1,64}?)\s+(est\s+mort|est\s+retourn[ée]\s+dans\s+son\s+monde|a\s+[ée]t[ée]\s+renvoy[ée]\s+dans\s+son\s+monde|invoqu[ée]|a\s+rejoint\s+votre\s+monde)\b', text, re.IGNORECASE)
-    if hunter_event:
+    if hunter_event and not (completed_hunter and hunter_event.start() < completed_hunter.end()
+                             and completed_hunter.start() < hunter_event.end()):
         name = ' '.join(hunter_event.group(1).split()).strip(' .!…')
         if name and any(char.isalnum() for char in name):
             action = hunter_event.group(2).casefold()
             event = 'died' if 'mort' in action else 'dismissed' if 'renvoy' in action else 'left' if 'retourn' in action else 'joined'
             relation = 'opponent' if context == 'Invasion' else 'ally' if context == 'Defense' else 'unknown'
             result.append({'name': name, 'role': 'hunter', 'relation': relation, 'mode': context, 'event': event})
+    if completed_hunter:
+        name = ' '.join(completed_hunter.group(1).split()).strip(' .!…')
+        if name and any(char.isalnum() for char in name):
+            relation = 'opponent' if context == 'Invasion' else 'ally' if context == 'Defense' else 'unknown'
+            result.append({'name': name, 'role': 'hunter', 'relation': relation,
+                           'mode': context, 'event': 'completed'})
     if context in ('Invasion', 'Defense', 'Unknown'):
         # A death identifies a participant, not who dealt the final blow.
-        if context == 'Invasion':
-            cooperator_death = re.search(r'\bdoigt\s+crochu(?:\s+alli[ée])?\s+([^\r\n]{1,64}?)\s+est\s+mort\b', text, re.IGNORECASE)
-            if cooperator_death:
-                name = ' '.join(cooperator_death.group(1).split()).strip(' .!…')
-                if name and any(char.isalnum() for char in name):
-                    result.append({'name': name, 'role': 'cooperator', 'relation': 'opponent',
-                                   'mode': 'Invasion', 'event': 'died'})
+        cooperator_death = re.search(r'\bdoigt\s+crochu(?:\s+alli[ée])?\s+([^\r\n]{1,64}?)\s+est\s+mort\b', text, re.IGNORECASE)
+        if cooperator_death:
+            name = ' '.join(cooperator_death.group(1).split()).strip(' .!…')
+            # The same game text describes a friendly cooperator during a
+            # defense and the host's cooperator while invading. Outside a
+            # combat, a previously identified Defense still tracks the ally
+            # summoned before an invasion; otherwise the side is uncertain.
+            death_context = context
+            if death_context == 'Unknown' and mode_detected and mode == 'Defense':
+                death_context = 'Defense'
+            if name and any(char.isalnum() for char in name) and death_context in ('Invasion', 'Defense'):
+                friendly = death_context == 'Defense'
+                result.append({'name': name, 'role': 'ally' if friendly else 'cooperator',
+                               'relation': 'ally' if friendly else 'opponent',
+                               'mode': death_context, 'event': 'died'})
         invader = re.search(
             r'\b(?:doigt\s+sanglant|(?:doigt\s+)?r[ée]fractaire)\s+([^\r\n]{1,64}?)\s+'
             r'(est\s+mort|a\s+p[ée]ri|a\s+envahi\s+votre\s+monde)\b', text, re.IGNORECASE)
@@ -104,9 +122,19 @@ def record_sighting(sighting, observed_at=None):
         con.execute('BEGIN IMMEDIATE')
         previous = con.execute('''SELECT id, observed_at, relation, mode FROM player_sightings
             WHERE name_key=? AND role=? AND event=? AND observed_at<=?
-            ORDER BY observed_at DESC LIMIT 1''',
+            ORDER BY observed_at DESC, id DESC LIMIT 1''',
             (key, sighting['role'], sighting['event'], timestamp)).fetchone()
-        if previous and 0 <= (observed - datetime.fromisoformat(previous[1])).total_seconds() < 45:
+        new_defense_cycle = False
+        if (previous and sighting['role'] == 'invader' and sighting['relation'] == 'opponent'
+                and sighting['mode'] == 'Defense' and sighting['event'] in ('invaded', 'died')):
+            # A separately confirmed opposite event is evidence of a new
+            # arrival/death cycle, not another frame of the prior notification.
+            intervening = 'invaded' if sighting['event'] == 'died' else 'died'
+            new_defense_cycle = bool(con.execute('''SELECT 1 FROM player_sightings
+                WHERE name_key=? AND role='invader' AND relation='opponent' AND mode='Defense'
+                AND event=? AND id>? AND observed_at<=? LIMIT 1''',
+                (key, intervening, previous[0], timestamp)).fetchone())
+        if previous and not new_defense_cycle and 0 <= (observed - datetime.fromisoformat(previous[1])).total_seconds() < 45:
             if previous[2] == 'unknown' and sighting['relation'] != 'unknown':
                 con.execute('UPDATE player_sightings SET relation=?, mode=? WHERE id=?',
                             (sighting['relation'], sighting['mode'], previous[0]))

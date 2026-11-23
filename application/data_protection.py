@@ -33,7 +33,10 @@ FIELDS = {
     'capture_steam_names': ('steam_name',),
     'detection_history': ('message', 'metadata'),
     'history_archive_events': ('message', 'metadata'),
+    'steam_avatars': ('avatar',),
     'player_sightings': ('name',),
+    'player_categories': ('name',),
+    'player_preferences': ('identity',),
     'notification_example': ('image',),
     'leaderboard_event_outbox': ('mode', 'kind', 'occurred_at'),
 }

@@ -4,6 +4,7 @@ Run from the project root with its virtual-environment Python. The test server
 uses a private APPDATA, temporary runtime images, and a separate ephemeral port.
 """
 import os
+import json
 import socket
 import subprocess
 import sys
@@ -16,8 +17,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
 CHROME = Path(os.environ.get('ProgramFiles', r'C:\Program Files')) / 'Google/Chrome/Application/chrome.exe'
-LANGUAGES = ['fra', 'eng', 'deu', 'ita', 'spaes', 'spaar', 'por', 'pol',
-             'rus', 'jap', 'kor', 'chi', 'zht', 'tha', 'ara']
+LANGUAGES = ['fra', *json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))]
 
 
 def scenario(browser, url, state='profile_required', viewport=None):
@@ -30,7 +30,7 @@ def scenario(browser, url, state='profile_required', viewport=None):
     context.route('**/online-leaderboard/sync', lambda route: route.fulfill(json={'state': state}))
     context.route('**/online-leaderboard/status', lambda route: route.fulfill(json={'state': state}))
     context.route('**/online-leaderboard/entries?**', lambda route: route.fulfill(json={
-        'mode': 'Arena', 'entries': [], 'page': 1, 'per_page': 5, 'total': 0, 'filtered_total': 0}))
+        'mode': 'Arena', 'entries': [], 'page': 1, 'per_page': 10, 'total': 0, 'filtered_total': 0}))
     reads = []
 
     def profile(route):

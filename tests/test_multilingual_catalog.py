@@ -46,7 +46,7 @@ class MultilingualCatalogTests(unittest.TestCase):
                     with self.subTest(language=language, question=index, kind=kind):
                         self.assertTrue(pack['modern'].get(f'faq_{kind}_{index:02d}'))
 
-    def test_every_interface_language_has_a_game_catalog_and_ocr_model(self):
+    def test_game_languages_have_a_catalog_and_ocr_model(self):
         root = Path(__file__).resolve().parents[1]
         init = types.ModuleType('application.init')
         init.database_setting = ':memory:'
@@ -55,7 +55,8 @@ class MultilingualCatalogTests(unittest.TestCase):
         with patch.dict(sys.modules, {'application.init': init}):
             spec.loader.exec_module(game_language)
         packs = json.loads((root / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
-        self.assertEqual(set(game_language.UI_TO_GAME), set(packs) | {'fra'})
+        self.assertTrue(set(game_language.UI_TO_GAME).issubset(set(packs) | {'fra'}))
+        self.assertTrue({'nld', 'tur', 'ukr', 'ces', 'ron', 'hun', 'ell', 'swe', 'dan', 'nor', 'fin', 'ind', 'vie', 'hin', 'ptpt'}.isdisjoint(game_language.UI_TO_GAME))
         self.assertEqual(set(game_language.UI_TO_GAME.values()), set(messages()))
         self.assertEqual(set(game_language.LANGUAGES), set(messages()))
         for _, model in game_language.LANGUAGES.values():
@@ -121,6 +122,16 @@ class MultilingualCatalogTests(unittest.TestCase):
     def test_english_hunter_message_remains_ambiguous(self):
         text = messages()['engus']['2600304'].replace('<?joinName?>', 'Xeno')
         self.assertEqual(classify(text, 'engus'), [{'event':'hunter_observed', 'values':{'joinName':'Xeno'}}])
+
+    def test_hunter_objective_departure_is_recognized_in_every_game_language(self):
+        for language, entries in messages().items():
+            for identifier in ('2610304', '2612304'):
+                with self.subTest(language=language, identifier=identifier):
+                    text = entries[identifier].replace('<?leaveName?>', 'Ash.The One')
+                    self.assertEqual(classify(text, language), [
+                        {'event': 'hunter_objective_completed', 'values': {'leaveName': 'Ash.The One'}}])
+                    self.assertEqual(tracker_notifications(text, language), [
+                        "Son objectif accompli, le Chasseur Ash.The One s'en est retourné dans son monde."])
 
     def test_more_specific_russian_template_keeps_full_player_name(self):
         text = messages()['rusru']['2642000'].replace('<?leaveName?>', 'Xeno')

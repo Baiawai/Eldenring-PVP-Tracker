@@ -72,6 +72,46 @@ class SteamLogAutoTests(unittest.TestCase):
                 p._worker(lambda: True)
         activate.assert_called_once()
 
+    def test_refusal_survives_transient_process_lookup_failure(self):
+        p = self.module
+        session = (1, 'first', Path('steam.exe'))
+        with patch.object(p, 'get_enabled', return_value=True), \
+             patch.object(p, 'steam_session', side_effect=[session, None, session]), \
+             patch.object(p, 'activate', return_value=None) as activate, \
+             patch.object(p._wake, 'wait', side_effect=[None, None, StopIteration]), \
+             patch.object(p._wake, 'clear'):
+            with self.assertRaises(StopIteration):
+                p._worker(lambda: True)
+        activate.assert_called_once_with(session[2])
+        self.assertEqual(p.status(), 'refused')
+
+    def test_refusal_survives_disable_and_reenable(self):
+        p = self.module
+        session = (1, 'first', Path('steam.exe'))
+        with patch.object(p, 'get_enabled', side_effect=[True, False, True]), \
+             patch.object(p, 'steam_session', return_value=session), \
+             patch.object(p, 'activate', return_value=None) as activate, \
+             patch.object(p._wake, 'wait', side_effect=[None, None, StopIteration]), \
+             patch.object(p._wake, 'clear'):
+            with self.assertRaises(StopIteration):
+                p._worker(lambda: True)
+        activate.assert_called_once_with(session[2])
+        self.assertEqual(p.status(), 'refused')
+
+    def test_request_survives_peer_detection_pause(self):
+        p = self.module
+        session = (1, 'first', Path('steam.exe'))
+        enabled = Mock(side_effect=[True, False, True])
+        with patch.object(p, 'get_enabled', return_value=True), \
+             patch.object(p, 'steam_session', return_value=session), \
+             patch.object(p, 'activate', return_value=True) as activate, \
+             patch.object(p._wake, 'wait', side_effect=[None, None, StopIteration]), \
+             patch.object(p._wake, 'clear'):
+            with self.assertRaises(StopIteration):
+                p._worker(enabled)
+        activate.assert_called_once_with(session[2])
+        self.assertEqual(p.status(), 'requested')
+
     def test_elevated_request_timeout_is_not_reported_as_success(self):
         p = self.module
         handle = Mock()
@@ -81,6 +121,17 @@ class SteamLogAutoTests(unittest.TestCase):
             self.assertFalse(p._activate_elevated(Path('steam.exe')))
         get_exit.assert_not_called()
         handle.Close.assert_called_once()
+
+    def test_only_failure_before_process_creation_is_definitely_not_started(self):
+        p = self.module
+        with patch.object(p.subprocess, 'Popen', side_effect=FileNotFoundError('missing')), \
+             patch.object(p.logging, 'getLogger'):
+            self.assertIs(p.activate(Path('steam.exe')), p._NOT_STARTED)
+        process = Mock()
+        process.wait.side_effect = OSError('wait failed')
+        with patch.object(p.subprocess, 'Popen', return_value=process), \
+             patch.object(p.logging, 'getLogger'):
+            self.assertIs(p.activate(Path('steam.exe')), False)
 
     def test_only_once_per_steam_session_then_on_restart(self):
         p = self.module
@@ -105,3 +156,107 @@ class SteamLogAutoTests(unittest.TestCase):
                 p._worker(lambda: True)
         session.assert_not_called()
         activate.assert_not_called()
+
+    def test_explicit_retry_is_coalesced_and_respects_cooldown(self):
+        p = self.module
+        with patch.object(p, '_started', True), patch.object(p, '_state', 'requested'), \
+             patch.object(p, '_last_attempt', 100.0), patch.object(p, '_retry_pending', False), \
+             patch.object(p, 'get_enabled', return_value=True), \
+             patch.object(p.time, 'monotonic', return_value=150.0), patch.object(p._wake, 'set') as wake:
+            result = p.request_retry(lambda: True)
+            self.assertEqual(result['state'], 'cooldown')
+            self.assertEqual(result['retry_after_seconds'], 70)
+            wake.assert_not_called()
+        with patch.object(p, '_started', True), patch.object(p, '_state', 'requested'), \
+             patch.object(p, '_last_attempt', 100.0), patch.object(p, '_retry_pending', False), \
+             patch.object(p, 'get_enabled', return_value=True), \
+             patch.object(p.time, 'monotonic', return_value=220.0), patch.object(p._wake, 'set') as wake:
+            self.assertEqual(p.request_retry(lambda: True)['state'], 'queued')
+            self.assertEqual(p.request_retry(lambda: True)['state'], 'cooldown')
+            wake.assert_called_once()
+
+    def test_failed_request_is_not_repeated_for_the_same_steam_session(self):
+        p = self.module
+        session = (1, 'same-session', Path('steam.exe'))
+        with patch.object(p, 'get_enabled', return_value=True), \
+             patch.object(p, 'steam_session', return_value=session), \
+             patch.object(p, 'activate', return_value=False) as activate, \
+             patch.object(p.time, 'monotonic', side_effect=[0, 120, 240, 360]), \
+             patch.object(p._wake, 'wait', side_effect=[None, None, None, StopIteration]), \
+             patch.object(p._wake, 'clear'):
+            with self.assertRaises(StopIteration):
+                p._worker(lambda: True)
+        activate.assert_called_once_with(session[2])
+        self.assertEqual(p.status(), 'failed')
+
+    def test_prelaunch_failures_retry_at_most_twice_without_another_uac(self):
+        p = self.module
+        session = (1, 'same-session', Path('steam.exe'))
+        with patch.object(p, 'get_enabled', return_value=True), \
+             patch.object(p, 'steam_session', return_value=session), \
+             patch.object(p, 'activate', return_value=p._NOT_STARTED) as activate, \
+             patch.object(p.time, 'monotonic', side_effect=[0, 120, 240, 360]), \
+             patch.object(p._wake, 'wait', side_effect=[None, None, None, StopIteration]), \
+             patch.object(p._wake, 'clear'):
+            with self.assertRaises(StopIteration):
+                p._worker(lambda: True)
+        self.assertEqual(activate.call_count, 3)
+        self.assertEqual(activate.call_args_list[0].kwargs, {})
+        self.assertEqual(activate.call_args_list[1].kwargs, {'allow_elevation': False})
+        self.assertEqual(activate.call_args_list[2].kwargs, {'allow_elevation': False})
+        self.assertEqual(p.status(), 'failed')
+
+    def test_new_steam_session_gets_one_request_after_previous_failure(self):
+        p = self.module
+        exe = Path('steam.exe')
+        sessions = [(1, 'first', exe), (1, 'first', exe), (2, 'second', exe)]
+        with patch.object(p, 'get_enabled', return_value=True), \
+             patch.object(p, 'steam_session', side_effect=sessions), \
+             patch.object(p, 'activate', return_value=False) as activate, \
+             patch.object(p._wake, 'wait', side_effect=[None, None, StopIteration]), \
+             patch.object(p._wake, 'clear'):
+            with self.assertRaises(StopIteration):
+                p._worker(lambda: True)
+        self.assertEqual(activate.call_count, 2)
+
+    def test_retry_never_queues_if_auto_or_peer_detection_disabled(self):
+        p = self.module
+        with patch.object(p, 'get_enabled', return_value=False), patch.object(p._wake, 'set') as wake:
+            self.assertEqual(p.request_retry(lambda: True)['state'], 'disabled')
+            wake.assert_not_called()
+        with patch.object(p, 'get_enabled', return_value=True), patch.object(p._wake, 'set') as wake:
+            self.assertEqual(p.request_retry(lambda: False)['state'], 'disabled')
+            wake.assert_not_called()
+
+    def test_explicit_retry_can_request_again_after_refusal(self):
+        p = self.module
+        session = (1, 'same-session', Path('steam.exe'))
+        def wait_again(_seconds):
+            if p.status() == 'refused':
+                p._retry_pending = True  # Equivalent to an accepted user click.
+                return None
+            raise StopIteration
+        with patch.object(p, 'get_enabled', return_value=True), \
+             patch.object(p, 'steam_session', return_value=session), \
+             patch.object(p, 'activate', side_effect=[None, True]) as activate, \
+             patch.object(p.time, 'monotonic', side_effect=[100, 220]), \
+             patch.object(p._wake, 'wait', side_effect=wait_again), \
+             patch.object(p._wake, 'clear'):
+            with self.assertRaises(StopIteration):
+                p._worker(lambda: True)
+        self.assertEqual(activate.call_count, 2)
+        self.assertEqual(p.status(), 'requested')
+
+    def test_unexpected_activation_error_does_not_repeat_request(self):
+        p = self.module
+        session = (1, 'same-session', Path('steam.exe'))
+        with patch.object(p, 'get_enabled', return_value=True), \
+             patch.object(p, 'steam_session', return_value=session), \
+             patch.object(p, 'activate', side_effect=RuntimeError('failure')) as activate, \
+             patch.object(p.time, 'monotonic', side_effect=[0, 120]), \
+             patch.object(p.logging, 'getLogger'), \
+             patch.object(p._wake, 'wait', side_effect=[None, StopIteration]), \
+             patch.object(p._wake, 'clear'):
+            with self.assertRaises(StopIteration):
+                p._worker(lambda: True)
+        activate.assert_called_once_with(session[2])

@@ -67,8 +67,24 @@ def begin():
     if any(database_path(name).exists() for name in DATABASES):
         return False
     data_dir().mkdir(parents=True, exist_ok=True)
-    _save({'state': 'pending'})
+    # Persist the overlay-default generation along with the pending state so
+    # an interrupted first launch is still recognized on the next start.
+    _save({'state': 'pending', 'overlay_defaults': 'v2'})
     return True
+
+
+def uses_new_overlay_defaults():
+    """Distinguish a profile created with a new-installation preset."""
+    status = read_status()
+    return status.get('state') in ('pending', 'failed') and status.get('overlay_defaults') in ('current', 'v2')
+
+
+def overlay_defaults_generation():
+    """Retain the preset chosen before a first run was interrupted."""
+    status = read_status()
+    if status.get('state') in ('pending', 'failed') and status.get('overlay_defaults') in ('current', 'v2'):
+        return status['overlay_defaults']
+    return 'legacy'
 
 
 def log_error(details):
@@ -104,7 +120,10 @@ def finish():
         from application import error_reports
         error_reports.report('initialization', 'storage', error)
         path = log_error(traceback.format_exc())
-        _save({'state': 'failed', 'log': str(path) if path else '', 'shown': bool(previous.get('shown'))})
+        failed = {'state': 'failed', 'log': str(path) if path else '', 'shown': bool(previous.get('shown'))}
+        if previous.get('overlay_defaults') in ('current', 'v2'):
+            failed['overlay_defaults'] = previous['overlay_defaults']
+        _save(failed)
 
 
 def claim():

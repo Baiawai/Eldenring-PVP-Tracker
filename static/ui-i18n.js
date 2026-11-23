@@ -1,7 +1,7 @@
 (function () {
     let language = 'fra';
     // Keep the FAQ current when Flask serves a template cached before this update.
-    const faqFrench = {"faq_a_01": "Lance le tracker et Elden Ring. Vérifie que la langue choisie correspond à celle du jeu, puis clique sur Start. Stop arrête le suivi ; le redémarrer remet la session en mémoire à zéro.", "faq_a_04": "Le tracker lit les notifications à l’écran par reconnaissance de texte (OCR). Un message masqué, manqué ou mal lu peut laisser un résultat inconnu. Vérifie la langue du jeu et la zone dans Configuration → Capture, puis teste-la avec un exemple reconnu sur deux lignes.", "faq_a_05": "Au premier lancement, le tracker utilise automatiquement la langue du navigateur si elle est prise en charge, sinon l’anglais. Tu peux la modifier dans Configuration pour qu’elle corresponde à celle du jeu : elle règle l’interface et la reconnaissance des notifications sans changer la langue du jeu. Ton choix est conservé.", "faq_a_06": "La zone de notification est détectée automatiquement. Après la reconnaissance d’une notification sur deux lignes, elle est stabilisée automatiquement. Si l’écran ou la fenêtre du jeu change, la détection reprend. Dans Configuration → Capture, tu peux vérifier l’aperçu ou choisir un réglage manuel. Un intervalle plus long peut faire manquer des notifications brèves.", "faq_a_07": "Choisis un mode : le taux de victoire divise les victoires par les victoires, défaites et égalités enregistrées. Les égalités ne concernent que l’arène. Le graphique utilise les captures de résultats conservées ; il peut donc différer des statistiques cumulées.", "faq_a_09": "Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. La mesure avancée du ping peut demander une autorisation administrateur Windows. En cas de refus ou d’indisponibilité, le ping Steam est utilisé lorsqu’il est disponible.", "faq_a_12": "La version Store comprend les composants nécessaires. Pour lancer le projet depuis ses sources, installe Python et prépare la distribution locale de Tesseract ou utilise une installation existante ; consulte le README du projet.", "faq_a_13": "Fermer l’onglet laisse le tracker actif. Stop arrête le suivi ; Configuration → Quitter ferme le programme. Redémarrer le suivi remet la session en mémoire à zéro, mais conserve les statistiques enregistrées.", "faq_q_15": "Comment récupérer mon profil de personnage ?", "faq_a_15": "Dans Configuration → Profil, lance la capture. En jeu, ouvre Configuration → Quitter la partie sans confirmer la sortie et garde le jeu visible. Le tracker récupère ensemble pseudo, niveau et image : vérifie-les avant d’enregistrer ou annule si nécessaire.", "faq_q_16": "Comment fonctionnent l’archivage et la purge de l’historique ?", "faq_a_16": "Arrête le suivi avant d’archiver ou de purger l’historique actif. L’archivage retire les événements de la liste, y compris les rencontres Steam, et les conserve chiffrés localement. La restauration ajoute les événements absents sans doublons et conserve l’archive. La purge retire l’historique actif mais conserve les archives, les captures et les statistiques cumulées.", "faq_q_17": "Comment activer la détection Steam ?", "faq_a_17": "Dans Configuration → P2P, active la détection des joueurs. L’activation automatique du journal Steam est proposée par défaut : elle demande à Steam d’activer le journal nécessaire au démarrage du tracker ou de Steam. Si elle échoue, la commande manuelle reste disponible. Les profils observés ne sont pas automatiquement associés aux personnages en jeu."};
+    const faqFrench = {"faq_a_01": "Lance le tracker et Elden Ring. Vérifie que la langue choisie correspond à celle du jeu, puis clique sur Start. Stop arrête le suivi ; le redémarrer remet la session en mémoire à zéro.", "faq_a_04": "Le tracker lit les notifications à l’écran par reconnaissance de texte (OCR). Un message masqué, manqué ou mal lu peut laisser un résultat inconnu. Vérifie la langue du jeu et la zone dans Configuration → Capture, puis teste-la avec un exemple reconnu sur deux lignes.", "faq_a_05": "Au premier lancement, l’interface utilise la langue du navigateur si elle est prise en charge, sinon l’anglais. Le tracker essaie de détecter la langue du jeu dans les réglages Steam ; à défaut, il utilise l’anglais. Tu peux choisir ces deux langues séparément dans Configuration. Tes choix sont conservés.", "faq_a_06": "La zone de notification est détectée automatiquement. Après la reconnaissance d’une notification sur deux lignes, elle est stabilisée automatiquement. Si l’écran ou la fenêtre du jeu change, la détection reprend. Dans Configuration → Capture, tu peux vérifier l’aperçu ou choisir un réglage manuel. Un intervalle plus long peut faire manquer des notifications brèves.", "faq_a_07": "Choisis un mode : le taux de victoire divise les victoires par les victoires, défaites et égalités enregistrées. Les égalités ne concernent que l’arène. Le graphique utilise les captures de résultats conservées ; il peut donc différer des statistiques cumulées.", "faq_a_09": "Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. La mesure avancée du ping peut demander une autorisation administrateur Windows. En cas de refus ou d’indisponibilité, le ping Steam est utilisé lorsqu’il est disponible. La mesure avancée est disponible uniquement dans la version de développement ; la version Store utilise le ping Steam.", "faq_a_12": "La version Store comprend les composants nécessaires. Pour lancer le projet depuis ses sources, installe Python et prépare la distribution locale de Tesseract ou utilise une installation existante ; consulte le README du projet.", "faq_a_13": "Fermer l’onglet laisse le tracker actif. Stop arrête le suivi ; Configuration → Quitter ferme le programme. Redémarrer le suivi remet la session en mémoire à zéro, mais conserve les statistiques enregistrées.", "faq_q_15": "Comment récupérer mon profil de personnage ?", "faq_a_15": "Dans Configuration → Profil, lance la capture. En jeu, ouvre Configuration → Quitter la partie sans confirmer la sortie et garde le jeu visible. Le tracker récupère ensemble pseudo, niveau et image : vérifie-les avant d’enregistrer ou annule si nécessaire.", "faq_q_16": "Comment fonctionnent l’archivage et la purge de l’historique ?", "faq_a_16": "Arrête le suivi avant d’archiver ou de purger l’historique actif. L’archivage retire les événements de la liste, y compris les rencontres Steam, et les conserve chiffrés localement. La restauration ajoute les événements absents sans doublons et conserve l’archive. La purge retire l’historique actif mais conserve les archives, les captures et les statistiques cumulées.", "faq_q_17": "Comment activer la détection Steam ?", "faq_a_17": "Dans Configuration → P2P, active la détection des joueurs. L’activation automatique du journal Steam est proposée par défaut : elle demande à Steam d’activer le journal nécessaire au démarrage du tracker ou de Steam. Si elle échoue, la commande manuelle reste disponible. Les profils observés ne sont pas automatiquement associés aux personnages en jeu."};
     faqFrench.faq_a_11 = 'Pour afficher les joueurs dans l’application, active la participation et accepte les conditions. Le classement utilise le serveur configuré, par défaut eldenringpvp.com. La participation est facultative et nécessite un compte Steam.';
     faqFrench.faq_q_18 = 'Comment connecter Steam et participer au classement ?';
     faqFrench.faq_a_18 = 'Dans Configuration → Classement en ligne, active la participation, accepte les conditions et connecte-toi à Steam. La confirmation peut être automatique ; si un code apparaît, saisis-le dans le tracker sans le partager. La publication du lien vers ton profil Steam est facultative.';
@@ -13,11 +13,13 @@
     faqFrench.faq_a_21 = 'Les statistiques locales existantes sont reprises pour chaque mode. Les nouveaux combats sont synchronisés et les événements en attente sont réessayés.';
     faqFrench.faq_q_22 = 'Puis-je utiliser le tracker sans connexion ?';
     faqFrench.faq_a_22 = 'Le suivi et les statistiques locales restent disponibles hors ligne. Le classement en ligne et la connexion Steam nécessitent Internet ; les événements de classement en attente sont réessayés au retour de la connexion.';
+    faqFrench.faq_q_23 = 'Quelles informations d’activité le tracker transmet-il ?';
+    faqFrench.faq_a_23 = 'Au démarrage, le tracker transmet au site un identifiant aléatoire, puis environ toutes les cinq minutes un signal d’activité tant que l’interface est ouverte ou que le suivi est actif, indépendamment du classement. Pour les participants au classement, un signal distinct permet d’afficher publiquement que leur tracker a été récemment actif.';
     const faqList = document.querySelector(".faq-list");
     if (faqList) {
         Object.keys(faqFrench).forEach(function (key) {
             let node = faqList.querySelector('[data-i18n="' + key + '"]');
-            if (!node && /^faq_q_(?:1[5-9]|2[0-2])$/.test(key)) {
+            if (!node && /^faq_q_(?:1[5-9]|2[0-3])$/.test(key)) {
                 const item = document.createElement("details"); item.className = "faq-item";
                 node = document.createElement("summary"); node.dataset.i18n = key;
                 const answer = document.createElement("p"); answer.dataset.i18n = key.replace("faq_q_", "faq_a_");
@@ -26,7 +28,7 @@
             if (node) { node.textContent = faqFrench[key]; node.dataset.i18nFr = faqFrench[key]; }
         });
         // Apply the same reading order to templates cached by a running server.
-        ['12','01','05','03','19','02','06','20','04','07','15','08','17','09','11','18','21','22','10','14','16','13'].forEach(function(number) {
+        ['12','01','05','03','19','02','06','20','04','07','15','08','17','09','11','18','21','22','23','10','14','16','13'].forEach(function(number) {
             const question = faqList.querySelector('[data-i18n="faq_q_' + number + '"]');
             const item = question && question.closest('.faq-item');
             if (item) faqList.appendChild(item);
@@ -42,16 +44,8 @@
         panel.innerHTML = '<img class="information-discord-icon" src="/static/icon-discord-bronze.png" alt=""><div class="information-discord-content"><h2 id="information_discord_title" data-i18n="information_discord_title">Aide et assistance</h2><p data-i18n="information_discord_help">Pour toute aide ou demande de support, rejoins notre serveur Discord.</p><a class="information-discord" href="https://discord.gg/y79z83D2Ua" target="_blank" rel="noopener noreferrer" data-i18n="information_discord">Rejoindre le serveur Discord</a></div>';
         informationShell.prepend(panel);
     }
-    if (informationShell && !informationShell.querySelector('[data-i18n="tracker_presence_notice"]')) {
-        const header = informationShell.querySelector('.information-header');
-        if (header) {
-            const notice = document.createElement('p');
-            notice.className = 'stats-chart-note';
-            notice.dataset.i18n = 'tracker_presence_notice';
-            notice.textContent = 'Le tracker transmet au site un identifiant aléatoire au démarrage, puis un signal d’activité au moins toutes les 10 minutes tant que l’interface est ouverte ou le suivi actif, indépendamment du classement.';
-            header.insertAdjacentElement('afterend', notice);
-        }
-    }
+    // Remove the former standalone notice from templates cached by the server.
+    if (informationShell) informationShell.querySelectorAll('[data-i18n="tracker_presence_notice"]').forEach(node => node.remove());
     const rankingPanel = document.querySelector('.cadre_multi');
     if (rankingPanel) {
         // Restore the original layout even when Flask has cached the disabled-page template.
@@ -81,23 +75,23 @@
             status.hidden = true; status.removeAttribute('data-i18n'); status.textContent = '';
         }
     }
-    // Older cached templates do not contain the report action on the player card.
-    const playerHeading = document.querySelector('#leaderboard_player_dialog .leaderboard-player-heading');
-    if (playerHeading && !playerHeading.querySelector('.leaderboard-player-report')) {
-        const link = document.createElement('a'); link.className = 'leaderboard-player-report';
-        link.dataset.i18n = 'leaderboard_report_button'; link.textContent = 'Signaler un contenu';
-        link.href = 'https://discord.gg/y79z83D2Ua'; link.target = '_blank'; link.rel = 'noopener noreferrer';
-        playerHeading.appendChild(link);
-    }
-    if (playerHeading) {
-        playerHeading.querySelectorAll('.leaderboard-player-report-help').forEach(node => node.remove());
-        const link = playerHeading.querySelector('.leaderboard-player-report');
-        if (link) { link.href = 'https://discord.gg/y79z83D2Ua'; link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+    // Remove the former card action even when Flask serves a cached template.
+    document.querySelectorAll('#leaderboard_player_dialog .leaderboard-player-report, #leaderboard_player_dialog .leaderboard-player-report-help')
+        .forEach(node => node.remove());
+    // Older cached templates still contain the former section heading.
+    const diagnosticsSection = document.querySelector('.diagnostics-settings[setting="6"]');
+    if (diagnosticsSection) {
+        const heading = diagnosticsSection.querySelector(':scope > #diagnostics_title');
+        if (heading) heading.remove();
+        diagnosticsSection.removeAttribute('aria-labelledby');
+        diagnosticsSection.setAttribute('aria-label', 'Diagnostic');
+        diagnosticsSection.dataset.i18nAria = 'diagnostics_title';
+        diagnosticsSection.dataset.i18nAriaFr = 'Diagnostic';
     }
     // Refresh the favicon even when the running server has cached an older template.
     document.querySelectorAll('link[rel~="icon"]').forEach(link => { link.href = '/static/tracker-eye-ornament.ico'; });
     const profileInstructions = document.getElementById('profile_capture_instructions');
-    if (profileInstructions) {
+    if (profileInstructions && !profileInstructions.classList.contains('profile-capture-guide')) {
         profileInstructions.dataset.i18n = 'profile_step_menu';
         profileInstructions.textContent = 'Lance Elden Ring et charge ta partie. Une fois dans le monde du jeu, ouvre le menu principal, puis Configuration. Va dans l’onglet tout à droite, « Quitter la partie », sans quitter la partie. L’application y récupérera automatiquement ton pseudo, ton niveau et ton image. Attends quelques secondes (environ 2 à 5 secondes), puis reviens ici pour vérifier les informations récupérées et les enregistrer.';
     }
@@ -115,6 +109,21 @@
     if (profileGuidance) {
         profileGuidance.dataset.i18n = 'sidebar_profile_guidance';
         profileGuidance.textContent = 'Lance Elden Ring et charge ta partie, puis ouvre l’onglet « Quitter la partie » sans quitter. L’application récupérera ton pseudo, ton niveau et ton image.';
+    }
+    // The old legacy labels say only "your language"; this card configures
+    // game recognition, independently of the interface language.
+    const gameLanguageCard = document.querySelector('.sidebar-guidance .carde_info[info="languages"]');
+    if (gameLanguageCard) {
+        const title = gameLanguageCard.querySelector('h5');
+        const description = gameLanguageCard.querySelector('p');
+        if (title) {
+            title.dataset.i18n = 'game_language_label';
+            title.dataset.i18nFr = 'Langue du jeu';
+        }
+        if (description) {
+            description.dataset.i18n = 'help_game_language';
+            description.dataset.i18nFr = 'Choisit la langue utilisée pour reconnaître les messages du jeu sans modifier ses réglages.';
+        }
     }
     // Keep the entire guidance card operable, including in cached templates.
     document.querySelectorAll('.sidebar-guidance .carde_info[info="languages"], .sidebar-guidance .carde_info[info="profile"]').forEach(function(card) {
@@ -214,8 +223,10 @@
         '0': ['settings_tab_general', 'Général'],
         '1': ['settings_tab_display', 'Graphismes'],
         '2': ['settings_tab_capture', 'Capture'],
+        '8': ['settings_overlay_section', 'Overlay en jeu'],
         '3': ['settings_tab_profile', 'Profil'],
         '5': ['settings_tab_p2p', 'P2P'],
+        '9': ['settings_tab_data', 'Données du tracker'],
         '6': ['settings_tab_diagnostics', 'Diagnostic'],
         '7': ['online_title', 'Classement en ligne'],
         '4': ['settings_tab_exit', 'Quitter']
@@ -292,10 +303,17 @@
         const active = settingsNav.querySelector('.btn_menu_settings.active_setting');
         const entry = active && settingsTitles[active.getAttribute('menu')];
         if (entry) settingsTitle.textContent = window.uiT(entry[0], entry[1]);
+        if (active) {
+            const navBox = settingsNav.getBoundingClientRect();
+            const tabBox = active.getBoundingClientRect();
+            if (navBox.width) settingsNav.style.setProperty('--settings-marker', ((tabBox.left + tabBox.width / 2 - navBox.left) / navBox.width * 100) + '%');
+        }
     }
     if (settingsNav && settingsTitle) {
         new MutationObserver(updateSettingsTitle).observe(settingsNav, {subtree:true, attributes:true, attributeFilter:['class']});
         document.addEventListener('ui-language-change', updateSettingsTitle);
+        window.addEventListener('resize', updateSettingsTitle);
+        if (window.ResizeObserver) new ResizeObserver(updateSettingsTitle).observe(settingsNav);
         updateSettingsTitle();
     }
 })();

@@ -22,6 +22,43 @@ COMMAND_FILTER = 'BeginAuthSession,EndAuthSession,LeaveLobby,SendClanChatMessage
 _wake = threading.Event()
 _start_lock = threading.Lock()
 _started = False
+_state_lock = threading.Lock()
+_state = 'unknown'
+_retry_pending = False
+_last_attempt = None
+RETRY_SECONDS = 120
+MAX_PRELAUNCH_ATTEMPTS = 3
+_NOT_STARTED = object()
+
+
+def status():
+    """Return only the state of the request, not the Steam path or process."""
+    with _state_lock:
+        return _state
+
+
+def _set_state(value):
+    global _state
+    with _state_lock:
+        _state = value
+
+
+def request_retry(peer_enabled):
+    """Queue one explicit request, coalesced and rate-limited per process."""
+    global _retry_pending
+    if not get_enabled() or not peer_enabled():
+        return {'state': 'disabled'}
+    with _state_lock:
+        if not _started:
+            return {'state': 'unavailable'}
+        if _state == 'waiting_steam':
+            return {'state': 'waiting_steam'}
+        remaining = 0 if _last_attempt is None else max(0, RETRY_SECONDS - (time.monotonic() - _last_attempt))
+        if _retry_pending or _state == 'requesting' or remaining > 0:
+            return {'state': 'cooldown', 'retry_after_seconds': max(1, int(remaining + .999))}
+        _retry_pending = True
+    _wake.set()
+    return {'state': 'queued'}
 
 
 def get_enabled():
@@ -69,18 +106,23 @@ def steam_session():
         return None
 
 
-def activate(executable):
-    """Request logging through Steam; None means Windows elevation was refused."""
+def activate(executable, allow_elevation=True):
+    """Request logging; distinguish a definite prelaunch failure from an ambiguous result."""
     try:
         process = subprocess.Popen([str(executable), '-console', '+log_ipc', COMMAND_FILTER],
                                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
                                    stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        process.wait(timeout=15)
-        return process.returncode == 0
     except OSError as error:
-        if error.winerror == 740:
+        if getattr(error, 'winerror', None) == 740 and allow_elevation:
             return _activate_elevated(executable)
         logging.getLogger(__name__).exception('Unable to request Steam logging')
+        return _NOT_STARTED
+    try:
+        process.wait(timeout=15)
+        return process.returncode == 0
+    except OSError:
+        # A process was created; it may already have delivered the command.
+        logging.getLogger(__name__).exception('Unable to wait for the Steam logging request')
         return False
     except subprocess.TimeoutExpired:
         logging.getLogger(__name__).exception('Unable to request Steam logging')
@@ -112,32 +154,64 @@ def _activate_elevated(executable):
 
 
 def _worker(peer_enabled):
+    global _retry_pending, _last_attempt, _state
     last_session = None
     observed_session = None
     next_attempt = 0
+    prelaunch_attempts = 0
+    last_outcome_state = 'unknown'
     while True:
         try:
-            if not get_enabled() or not peer_enabled():
-                last_session = None
-                observed_session = None
-                next_attempt = 0
+            auto_enabled = get_enabled()
+            peers_enabled = peer_enabled()
+            if not auto_enabled or not peers_enabled:
+                _set_state('disabled' if not auto_enabled else 'paused')
+                with _state_lock:
+                    _retry_pending = False
             else:
                 session = steam_session()
                 if session is None:
-                    last_session = None
-                    observed_session = None
-                    next_attempt = 0
+                    _set_state('waiting_steam')
+                    with _state_lock:
+                        _retry_pending = False
                 else:
                     if session[:2] != observed_session:
                         observed_session = session[:2]
                         next_attempt = 0
-                    if session[:2] != last_session and time.monotonic() >= next_attempt:
-                        next_attempt = time.monotonic() + 60
-                        outcome = activate(session[2])
-                        if outcome is True or outcome is None:
-                            # Do not repeatedly prompt after the user refuses elevation.
-                            last_session = session[:2]
+                        prelaunch_attempts = 0
+                        last_outcome_state = 'unknown'
+                    with _state_lock:
+                        explicit = _retry_pending
+                        _retry_pending = False
+                    now = time.monotonic()
+                    if (explicit or (session[:2] != last_session and prelaunch_attempts < MAX_PRELAUNCH_ATTEMPTS)) and now >= next_attempt:
+                        next_attempt = now + RETRY_SECONDS
+                        with _state_lock:
+                            _last_attempt = now
+                            _state = 'requesting'
+                        # Set the latch first: exceptions after a launch can
+                        # mean Steam has already received the command.
+                        last_session = session[:2]
+                        allow_elevation = explicit or prelaunch_attempts == 0
+                        if explicit:
+                            prelaunch_attempts = 0
+                        outcome = activate(session[2]) if allow_elevation else activate(session[2], allow_elevation=False)
+                        if outcome is True:
+                            last_outcome_state = 'requested'
+                        elif outcome is None:
+                            last_outcome_state = 'refused'
+                        elif outcome is _NOT_STARTED:
+                            prelaunch_attempts += 1
+                            last_session = None
+                            last_outcome_state = 'failed'
+                        else:
+                            last_outcome_state = 'failed'
+                        _set_state(last_outcome_state)
+                    else:
+                        _set_state(last_outcome_state)
         except Exception:
+            last_outcome_state = 'failed'
+            _set_state('failed')
             logging.getLogger(__name__).exception('Steam automatic logging failed')
         _wake.wait(5)
         _wake.clear()

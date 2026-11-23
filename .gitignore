@@ -22,6 +22,10 @@ output/
 *.pfx
 leaderboard-config.json
 
+# Local-only optional metadata source for the official Store build.
+/application/_private_store_version.py
+/application/_private_peer_badges.py
+
 # Runtime screenshots and profile images
 /application/simple_*.jpg
 /application/simple_notif_*.jpg

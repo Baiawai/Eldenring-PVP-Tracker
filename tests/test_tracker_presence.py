@@ -1,5 +1,7 @@
 import json
+import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -26,10 +28,43 @@ class TrackerPresenceTest(unittest.TestCase):
         event.wait.side_effect = [True, False, False, StopWorker()]
         with patch.object(tracker_presence, '_pulse', event), \
                 patch.object(tracker_presence, '_is_tracking', side_effect=[False, True, False]), \
-                patch.object(tracker_presence, '_send_safely') as send:
+                patch.object(tracker_presence, '_send_safely') as send, \
+                patch.object(tracker_presence.time, 'monotonic', side_effect=[100, 400]), \
+                patch.dict(sys.modules, {'application.online_leaderboard': types.SimpleNamespace(send_tracker_activity=MagicMock())}):
             with self.assertRaises(StopWorker):
                 tracker_presence._run()
             self.assertEqual([call.args[0] for call in send.call_args_list], [False, True, True])
+
+    def test_leaderboard_activity_is_throttled_to_five_minutes_and_idle_is_not_activity(self):
+        class StopWorker(BaseException):
+            pass
+        event = MagicMock()
+        event.wait.side_effect = [True, True, True, True, False, StopWorker()]
+        online = types.SimpleNamespace(send_tracker_activity=MagicMock())
+        with patch.object(tracker_presence, '_pulse', event), \
+                patch.object(tracker_presence, '_is_tracking', return_value=False), \
+                patch.object(tracker_presence, '_send_safely'), \
+                patch.object(tracker_presence.time, 'monotonic', side_effect=[100, 130, 399, 400]), \
+                patch.dict(sys.modules, {'application.online_leaderboard': online}):
+            with self.assertRaises(StopWorker):
+                tracker_presence._run()
+        self.assertEqual(online.send_tracker_activity.call_count, 2)
+
+    def test_leaderboard_activity_respects_long_retry_after(self):
+        class StopWorker(BaseException):
+            pass
+        event = MagicMock()
+        event.wait.side_effect = [True, True, True, StopWorker()]
+        error = __import__('urllib.error', fromlist=['HTTPError']).HTTPError('https://example.invalid', 429, 'rate limited', {'Retry-After': '900'}, None)
+        online = types.SimpleNamespace(send_tracker_activity=MagicMock(side_effect=[error, None]))
+        with patch.object(tracker_presence, '_pulse', event), \
+                patch.object(tracker_presence, '_is_tracking', return_value=False), \
+                patch.object(tracker_presence, '_send_safely'), \
+                patch.object(tracker_presence.time, 'monotonic', side_effect=[100, 100, 400, 1000]), \
+                patch.dict(sys.modules, {'application.online_leaderboard': online}):
+            with self.assertRaises(StopWorker):
+                tracker_presence._run()
+        self.assertEqual(online.send_tracker_activity.call_count, 2)
 
     def test_transient_presence_failure_is_retried_without_blocking_the_application(self):
         with patch.object(tracker_presence, 'send_heartbeat', side_effect=[URLError(TimeoutError()), True]) as send, \

@@ -71,17 +71,22 @@ def record_delta(db, mode, args, settings_path):
     _safely_record(db, _record_delta, mode, args, settings_path)
 
 
-def _record_independent_victory(db, mode, settings_path):
+def _record_independent_victory(db, mode, settings_path, active_match_pending=False):
     _schema(db)
     if _enabled(settings_path):
         match = str(uuid.uuid4())
-        _append(db, match, mode, 'start')
-        _append(db, match, mode, 'victory')
+        if active_match_pending:
+            # A separate start would make older servers abandon the still-open
+            # primary defense. The server applies this as one atomic result.
+            _append(db, match, mode, 'defense_extra_victory')
+        else:
+            _append(db, match, mode, 'start')
+            _append(db, match, mode, 'victory')
 
 
-def record_independent_victory(db, mode, settings_path):
+def record_independent_victory(db, mode, settings_path, *, active_match_pending=False):
     """Queue a complete inferred encounter without replacing an active one."""
-    _safely_record(db, _record_independent_victory, mode, settings_path)
+    _safely_record(db, _record_independent_victory, mode, settings_path, active_match_pending)
 
 
 def record_correction(db, mode, settings_path):

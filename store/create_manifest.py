@@ -5,6 +5,7 @@ from pathlib import Path
 import re
 from xml.sax.saxutils import escape, quoteattr
 from PIL import Image
+from check_release_version import validate_store_version
 
 p = argparse.ArgumentParser()
 p.add_argument('--package-dir', required=True, type=Path)
@@ -20,9 +21,10 @@ languages = sorted({'fr', *(pack['html_lang'] for pack in packs.values())})
 resources = ''.join('<Resource Language=' + quoteattr(language) + ' />' for language in languages)
 if not re.fullmatch(r'[A-Za-z0-9.-]{3,50}', a.identity):
     p.error('Invalid package identity')
-parts = a.version.split('.')
-if len(parts) != 4 or any(not x.isdigit() or int(x) > 65535 for x in parts) or parts[-1] != '0':
-    p.error('Store version must contain four numbers, with revision 0')
+try:
+    validate_store_version(a.version)
+except ValueError as error:
+    p.error(str(error))
 if not a.publisher.startswith('CN='):
     p.error('Publisher must be the exact Partner Center publisher subject')
 assets = a.package_dir / 'Assets'

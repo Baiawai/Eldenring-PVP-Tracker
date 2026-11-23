@@ -26,7 +26,7 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 from urllib.error import HTTPError, URLError
 from flask import jsonify, request
 from __main__ import app
-from application import init, mode_stats, leaderboard_baseline, network_retry
+from application import init, mode_stats, leaderboard_baseline, network_retry, game_language
 from application.runtime_paths import FROZEN, STORE_BUILD, data_dir
 from application.secur import decrypt_value
 import win32crypt
@@ -42,7 +42,12 @@ _RETRY_ATTEMPT = 0
 _RETRY_GENERATION = 0
 _SERVER_RETRY_UNTIL = 0.0
 _LAST_SYNC_START = None
+_LAST_SYNC_FINISH = None
 _SYNC_INTERVAL_SECONDS = 10
+_PERIODIC_INTERVAL_SECONDS = 600
+_PERIODIC_WAKE = threading.Event()
+_PERIODIC_START_LOCK = threading.Lock()
+_PERIODIC_STARTED = False
 _STATUS = {'state': 'idle'}
 _DEFAULT_BASE_URL = 'https://eldenringpvp.com'
 _LANGUAGE_SYNC_REQUIRED = False
@@ -296,6 +301,19 @@ def _call(method, path, data=None, token=None, root=None, extra_headers=None):
         raise
 
 
+def send_tracker_activity():
+    """Publish activity only for an enabled, already linked leaderboard account."""
+    with _LOCK:
+        enabled, ident, encrypted, pending, server = _settings()
+        root = _base_url()
+        if (not enabled or pending or not ident or not encrypted or not root or server != root
+                or _login_cancel_pending()):
+            return False
+        token = _stored_token(root)
+        _call('POST', '/api/v1/profile/activity', token=token, root=root)
+        return True
+
+
 def _profile():
     profile = init.load_user()[0]
     name = str(profile[1]).strip()
@@ -329,7 +347,8 @@ def _profile():
                 avatar = 'data:image/jpeg;base64,' + base64.b64encode(output.getvalue()).decode('ascii') if output.tell() <= 200_000 else None
     except (ValueError, TypeError, OSError, UnidentifiedImageError, Image.DecompressionBombError):
         avatar = None
-    language = str(profile[5] or '').strip()
+    locale = game_language.selected(str(profile[5] or '').strip())
+    language = next((code for code, value in game_language.UI_TO_GAME.items() if value == locale), None)
     return {'name': name, 'level': level, 'avatar': avatar, 'language': language if language in _LANGUAGES else None, 'event_protocol': 1}
 
 
@@ -497,6 +516,21 @@ def _send_events(root, token, baseline_only=False):
             events = [{'event_id':row[0], 'match_id':row[1], 'mode':decrypt_value(row[2]).decode('utf-8'), 'kind':decrypt_value(row[3]).decode('utf-8'), 'occurred_at':decrypt_value(row[4]).decode('utf-8')} for row in rows]
         except Exception as error:
             raise ValueError('event_conflict') from error
+        if any(event['kind'] == 'defense_extra_victory' for event in events):
+            # Older servers interpret a new match as abandoning the current
+            # defense. Never submit the new atomic event without an explicit
+            # capability; leave this ordered batch untouched until supported.
+            try:
+                status = _remote_steam_status(root, token)
+            except HTTPError as error:
+                if error.code in (404, 405, 426):
+                    raise ValueError('server_update_required') from error
+                raise
+            if not isinstance(status, dict):
+                raise ValueError('server_update_required')
+            capabilities = status.get('capabilities')
+            if not isinstance(capabilities, list) or 'defense_extra_victory' not in capabilities:
+                raise ValueError('server_update_required')
         try:
             result = _call('POST', '/api/v1/events', {'events':events}, token, root=root)
         except HTTPError as error:
@@ -741,7 +775,7 @@ def _tracking_module():
 
 @app.route('/online-leaderboard/migrate-server', methods=['POST'])
 def online_leaderboard_migrate_server():
-    global _LAST_SYNC_START, _LANGUAGE_SYNC_REQUIRED
+    global _LAST_SYNC_START, _LAST_SYNC_FINISH, _LANGUAGE_SYNC_REQUIRED
     if not FROZEN:
         return jsonify(error='not_available'), 404
     data = request.get_json(silent=True)
@@ -770,6 +804,7 @@ def online_leaderboard_migrate_server():
                     pass
                 leaderboard_migration.migrate(_database(), init.database_user, _DEFAULT_BASE_URL)
                 _LAST_SYNC_START = None
+                _LAST_SYNC_FINISH = None
                 _LANGUAGE_SYNC_REQUIRED = False
                 _STATUS['state'] = 'disabled'
                 return jsonify(ok=True)
@@ -1042,26 +1077,110 @@ def online_leaderboard_steam_recovery():
 
 
 def _retry_scheduled(expected_ident, expected_token, generation):
+    global _SCHEDULED_RETRY, _RETRY_GENERATION
+    with _START_LOCK:
+        if generation != _RETRY_GENERATION:
+            return
+        try:
+            enabled, ident, encrypted, pending, _ = _settings()
+            if not enabled or pending or ident != expected_ident or encrypted != expected_token:
+                _SCHEDULED_RETRY = None
+                _RETRY_GENERATION += 1
+                return
+            # Keep the identity check, cooldown and new worker start atomic.
+            # A manual start either invalidates this timer first, or sees the
+            # worker already running; it cannot finish in between these steps.
+            _SCHEDULED_RETRY = None
+            state = _start_sync_locked(rate_limit=True)
+            if state == 'rate_limited':
+                now = time.monotonic()
+                delay = _sync_cooldown_remaining_locked(now)
+                _schedule_retry_locked(expected_ident, expected_token, generation, delay)
+            else:
+                # The retry is consumed or another worker already covers it.
+                _RETRY_GENERATION += 1
+        except Exception:
+            # A transient local database failure must not silently lose the retry.
+            app.logger.exception('Unable to start scheduled leaderboard retry')
+            _schedule_retry_locked(expected_ident, expected_token, generation, 60)
+
+
+def _schedule_retry_locked(ident, token, generation, delay):
+    """Re-arm a retry under _START_LOCK without shortening a server cooldown."""
     global _SCHEDULED_RETRY
+    # Recheck exceptionally long server cooldowns at most once per day.
+    delay = min(86400, max(0.001, delay)) if math.isfinite(delay) else 86400
+    timer = threading.Timer(delay, _retry_scheduled, args=(ident, token, generation))
+    timer.daemon = True
+    timer.start()
+    _SCHEDULED_RETRY = timer
+
+
+def _retry_after_local_failure(generation):
+    """Retry a failed local worker, including outstanding privacy operations."""
+    global _SCHEDULED_RETRY, _RETRY_GENERATION
     with _START_LOCK:
         if generation != _RETRY_GENERATION:
             return
         _SCHEDULED_RETRY = None
-    enabled, ident, encrypted, pending, _ = _settings()
-    if enabled and not pending and ident == expected_ident and encrypted == expected_token:
-        start_sync()
+        try:
+            state = _start_sync_locked(rate_limit=True)
+            if state == 'rate_limited':
+                _schedule_local_retry_locked(generation, _sync_cooldown_remaining_locked(time.monotonic()))
+            else:
+                _RETRY_GENERATION += 1
+        except Exception:
+            app.logger.exception('Unable to retry leaderboard synchronization after local failure')
+            _schedule_local_retry_locked(generation, 60)
+
+
+def _schedule_local_retry_locked(generation, delay):
+    global _SCHEDULED_RETRY
+    delay = min(86400, max(0.001, delay)) if math.isfinite(delay) else 86400
+    timer = threading.Timer(delay, _retry_after_local_failure, args=(generation,))
+    timer.daemon = True
+    timer.start()
+    _SCHEDULED_RETRY = timer
 
 
 def _worker():
-    global _RUNNING, _LANGUAGE_SYNC_REQUIRED, _SCHEDULED_RETRY, _RETRY_ATTEMPT, _RETRY_GENERATION, _SERVER_RETRY_UNTIL
+    global _RUNNING, _LAST_SYNC_FINISH, _RETRY_GENERATION
+    try:
+        _worker_impl()
+    except Exception:
+        app.logger.exception('Unexpected local leaderboard synchronization failure')
+        with _START_LOCK:
+            _RUNNING = False
+            _LAST_SYNC_FINISH = time.monotonic()
+            if _STATUS['state'] not in ('delete_pending', 'steam_cancel_pending', 'steam_remove_pending', 'language_remove_pending'):
+                _STATUS['state'] = 'offline'
+            _PERIODIC_WAKE.set()
+            if _SCHEDULED_RETRY is None:
+                _RETRY_GENERATION += 1
+                try:
+                    _schedule_local_retry_locked(_RETRY_GENERATION, 60)
+                except Exception:
+                    # The periodic scheduler can still try again later.
+                    app.logger.exception('Unable to schedule local leaderboard retry')
+
+
+def _worker_impl():
+    global _RUNNING, _LANGUAGE_SYNC_REQUIRED, _SCHEDULED_RETRY, _RETRY_ATTEMPT, _RETRY_GENERATION, _SERVER_RETRY_UNTIL, _LAST_SYNC_FINISH
     while True:
         with _START_LOCK:
             _LANGUAGE_SYNC_REQUIRED = False
         result = _sync()
         if _STATUS['state'] == 'baseline_wait' and _settings()[0]:
-            # The first snapshot must include an already running fight. Retry
-            # after it finishes, even when the settings page is closed.
-            time.sleep(2)
+            # Wait locally while a fight prevents the first snapshot. Repeating
+            # _sync here would contact Steam and resend consent every two seconds.
+            # Pending privacy operations must still run without waiting for it.
+            while True:
+                time.sleep(2)
+                tracking = sys.modules.get('application.functions')
+                enabled, _, _, pending, _ = _settings()
+                if (not enabled or not _event_permission() or pending or _login_cancel_pending() or _language_remove_pending()
+                        or _steam_settings()[1] or not bool(getattr(tracking, 'fight', False))):
+                    break
             continue
         with _START_LOCK:
             # A withdrawal during upload must be handled even if no browser
@@ -1075,7 +1194,9 @@ def _worker():
             if _LANGUAGE_SYNC_REQUIRED and (_settings()[0] or (_steam_settings()[1] and result != 'steam_delete_failed') or (_language_remove_pending() and result != 'language_delete_failed')):
                 _STATUS['state'] = 'syncing'
                 continue
+            _LAST_SYNC_FINISH = time.monotonic()
             _RUNNING = False
+            _PERIODIC_WAKE.set()
             if isinstance(result, tuple) and result[0] == 'retry_transient':
                 _, retry_after, ident, encrypted = result
                 if retry_after is not None:
@@ -1085,48 +1206,106 @@ def _worker():
                     delay = max(retry_after or 0, min(900, 30 * (2 ** min(_RETRY_ATTEMPT, 5))) * random.uniform(0.8, 1.2))
                     _RETRY_ATTEMPT += 1
                     _RETRY_GENERATION += 1
-                    _SCHEDULED_RETRY = threading.Timer(delay, _retry_scheduled, args=(ident, encrypted, _RETRY_GENERATION))
-                    _SCHEDULED_RETRY.daemon = True
-                    _SCHEDULED_RETRY.start()
+                    _schedule_retry_locked(ident, encrypted, _RETRY_GENERATION, delay)
             else:
                 _RETRY_ATTEMPT = 0
             return
 
 
-def start_sync(rate_limit=False):
-    global _RUNNING, _LAST_SYNC_START, _SCHEDULED_RETRY, _RETRY_GENERATION
+def start_sync(rate_limit=False, *, periodic=False):
     with _START_LOCK:
-        enabled, _, _, pending, _ = _settings()
-        steam_pending = _steam_settings()[1]
-        language_pending = _language_remove_pending()
-        cancel_pending = _login_cancel_pending()
-        if not enabled and not pending and not steam_pending and not language_pending and not cancel_pending:
-            return 'disabled'
-        if _RUNNING:
-            return 'syncing'
-        now = time.monotonic()
-        if not pending and not steam_pending and not language_pending and not cancel_pending and now < _SERVER_RETRY_UNTIL:
-            return 'rate_limited'
-        if rate_limit and not pending and not steam_pending and not language_pending and not cancel_pending and _LAST_SYNC_START is not None and now - _LAST_SYNC_START < _SYNC_INTERVAL_SECONDS:
-            return 'rate_limited'
-        if _SCHEDULED_RETRY is not None:
-            _SCHEDULED_RETRY.cancel()
-            _SCHEDULED_RETRY = None
-            _RETRY_GENERATION += 1
-        if not pending:
-            _LAST_SYNC_START = now
-        _RUNNING = True
-        _STATUS['state'] = 'syncing'
+        return _start_sync_locked(rate_limit=rate_limit, periodic=periodic)
+
+
+def _start_sync_locked(rate_limit=False, *, periodic=False):
+    """Apply synchronization gates while the caller holds _START_LOCK."""
+    global _RUNNING, _LAST_SYNC_START, _SCHEDULED_RETRY, _RETRY_GENERATION
+    enabled, _, _, pending, _ = _settings()
+    steam_pending = _steam_settings()[1]
+    language_pending = _language_remove_pending()
+    cancel_pending = _login_cancel_pending()
+    if not enabled and not pending and not steam_pending and not language_pending and not cancel_pending:
+        return 'disabled'
+    if _RUNNING:
+        return 'syncing'
+    now = time.monotonic()
+    if not pending and not steam_pending and not language_pending and not cancel_pending and now < _SERVER_RETRY_UNTIL:
+        return 'rate_limited'
+    last_activity = max((stamp for stamp in (_LAST_SYNC_START, _LAST_SYNC_FINISH) if stamp is not None), default=None)
+    if rate_limit and not pending and not steam_pending and not language_pending and not cancel_pending and last_activity is not None and now - last_activity < _SYNC_INTERVAL_SECONDS:
+        return 'rate_limited'
+    # A periodic tick must not shorten a previously scheduled retry's backoff.
+    if periodic and _SCHEDULED_RETRY is not None and not pending and not steam_pending and not language_pending and not cancel_pending:
+        return 'retry_scheduled'
+    previous_start = _LAST_SYNC_START
+    previous_state = _STATUS['state']
+    if not pending:
+        _LAST_SYNC_START = now
+    _RUNNING = True
+    _STATUS['state'] = 'syncing'
+    try:
         threading.Thread(target=_worker, daemon=True).start()
-        return _STATUS['state']
+    except Exception:
+        _RUNNING = False
+        _LAST_SYNC_START = previous_start
+        _STATUS['state'] = previous_state
+        raise
+    # The new worker waits on _START_LOCK before doing work, so an existing
+    # retry can be cancelled only after the thread has actually started.
+    if _SCHEDULED_RETRY is not None:
+        _SCHEDULED_RETRY.cancel()
+        _SCHEDULED_RETRY = None
+        _RETRY_GENERATION += 1
+    return _STATUS['state']
+
+
+def _sync_cooldown_remaining_locked(now):
+    last_activity = max((stamp for stamp in (_LAST_SYNC_START, _LAST_SYNC_FINISH) if stamp is not None), default=None)
+    local_wait = 0 if last_activity is None else max(0, _SYNC_INTERVAL_SECONDS - (now - last_activity))
+    return max(local_wait, _SERVER_RETRY_UNTIL - now)
 
 
 def sync_cooldown_remaining_ms():
     with _START_LOCK:
         now = time.monotonic()
-        local_wait = 0 if _LAST_SYNC_START is None else max(0, _SYNC_INTERVAL_SECONDS - (now - _LAST_SYNC_START))
-        remaining = max(local_wait, _SERVER_RETRY_UNTIL - now)
+        remaining = _sync_cooldown_remaining_locked(now)
         return 86400000 if not math.isfinite(remaining) else max(0, math.ceil(remaining * 1000))
+
+
+def _periodic_tick():
+    """Use the same gate as a manual refresh, preserving scheduled retries."""
+    return start_sync(rate_limit=True, periodic=True)
+
+
+def _periodic_worker():
+    next_due = time.monotonic() + _PERIODIC_INTERVAL_SECONDS
+    while True:
+        with _START_LOCK:
+            if _LAST_SYNC_FINISH is not None:
+                next_due = max(next_due, _LAST_SYNC_FINISH + _PERIODIC_INTERVAL_SECONDS)
+            delay = max(0, next_due - time.monotonic())
+        if _PERIODIC_WAKE.wait(delay):
+            _PERIODIC_WAKE.clear()
+            continue
+        try:
+            _periodic_tick()
+        except Exception:
+            app.logger.exception('Unable to start periodic leaderboard synchronization')
+            # Transient local failures must not kill the scheduler or spin.
+            next_due = time.monotonic() + 60
+        else:
+            next_due = time.monotonic() + _PERIODIC_INTERVAL_SECONDS
+
+
+def start_periodic_sync():
+    """Start once for this tracker process, even with no browser open."""
+    global _PERIODIC_STARTED
+    with _PERIODIC_START_LOCK:
+        if _PERIODIC_STARTED:
+            return
+        thread = threading.Thread(target=_periodic_worker, name='leaderboard-periodic-sync', daemon=True)
+        thread.start()
+        _PERIODIC_STARTED = True
 
 
 @app.route('/online-leaderboard/sync', methods=['POST'])
@@ -1146,13 +1325,20 @@ def online_leaderboard_entries():
     if mode not in mode_stats.MODES:
         return jsonify(error='invalid_mode'), 400
     try:
+        # Older cached front ends do not send a page size and expect five rows.
+        per_page = int(request.args.get('per_page', '5'))
+    except (TypeError, ValueError):
+        return jsonify(error='invalid_request'), 400
+    if per_page not in (5, 10, 20):
+        return jsonify(error='invalid_request'), 400
+    try:
         page = max(1, min(int(request.args.get('page', '1')), 1000000))
         search = request.args.get('search', '')
         sort = request.args.get('sort', 'rank')
         direction = request.args.get('direction', 'asc')
         if len(search) > 80 or sort not in ('rank', 'language', 'name', 'level', 'score', 'victory', 'defeat', 'egality', 'ratio', 'combats') or direction not in ('asc', 'desc'):
             return jsonify(error='invalid_request'), 400
-        query = urlencode({'mode': mode, 'per_page': 5, 'page': page, 'search': search, 'sort': sort, 'direction': direction})
+        query = urlencode({'mode': mode, 'per_page': per_page, 'page': page, 'search': search, 'sort': sort, 'direction': direction})
         return jsonify(_call('GET', '/api/v1/leaderboards?' + query))
     except Exception:
         return jsonify(error='unavailable'), 503

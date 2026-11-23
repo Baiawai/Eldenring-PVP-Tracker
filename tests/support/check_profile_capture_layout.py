@@ -18,7 +18,7 @@ with socket.socket() as sock:
     port = sock.getsockname()[1]
 with tempfile.TemporaryDirectory(prefix='tracker-profile-layout-', ignore_cleanup_errors=True) as directory:
     env = os.environ.copy()
-    env.update(APPDATA=directory, TRACKER_TEST_PORT=str(port))
+    env.update(APPDATA=directory, LOCALAPPDATA=directory, TRACKER_TEST_PORT=str(port), TRACKER_TEST_NO_STEAM='1')
     server = subprocess.Popen([sys.executable, str(ROOT / 'tests/support/browser_server.py')], cwd=ROOT, env=env,
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -86,8 +86,53 @@ with tempfile.TemporaryDirectory(prefix='tracker-profile-layout-', ignore_cleanu
                         assert page.locator('#saved_profile_avatar').get_attribute('src').endswith(saved_profile['avatar'])
                         assert page.locator('#profile_capture_cancel').is_visible()
                         assert page.locator('#profile_capture_save').is_hidden()
+                        guide = page.locator('#profile_capture_instructions.profile-capture-guide')
+                        assert guide.is_visible()
+                        steps = guide.locator('ol.profile-guide-steps > li')
+                        assert steps.count() == 5
+                        figures = guide.locator('figure.profile-guide-visual')
+                        captions = figures.locator('figcaption')
+                        assert figures.count() == 2 and captions.count() == 2
+                        assert all(caption.is_visible() for caption in captions.all())
+                        assert page.locator('#profile_capture_status').inner_text().strip()
+                        languages = ['fra'] + page.evaluate('() => Object.keys(window.ELDEN_UI_PACKS)')
+                        assert len(languages) == 30 and len(set(languages)) == 30
+                        keys = ['profile_guide_step_' + str(number) for number in range(1, 6)] + ['profile_guide_menu_visual_label', 'profile_guide_profile_visual_label']
+                        for language in languages:
+                            page.evaluate('(code) => uiApplyLanguage(code)', language)
+                            expected = page.evaluate('''([code, keys]) => keys.map(key => code === 'fra'
+                                ? document.querySelector('#profile_capture_instructions [data-i18n="' + key + '"]').dataset.i18nFr
+                                : window.ELDEN_UI_PACKS[code].modern[key])''', [language, keys])
+                            actual = steps.all_text_contents() + captions.all_text_contents()
+                            assert all(isinstance(value, str) and value.strip() for value in expected), (width, language, expected)
+                            assert [value.strip() for value in actual] == [value.strip() for value in expected], (width, language, actual, expected)
+                            assert guide.evaluate('(node) => node.scrollWidth <= node.clientWidth + 2'), (width, language, 'guide overflow')
+                            for step in steps.all():
+                                assert step.evaluate('(node) => parseFloat(getComputedStyle(node).fontSize)') >= 18, (width, language)
+                        page.evaluate("uiApplyLanguage('fra')")
+                        screenshot_dir = os.environ.get('TRACKER_PROFILE_SCREENSHOT_DIR')
+                        if screenshot_dir:
+                            guide.screenshot(path=str(Path(screenshot_dir) / ('profile-guide-' + str(width) + '.png')))
+                        for index, caption in enumerate(captions.all(), start=1):
+                            caption.scroll_into_view_if_needed()
+                            assert caption.evaluate('''node => {
+                                const rect = node.getBoundingClientRect();
+                                if (rect.top < 0 || rect.bottom > innerHeight) return false;
+                                for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+                                    if (/(auto|scroll|hidden|clip)/.test(getComputedStyle(parent).overflowY)) {
+                                        const bounds = parent.getBoundingClientRect();
+                                        if (rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1) return false;
+                                    }
+                                }
+                                return true;
+                            }'''), (width, index, 'The visual caption cannot be reached by scrolling')
+                            assert figures.nth(index - 1).locator('svg').count() == 1
+                            if screenshot_dir:
+                                figures.nth(index - 1).screenshot(
+                                    path=str(Path(screenshot_dir) / ('profile-guide-visual-' + str(index) + '-' + str(width) + '.png')))
                         ready[0] = True
                         page.locator('#profile_capture_preview').wait_for(state='visible', timeout=7000)
+                        assert guide.is_hidden(), 'The instructions must not obscure the review'
                         cancel, save = page.locator('#profile_capture_cancel'), page.locator('#profile_capture_save')
                         assert save.is_visible() and cancel.is_visible()
                         c, s = cancel.bounding_box(), save.bounding_box()
@@ -129,7 +174,10 @@ with tempfile.TemporaryDirectory(prefix='tracker-profile-layout-', ignore_cleanu
                         if screenshot_dir:
                             page.locator('.contente_settings[setting="3"]').screenshot(
                                 path=str(Path(screenshot_dir) / ('profile-saved-' + str(width) + '.png')))
+                        ready[0] = False
                         page.evaluate('window.openProfileCapture()')
+                        assert guide.is_visible() and save.is_hidden(), 'Restart must restore the guide before a capture'
+                        ready[0] = True
                         page.locator('#profile_capture_preview').wait_for(state='visible', timeout=7000)
                         fail_save[0] = True
                         save.click()
@@ -181,13 +229,15 @@ with tempfile.TemporaryDirectory(prefix='tracker-profile-layout-', ignore_cleanu
                 cached.add_script_tag(path=str(ROOT / 'static/ui-packs.js'))
                 cached.add_script_tag(path=str(ROOT / 'static/ui-i18n.js'))
                 instructions = cached.locator('#profile_capture_instructions')
-                assert instructions.get_attribute('data-i18n') == 'profile_step_menu'
-                for language in ['eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
+                assert instructions.locator('ol.profile-guide-steps > li').count() == 5
+                assert instructions.locator('figure.profile-guide-visual').count() == 2
+                for language in cached.evaluate('() => Object.keys(window.ELDEN_UI_PACKS)'):
                     cached.evaluate('(code) => uiApplyLanguage(code)', language)
-                    expected = cached.evaluate('(code) => ELDEN_UI_PACKS[code].modern.profile_step_menu', language)
-                    assert instructions.text_content() == expected, language
+                    for key in ['profile_guide_step_' + str(number) for number in range(1, 6)] + ['profile_guide_menu_visual_label', 'profile_guide_profile_visual_label']:
+                        expected = cached.evaluate('([code, key]) => ELDEN_UI_PACKS[code].modern[key]', [language, key])
+                        assert instructions.locator('[data-i18n="' + key + '"]').text_content() == expected, (language, key)
                 cached.evaluate("uiApplyLanguage('fra')")
-                assert 'Quitter la partie' in instructions.text_content()
+                assert instructions.locator('ol.profile-guide-steps > li').count() == 5
                 cached.close()
             finally:
                 browser.close()

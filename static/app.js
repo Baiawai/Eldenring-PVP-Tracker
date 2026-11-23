@@ -1,3 +1,71 @@
+// Adapt a running server's cached settings template before binding the tabs.
+(function () {
+    const nav = document.querySelector('.contente_header_settings');
+    const parent = document.querySelector('.cadre_settings_sub');
+    if (!nav || !parent) return;
+    if (!nav.querySelector('[menu="8"]')) {
+        const tab = document.createElement('button');
+        tab.type = 'button'; tab.className = 'btn_menu_settings overlay-settings-tab';
+        tab.setAttribute('menu', '8');
+        tab.dataset.i18nTitle = tab.dataset.i18nAria = 'settings_overlay_section';
+        tab.dataset.i18nTitleFr = tab.dataset.i18nAriaFr = 'Overlay en jeu';
+        tab.title = window.uiT ? window.uiT('settings_overlay_section', 'Overlay en jeu') : 'Overlay en jeu';
+        tab.setAttribute('aria-label', tab.title);
+        const icon = document.createElement('img'); icon.src = '/static/icon-overlay-bronze.svg'; icon.alt = '';
+        tab.appendChild(icon);
+        nav.insertBefore(tab, nav.querySelector('[menu="3"]'));
+    }
+    let section = parent.querySelector('.contente_settings[setting="8"]');
+    if (!section) {
+        section = document.createElement('section');
+        section.className = 'contente_settings hide overlay-settings'; section.setAttribute('setting', '8');
+        section.dataset.i18nAria = 'settings_overlay_section'; section.dataset.i18nAriaFr = 'Overlay en jeu';
+        section.setAttribute('aria-label', window.uiT ? window.uiT('settings_overlay_section', 'Overlay en jeu') : 'Overlay en jeu');
+        const control = document.getElementById('game_overlay_enabled');
+        if (control) section.appendChild(control.closest('.form_single'));
+        else section.innerHTML = '<div class="form_single"><label class="form_single_left" for="game_overlay_enabled" data-i18n="game_overlay_enabled" data-i18n-fr="Overlay en jeu">Overlay en jeu</label><div class="form_single_right"><input type="checkbox" id="game_overlay_enabled" disabled><span id="game_overlay_status" role="status" aria-live="polite"></span></div></div>';
+        parent.insertBefore(section, parent.querySelector('.contente_settings[setting="3"]'));
+    }
+    // Keep the data tab available with an older server-cached template too.
+    if (!nav.querySelector('[menu="9"]')) {
+        const tab = document.createElement('button');
+        tab.type = 'button'; tab.className = 'btn_menu_settings data-settings-tab';
+        tab.setAttribute('menu', '9');
+        tab.dataset.i18nTitle = tab.dataset.i18nAria = 'settings_tab_data';
+        tab.dataset.i18nTitleFr = tab.dataset.i18nAriaFr = 'Données du tracker';
+        tab.title = window.uiT ? window.uiT('settings_tab_data', 'Données du tracker') : 'Données du tracker';
+        tab.setAttribute('aria-label', tab.title);
+        const icon = document.createElement('img'); icon.src = '/static/icon-data-bronze.svg'; icon.alt = '';
+        tab.appendChild(icon);
+        nav.insertBefore(tab, nav.querySelector('[menu="6"]'));
+    }
+    if (!parent.querySelector('.contente_settings[setting="9"]')) {
+        const dataSection = document.createElement('section');
+        dataSection.className = 'contente_settings hide data-settings';
+        dataSection.setAttribute('setting', '9');
+        dataSection.dataset.i18nAria = 'settings_tab_data';
+        dataSection.dataset.i18nAriaFr = 'Données du tracker';
+        dataSection.setAttribute('aria-label', window.uiT ? window.uiT('settings_tab_data', 'Données du tracker') : 'Données du tracker');
+        parent.insertBefore(dataSection, parent.querySelector('.contente_settings[setting="6"]'));
+    }
+    const dataSettings = parent.querySelector('.contente_settings[setting="9"]');
+    ['retention_captures', 'retention_steam'].forEach(function (id) {
+        const select = document.getElementById(id);
+        const row = select && select.closest('.form_single');
+        if (!row || dataSettings.contains(row)) return;
+        const container = document.createElement('div');
+        container.className = 'data-retention-row';
+        container.dataset.retentionKind = id;
+        container.appendChild(row);
+        dataSettings.insertBefore(container, dataSettings.firstChild);
+    });
+    // A template cached before the overlay existed has no script tag for it.
+    document.addEventListener('DOMContentLoaded', function () {
+        if (document.querySelector('script[src*="/overlay-settings.js"]')) return;
+        const script = document.createElement('script'); script.src = '/static/overlay-settings.js'; document.body.appendChild(script);
+    }, {once:true});
+})();
+
 // Keep graph labels as readable as the rest of the interface.
 Chart.defaults.font.size = 18;
 
@@ -293,6 +361,7 @@ function startPreviewPolling() {
 
 const TRACKING_POLL_INTERVAL_MS = 1000;
 let trackingPollInFlight = false;
+let trackingEventsCursor = 0;
 var runApp = setInterval(intervall, TRACKING_POLL_INTERVAL_MS);
 clearInterval(runApp);
 var interface_en = window.interface_en;
@@ -389,8 +458,9 @@ var days_active = "";
 // Ignore late translation responses after the user changes languages again.
 function createTableLanguageSetter(jquery) {
     const files = {fra:'fra', spa:'spa', spaes:'spa', spaar:'spa', ita:'ita', deu:'deu',
-        rus:'rus', jap:'jap', chi:'chi', por:'por', nld:'nld', nor:'nor', fin:'fin',
-        dan:'dan', tur:'tur', kor:'kor', ell:'ell', pol:'pol', ces:'ces', ron:'ron',
+        rus:'rus', jap:'jap', chi:'chi', por:'por', ptpt:'por', nld:'nld', nor:'nor', fin:'fin', swe:'swe',
+        ukr:'ukr', ind:'ind', vie:'vie', hin:'hin',
+        dan:'dan', tur:'tur', kor:'kor', ell:'ell', pol:'pol', ces:'ces', ron:'ron', hun:'hun',
         ara:'ara', heb:'heb', zht:'zht', tha:'tha'};
     let generation = 0;
     function apply(data) {
@@ -953,7 +1023,7 @@ function intervall(){
     $.ajax({
         url: "/interval",
         type :"GET",
-        headers: {'X-Tracker-Light': '1'},
+        headers: {'X-Tracker-Light': '1', 'X-Tracker-Events-After': String(trackingEventsCursor)},
         contentType: "application/json"
         , success: function(response){
             if (requestedPreviewStatusVersion === previewStatusVersion && response.monitor_running === true && typeof response.gameDetected === 'boolean') {
@@ -1098,7 +1168,7 @@ function intervall(){
                 }
                 if (isSearchStart) text_list[i] = entry.slice(startMarker.length);
                 last_msg = $('.cadreStats p:last-child').text();
-                if(text_list[i] != tampo_text && last_msg != text_list[i]){
+                if(Number.isSafeInteger(response.events_cursor) || (text_list[i] != tampo_text && last_msg != text_list[i])){
                     tampo_text = text_list[i];
                     if(text_list[i].indexOf("Let's gooo !") != -1){
                         lets_go = true;
@@ -1191,6 +1261,9 @@ function intervall(){
 
             }
             last_msg = $('.cadreStats p:last-child').text();
+            if (Number.isSafeInteger(response.events_cursor) && response.events_cursor >= trackingEventsCursor) {
+                trackingEventsCursor = response.events_cursor;
+            }
             setTimeout(function() {
                 $('.cadreStats').scrollTop($('.cadreStats')[0].scrollHeight);
             }, 0);
@@ -1269,6 +1342,9 @@ function markLiveCaptureTime(card, originalLabel) {
 }
 document.addEventListener('ui-language-change', function() {
     document.querySelectorAll('.para_capture[data-capture-caption]').forEach(renderCaptureCaption);
+    document.querySelectorAll('.capture-viewer-unavailable').forEach(message => {
+        message.textContent = appT('capture_viewer_title', 'Capture agrandie') + ' : ' + appT('capture_display_unavailable', 'indisponible');
+    });
 });
 // The event journal shows this detail; the capture title already renders it.
 function captureDuration(value) {
@@ -1676,12 +1752,54 @@ $(function() {
 });
 
 let captureViewerIndex = -1;
+let captureViewerPlayer = null;
 
 function visibleCaptureCards() {
     return $('.captures-panel .para_capture:visible').toArray();
 }
 
 function showCaptureViewer(index) {
+    if (captureViewerPlayer) {
+        const refs = captureViewerPlayer;
+        if (index < 0 || index >= refs.length) return;
+        captureViewerIndex = index;
+        $('.capture-viewer-card').remove();
+        const ref = refs[index];
+        const classes = {victory:'victory_text', defeat:'defeat_text', draw:'egality_text'};
+        const resultClass = classes[ref.outcome] || '';
+        const card = document.createElement('div');
+        card.className = 'para_capture capture-viewer-card ' + resultClass;
+        const caption = document.createElement('span');
+        const title = document.createElement('b');
+        const durationLabel = document.createElement('em');
+        durationLabel.className = 'capture-duration-label';
+        durationLabel.style.fontStyle = 'normal';
+        durationLabel.textContent = appT('time', 'Temps');
+        caption.append(title, document.createElement('br'), durationLabel, document.createTextNode(': ' + captureDuration(ref.duration)));
+        const frame = document.createElement('div');
+        frame.className = 'img';
+        const img = document.createElement('img');
+        img.alt = '';
+        img.addEventListener('error', () => {
+            if (!card.isConnected) return;
+            const message = document.createElement('div');
+            message.className = 'capture-viewer-unavailable';
+            message.textContent = appT('capture_viewer_title', 'Capture agrandie') + ' : ' + appT('capture_display_unavailable', 'indisponible');
+            frame.replaceChildren(message);
+        });
+        img.src = '/players/capture/' + ref.id;
+        frame.appendChild(img);
+        const posted = document.createElement('div');
+        posted.className = 'posted'; posted.textContent = String(ref.id);
+        const date = document.createElement('div');
+        date.className = 'datePosted'; date.textContent = ref.date || '';
+        card.append(caption, frame, posted, date);
+        rememberCaptureCaption(card, ref.mode, resultClass, ref.opponent || '', '');
+        $('#capture_viewer_overlay .capture-viewer-content').append(card);
+        $('.capture-viewer-prev').prop('disabled', index === 0);
+        $('.capture-viewer-next').prop('disabled', index === refs.length - 1);
+        return;
+    }
     const cards = visibleCaptureCards();
     if (index < 0 || index >= cards.length) return;
     captureViewerIndex = index;
@@ -1700,7 +1818,23 @@ function closeCaptureViewer() {
     $('.capture-viewer-card').remove();
     $('.capture_absolute_launch').removeClass('capture_absolute_launch');
     captureViewerIndex = -1;
+    captureViewerPlayer = null;
 }
+
+// Reuse the capture viewer with a player's complete, image-free reference
+// list. Images are fetched individually only when the viewer displays them.
+window.openPlayerCapture = function(refs, captureId) {
+    if (!Array.isArray(refs)) return false;
+    const items = refs.filter(ref => ref && Number.isSafeInteger(ref.id) && ref.id > 0);
+    const index = items.findIndex(ref => ref.id === captureId);
+    if (index < 0) return false;
+    closeCaptureViewer();
+    captureViewerPlayer = items;
+    showCaptureViewer(index);
+    $('#capture_viewer_overlay').prop('hidden', false);
+    $('#capture_viewer_overlay .capture-viewer-content').attr('tabindex', '-1').trigger('focus');
+    return true;
+};
 
 $(document).on('click', '.captures-panel .para_capture', function() {
     const index = visibleCaptureCards().indexOf(this);
@@ -1853,7 +1987,7 @@ function init(){
                     $(".panel_user p span").text(user[7]);
                 }
 
-                let langue_select = user[5];
+                let langue_select = window.selectedInterfaceLanguage || response.interface_language || user[5];
         
                 launchLanguages(langue_select);
 
@@ -2667,7 +2801,10 @@ $(window).on('load', function() {
         card.querySelector('span').textContent = t('onboarding_hint', 'Découvre comment préparer ta première capture.');
         dialog.querySelector('h3').textContent = t(headings[step][0], headings[step][1]);
         dialog.querySelector('.onboarding-description').textContent = t(descriptions[step][0], descriptions[step][1]);
-        dialog.querySelector('.onboarding-progress').textContent = (step + 1) + ' / ' + descriptions.length;
+        const progress = dialog.querySelector('.onboarding-progress');
+        // Keep the current/total order stable inside right-to-left languages.
+        progress.dir = 'ltr';
+        progress.textContent = (step + 1) + ' / ' + descriptions.length;
         previous.textContent = t('online_previous', 'Précédent');
         next.textContent = step === descriptions.length - 1 ? t('initialization_close', 'Fermer') : t('online_next', 'Suivant');
         close.setAttribute('aria-label', t('initialization_close', 'Fermer'));

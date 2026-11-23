@@ -228,9 +228,9 @@ def detection_history():
     where = ' WHERE ' + ' AND '.join(conditions) if conditions else ''
     with closing(_connect()) as con:
         rows = con.execute('SELECT id,recorded_at,mode,message,kind,metadata FROM detection_history' + where +
-                           ' ORDER BY id DESC LIMIT 51', params).fetchall()
+                           ' ORDER BY id DESC LIMIT 31', params).fetchall()
     events = []
-    for row in rows[:50]:
+    for row in rows[:30]:
         text = decrypt_value(row[3]).decode('utf-8')
         kind = row[4]
         if text.startswith("Let's gooo !"):
@@ -239,7 +239,7 @@ def detection_history():
         metadata = json.loads(decrypt_value(row[5]).decode('utf-8')) if row[5] else None
         events.append({'id':row[0], 'date':row[1], 'mode':event_mode, 'message':text,
                        'kind':kind, 'metadata':metadata})
-    return jsonify({'request':'success', 'events':events, 'has_more':len(rows)>50})
+    return jsonify({'request':'success', 'events':events, 'has_more':len(rows)>30})
 
 
 def read_steam_history():

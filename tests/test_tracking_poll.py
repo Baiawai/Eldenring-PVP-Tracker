@@ -13,7 +13,7 @@ class TrackingPollingTests(unittest.TestCase):
         source = (ROOT / 'static/app.js').read_text(encoding='utf-8')
         code = source[source.index('function intervall(){'):source.index('\nvar status_capture', source.index('function intervall(){'))]
         script = '''
-let trackingPollInFlight = false, previewStatusVersion = 0, calls = [];
+let trackingPollInFlight = false, previewStatusVersion = 0, trackingEventsCursor = 0, calls = [];
 const $ = {ajax: options => calls.push(options)};
 ''' + code + '''
 intervall(); intervall();

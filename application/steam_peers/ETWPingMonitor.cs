@@ -152,6 +152,24 @@ namespace SteamP2PInfo
             }
         }
 
+        // The rolling values are meaningful only after the sample window has
+        // filled. Until then do not report the default zero as a measurement.
+        public static bool TryGetStatistics(ulong netId, out double average, out double jitter)
+        {
+            lock (lockObj)
+            {
+                PingInfo info;
+                if (pings.TryGetValue(netId, out info) && info.cnt >= N_SAMPLES)
+                {
+                    average = info.avgPing;
+                    jitter = info.jitter;
+                    return true;
+                }
+            }
+            average = jitter = 0;
+            return false;
+        }
+
         /// <summary>
         /// Get [stun packet sent before reply]/[stun packets sent], as a percentage.
         /// </summary>

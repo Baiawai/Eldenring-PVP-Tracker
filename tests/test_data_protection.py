@@ -53,6 +53,8 @@ class DataProtectionTests(unittest.TestCase):
                 db.executemany('INSERT INTO detection_history VALUES (?, ?, NULL)', [(number, legacy.encrypt(str(number).encode())) for number in range(2, 47)])
                 db.execute('CREATE TABLE history_archive_events (archive_id INTEGER, original_id INTEGER, message BLOB, metadata BLOB, PRIMARY KEY (archive_id,original_id))')
                 db.execute('INSERT INTO history_archive_events VALUES (1, 1, ?, ?)', (legacy.encrypt(b'Archive'), None))
+                db.execute('CREATE TABLE steam_avatars (steam_key TEXT PRIMARY KEY, avatar BLOB, digest TEXT, updated_at INTEGER)')
+                db.execute('INSERT INTO steam_avatars VALUES (?, ?, ?, ?)', ('key', legacy.encrypt(b'avatar-base64'), 'digest', 1))
             with closing(sqlite3.connect(source / 'database_user.db')) as db, db:
                 db.execute('CREATE TABLE tabel_user (id INTEGER PRIMARY KEY, name TEXT)')
                 db.execute('INSERT INTO tabel_user VALUES (1, ?)', (legacy.encrypt(b'Personnage').decode('ascii'),))
@@ -68,6 +70,7 @@ class DataProtectionTests(unittest.TestCase):
                     message = db.execute('SELECT message FROM detection_history').fetchone()[0]
                     messages = db.execute('SELECT id,message FROM detection_history ORDER BY id').fetchall()
                     archive = db.execute('SELECT message FROM history_archive_events').fetchone()[0]
+                    avatar = db.execute('SELECT avatar FROM steam_avatars').fetchone()[0]
                 self.assertEqual(Fernet(key).decrypt(name[3:]).decode(), 'Joueur')
                 with self.assertRaises(InvalidToken):
                     legacy.decrypt(name[3:])
@@ -75,6 +78,7 @@ class DataProtectionTests(unittest.TestCase):
                 self.assertEqual(Fernet(key).decrypt(message[3:]), b'Victoire')
                 self.assertEqual([Fernet(key).decrypt(value[3:]) for ident, value in messages[1:]], [str(number).encode() for number in range(2, 47)])
                 self.assertEqual(Fernet(key).decrypt(archive[3:]), b'Archive')
+                self.assertEqual(Fernet(key).decrypt(avatar[3:]), b'avatar-base64')
                 with closing(sqlite3.connect(destination / 'database_user.db')) as db:
                     name_text = db.execute('SELECT name FROM tabel_user').fetchone()[0]
                 self.assertEqual(Fernet(key).decrypt(name_text[3:].encode()), b'Personnage')

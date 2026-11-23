@@ -8,6 +8,34 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 class InterfaceTranslationTests(unittest.TestCase):
+    def test_overlay_customization_labels_exist_in_all_languages(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        keys = ('overlay_custom_transparency', 'overlay_custom_background_color', 'overlay_custom_text_color',
+                'overlay_custom_text_size', 'overlay_custom_show_status', 'overlay_custom_show_mode',
+                'overlay_custom_show_peers', 'overlay_custom_show_event', 'overlay_custom_error',
+                'overlay_custom_load_error', 'overlay_group_appearance', 'overlay_group_content',
+                'overlay_group_players', 'overlay_group_cards', 'overlay_group_ping_colors',
+                'overlay_player_data_availability', 'overlay_player_count', 'overlay_avatar_label',
+                'overlay_steam_id', 'overlay_avatar_size', 'overlay_card_size', 'overlay_card_spacing',
+                'overlay_ping_good_color', 'overlay_ping_medium_color', 'overlay_ping_bad_color',
+                'steam_peer_connection_quality', 'steam_peer_quality_unknown', 'steam_peer_duration',
+                'steam_peer_ping_average', 'steam_peer_jitter', 'overlay_visibility_mode',
+                'overlay_visibility_capture', 'overlay_visibility_game_visible', 'overlay_visibility_always',
+                'overlay_visibility_help', 'overlay_capture_paused', 'overlay_border_radius',
+                'overlay_border_color', 'overlay_text_transparency')
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertTrue(all(pack['modern'][key].strip() for key in keys))
+
+    def test_overlay_event_labels_are_localized_in_every_pack(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertTrue(pack['modern']['overlay_last_event'].strip())
+                self.assertTrue(pack['modern']['overlay_no_event'].strip())
+        self.assertEqual(packs['eng']['modern']['overlay_last_event'], 'Latest event')
+        self.assertEqual(packs['jap']['modern']['overlay_no_event'], 'イベントは検出されていません')
+
     def test_main_template_accessible_labels_have_translations(self):
         class Labels(HTMLParser):
             missing = []
@@ -48,9 +76,15 @@ class InterfaceTranslationTests(unittest.TestCase):
             keys.update(re.findall(r"\b(?:uiSetStatus|appStatus)\(\s*(?:[^,()]|\([^()]*\))+,\s*['\"]([\w-]+)['\"]", source))
             keys.update(re.findall(r"\bsetStatus\(\s*['\"]([\w-]+)['\"]", source))
             keys.update(re.findall(r'data-online=["\']([\w-]+)["\']', source))
+            # Also cover labels created dynamically and cached-template patches.
+            keys.update(key for key in re.findall(
+                r"\.dataset\.i18n(?:Aria|Title|Placeholder)?\s*=\s*['\"]([\w-]+)['\"]", source)
+                if not key.endswith('_'))
+            keys.update(key for key in re.findall(r'data-i18n(?:-aria|-placeholder|-title)?=["\']([\w-]+)["\']', source)
+                        if not key.endswith('_'))
         html = (ROOT / 'templates/index.html').read_text(encoding='utf-8')
         keys.update(re.findall(r'data-i18n(?:-aria|-placeholder|-title)?="([\w-]+)"', html))
-        self.assertEqual(len(packs), 14)
+        self.assertTrue({'nld', 'tur', 'ukr', 'ces', 'ron', 'hun', 'ell', 'swe', 'dan', 'nor', 'fin', 'ind', 'vie', 'hin', 'ptpt'}.issubset(packs))
         for language, pack in packs.items():
             with self.subTest(language=language):
                 self.assertFalse(keys - set(pack['modern']))
@@ -74,6 +108,13 @@ class InterfaceTranslationTests(unittest.TestCase):
                 if key in pack['modern']:
                     with self.subTest(language=language, key=key):
                         self.assertEqual(placeholders(pack['modern'][key]), placeholders(english))
+
+    def test_invader_arrival_uses_one_player_name_in_every_language(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        self.assertEqual(packs['eng']['modern']['tracking_defending_against'], '{name} invaded your world.')
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertEqual(pack['modern']['tracking_defending_against'].count('{name}'), 1)
 
     def test_arabic_consent_preserves_pvp_acronym(self):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
@@ -111,17 +152,69 @@ class InterfaceTranslationTests(unittest.TestCase):
         self.assertTrue(source.startswith(prefix) and source.endswith(';'))
         self.assertEqual(backend, json.loads(source[len(prefix):-1]))
 
+    def test_overlay_encounter_count_is_translated_without_remote_notice(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertTrue(pack['modern']['overlay_encounter_count'].strip())
+        script = (ROOT / 'static/overlay-settings.js').read_text(encoding='utf-8')
+        self.assertIn("['show_player_stats', 'overlay_encounter_count'", script)
+        self.assertNotIn("privacy.dataset.i18n = 'overlay_rank_privacy_notice'", script)
+
+    def test_overlay_position_options_are_translated(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        keys = ('overlay_position', 'overlay_position_top_left', 'overlay_position_top_right',
+                'overlay_position_bottom_left', 'overlay_position_bottom_right')
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertTrue(all(pack['modern'].get(key) for key in keys))
+                self.assertEqual(len({pack['modern'][key] for key in keys[1:]}), 4)
+
+    def test_overlay_player_roles_are_translated(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                for key in ('duelist', 'ally', 'hunter', 'invader', 'enemy_cooperator', 'overlay_show_role'):
+                    self.assertTrue(pack['modern'].get(key), key)
+
+    def test_ping_faq_explains_store_and_development_behavior(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertIn('Steam', pack['modern']['faq_a_09'])
+        self.assertIn('only in the development version', packs['eng']['modern']['faq_a_09'])
+        self.assertIn('the Store version uses Steam ping', packs['eng']['modern']['faq_a_09'])
+        template = (ROOT / 'templates/index.html').read_text(encoding='utf-8')
+        fallback = (ROOT / 'static/ui-i18n.js').read_text(encoding='utf-8')
+        self.assertIn('uniquement dans la version de développement', template)
+        self.assertIn('la version Store utilise le ping Steam', fallback)
+
+    def test_overlay_encounter_count_is_translated(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertTrue(pack['modern'].get('overlay_encounter_count'))
+        self.assertEqual(packs['eng']['modern']['overlay_encounter_count'], 'Number of encounters')
+        self.assertEqual(packs['jap']['modern']['overlay_encounter_count'], '遭遇回数')
+
+    def test_overlay_width_and_border_labels_are_translated(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                self.assertTrue(pack['modern'].get('overlay_width_percent'))
+                self.assertTrue(pack['modern'].get('overlay_show_border'))
+
     def test_faq_order_and_ocr_explanation_are_available_in_every_language(self):
         html = (ROOT / 'templates/index.html').read_text(encoding='utf-8')
         questions = re.findall(r'<summary data-i18n="faq_q_(\d+)">', html)
         self.assertEqual(questions, ['12', '01', '05', '03', '19', '02', '06', '20',
                                      '04', '07', '15', '08', '17', '09', '11', '18',
-                                     '21', '22', '10', '14', '16', '13'])
+                                     '21', '22', '23', '10', '14', '16', '13'])
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         for language, pack in packs.items():
             with self.subTest(language=language):
                 self.assertIn('OCR', pack['modern']['faq_a_19'])
-                for number in range(19, 23):
+                for number in range(19, 24):
                     self.assertTrue(pack['modern'][f'faq_q_{number}'])
                     self.assertTrue(pack['modern'][f'faq_a_{number}'])
 

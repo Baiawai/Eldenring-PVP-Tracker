@@ -7,6 +7,7 @@
     <link rel="icon" href="{{ url_for('static', filename='tracker-eye-ornament.ico') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='app-typography.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='store-update.css') }}">
+    <script defer src="{{ url_for('static', filename='store-update.js') }}"></script>
 </head>
 <body>
     <main class="update-panel">
@@ -14,6 +15,18 @@
         <div class="update-divider" aria-hidden="true"><span>✦</span></div>
         <h1>{{ title }}</h1>
         <p>{{ message }}</p>
+        <dl class="update-versions">
+            <div class="update-version-row">
+                <dt>{{ current_version_label | default('Version actuelle', true) }}</dt>
+                <dd><bdi>{{ current_version | default(unavailable_label | default('Indisponible', true), true) }}</bdi></dd>
+            </div>
+            <div class="update-version-row">
+                <dt id="update-available-label"
+                    data-store-label="{{ new_version_label | default('Nouvelle version', true) }}"
+                    data-site-label="{{ indicative_version_label | default('Dernière version publiée (indicative)', true) }}">{{ (indicative_version_label | default('Dernière version publiée (indicative)', true)) if available_version_source == 'site' else (new_version_label | default('Nouvelle version', true)) }}</dt>
+                <dd><bdi id="update-available-version" data-source="{{ available_version_source | default('', true) }}">{{ available_version | default(unavailable_label | default('Indisponible', true), true) }}</bdi></dd>
+            </div>
+        </dl>
         <a class="update-button" href="{{ store_url }}">{{ action }}</a>
         <p class="update-instruction">{{ instruction }}</p>
     </main>

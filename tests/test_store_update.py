@@ -18,6 +18,12 @@ def package(family=store_update.STORE_FAMILY, signature=3):
 
 
 class StoreUpdateTests(unittest.TestCase):
+    def setUp(self):
+        # Never call the real optional version provider from a unit test.
+        lookup = patch.object(store_update, '_start_indicative_version_lookup')
+        lookup.start()
+        self.addCleanup(lookup.stop)
+
     def tearDown(self):
         store_update._REQUIRED = False
 
@@ -40,6 +46,11 @@ class StoreUpdateTests(unittest.TestCase):
         with patch.object(store_update, 'FROZEN', True):
             with patch.object(store_update, '_query_store_update', return_value=True):
                 self.assertTrue(store_update.check_at_start())
+            # A confirmed requirement is sticky within a running process.
+            with patch.object(store_update, '_query_store_update', side_effect=OSError('offline')):
+                self.assertTrue(store_update.check_at_start())
+            # Independent launches without a confirmed update remain usable.
+            store_update._REQUIRED = False
             with patch.object(store_update, '_query_store_update', side_effect=OSError('offline')):
                 self.assertFalse(store_update.check_at_start())
             with patch.object(store_update, '_query_store_update', return_value=False):

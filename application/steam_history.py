@@ -1,11 +1,51 @@
 """Persist Steam connection observations without guessing character identity."""
+import logging
+import queue
 import threading
 from application.detection_history import record_detection, update_detection
+from application import steam_avatar_store
 
 _lock = threading.Lock()
 _known = {}
 _arena = None
 _pvp_encounter = None
+_avatar_queue = queue.Queue(maxsize=32)
+_avatar_worker_lock = threading.Lock()
+_avatar_worker_started = False
+
+
+def _avatar_worker():
+    while True:
+        sid, event_id, revision, image, on_changed = _avatar_queue.get()
+        try:
+            changed = steam_avatar_store.save(sid, event_id, image)
+        except Exception:
+            logging.getLogger(__name__).exception('Unable to save a Steam avatar')
+            with _lock:
+                state = _known.get(sid)
+                if state and state.get('id') == event_id and state.get('avatar_revision') == revision:
+                    state.pop('avatar_revision', None)
+        else:
+            if changed and on_changed:
+                try:
+                    on_changed()
+                except Exception:
+                    logging.getLogger(__name__).exception('Unable to refresh Steam avatar presentation')
+        finally:
+            _avatar_queue.task_done()
+
+
+def _queue_avatar(sid, event_id, revision, image, on_changed):
+    global _avatar_worker_started
+    with _avatar_worker_lock:
+        if not _avatar_worker_started:
+            threading.Thread(target=_avatar_worker, name='steam-avatar-save', daemon=True).start()
+            _avatar_worker_started = True
+    try:
+        _avatar_queue.put_nowait((sid, event_id, revision, image, on_changed))
+        return True
+    except queue.Full:
+        return False
 
 
 def clear_history_transaction(operation):
@@ -24,7 +64,10 @@ def _clean(peer):
     if len(sid) != 17 or not sid.isascii() or not sid.isdigit():
         return None
     name = str(peer.get('name') or sid).strip()[:128] or sid
-    return {'id':sid, 'name':name, 'country_code':peer.get('country_code')}
+    item = {'id':sid, 'name':name, 'country_code':peer.get('country_code')}
+    if type(peer.get('steam_friend')) is bool:
+        item['steam_friend'] = peer['steam_friend']
+    return item
 
 def observe(status, peers, mode='Unknown'):
     if status not in ('active', 'game_closed', 'disabled', 'steam_unavailable'):
@@ -43,8 +86,8 @@ def observe(status, peers, mode='Unknown'):
             previous = state['steam'] if state else None
             item = dict(current_item)
             if previous:
-                for field in ('outcome', 'match_date'):
-                    if field in previous:
+                for field in ('outcome', 'match_date', 'steam_friend'):
+                    if field in previous and field not in item:
                         item[field] = previous[field]
             if previous and not item['country_code']:
                 item['country_code'] = previous.get('country_code')
@@ -61,11 +104,15 @@ def observe(status, peers, mode='Unknown'):
                     update_detection(state['id'], 'Joueur Steam rencontré : ' + item['name'], updated_mode, item)
                     state.update(steam=item, mode=updated_mode)
                     changed += 1
-        if _arena is not None and not _arena.get('sealed') and status == 'active':
-            for sid, state in _known.items():
-                _arena['participants'][sid] = state
-            if len(_arena['participants']) > 1:
-                _arena['ambiguous'] = True
+        if _arena is not None and not _arena.get('sealed'):
+            # A reconnected network peer is a new observation; do not reuse
+            # its old overlay role during this encounter.
+            _arena.setdefault('departed', set()).update(set(_arena['participants']) - set(current))
+            if status == 'active':
+                for sid, state in _known.items():
+                    _arena['participants'][sid] = state
+                if len(_arena['participants']) > 1:
+                    _arena['ambiguous'] = True
         if _pvp_encounter is not None and status == 'active':
             for sid in current:
                 _pvp_encounter['participants'][sid] = dict(_known[sid]['steam'])
@@ -75,6 +122,30 @@ def observe(status, peers, mode='Unknown'):
             if sid not in current:
                 _known.pop(sid)
     return changed
+
+
+def persist_avatars(status, peers, avatar_provider, on_changed=None):
+    """Queue live avatars without blocking the Steam helper's reader thread."""
+    if status != 'active' or not callable(avatar_provider):
+        return False
+    queued = False
+    # The same lock protects history deletion and clears _known. Never save a
+    # late avatar for a row that was just purged.
+    with _lock:
+        for peer in peers[:16]:
+            if not isinstance(peer, dict) or peer.get('avatar_available') is not True:
+                continue
+            sid, revision = peer.get('id'), peer.get('avatar_revision')
+            state = _known.get(sid)
+            if not state or not isinstance(revision, int) or revision <= 0 or state.get('avatar_revision') == revision:
+                continue
+            image = avatar_provider(sid)
+            if image is None:
+                continue
+            if _queue_avatar(sid, state['id'], revision, image, on_changed):
+                state['avatar_revision'] = revision
+                queued = True
+    return queued
 
 
 def begin_arena():
@@ -121,6 +192,22 @@ def arena_opponent_name():
         if not _arena or _arena['ambiguous'] or len(_arena['participants']) != 1:
             return ''
         return next(iter(_arena['participants'].values()))['steam']['name']
+
+
+def active_arena_participant_id():
+    """Return the sole still-connected candidate in the current unsealed duel.
+
+    This is a probable network participant, not a proven game identity. An
+    encounter that has ever contained multiple peers remains ambiguous.
+    """
+    with _lock:
+        if not _arena or _arena.get('sealed') or _arena.get('ambiguous') or len(_arena['participants']) != 1:
+            return ''
+        ident, state = next(iter(_arena['participants'].items()))
+        current = _known.get(ident)
+        if ident in _arena.get('departed', ()) or not current or current['id'] != state['id'] or state['mode'] not in ('Unknown', 'Arena'):
+            return ''
+        return ident
 
 
 def finish_arena(outcome, match_date):

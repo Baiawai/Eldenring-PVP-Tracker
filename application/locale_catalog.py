@@ -109,6 +109,7 @@ _EVENTS = {
     'ally_joined': ('2600000',),
     'defense_invaded': ('2600200','2600210','2602200','2602210','2602250','2602260'),
     'hunter_joined': ('2600304','2602304'),
+    'hunter_objective_completed': ('2610304','2612304'),
     'invasion_started': ('2601200','2601210'),
     'hunter_summoning': ('2602354',),
     'invasion_victory': ('2611200','2611210'),
@@ -170,6 +171,10 @@ def classify(text, language):
         item['event'] in ('cooperator_left', 'hunter_left') and any(
             other['event'] == item['event'].replace('_left', '_dismissed')
             and overlaps(item, other) for other in found))]
+    found = [item for item in found if not (
+        item['event'] == 'hunter_left' and any(
+            other['event'] == 'hunter_objective_completed' and overlaps(item, other)
+            for other in found))]
 
     # Some localizations use the same text for summoning and arrival.
     ambiguous = []
@@ -209,6 +214,7 @@ def tracker_notifications(text, language):
             'hunter_joined': 'Chasseur ' + name + ' invoqué.',
             'hunter_summoning': 'Invocation du Chasseur ' + name + '.',
             'hunter_observed': 'Invocation du Chasseur ' + name + '.',
+            'hunter_objective_completed': "Son objectif accompli, le Chasseur " + name + " s'en est retourné dans son monde.",
             'invasion_started': "Invasion d'un autre monde.\nTerrassez " + host + ', Hôte des Doigts !',
             'invasion_victory': 'Hôte des Doigts vaincu. Retour dans votre monde.',
             'cooperator_died': 'Le Doigt crochu ' + name + ' est mort.',
@@ -233,7 +239,7 @@ def tracker_notifications(text, language):
         # Never invent a name or falsely mark a hunter-mode objective as ours.
         if value and ((event != 'invasion_started' or host) and
                       (event not in {'ally_joined', 'defense_invaded', 'hunter_joined',
-                                     'hunter_summoning', 'hunter_observed', 'cooperator_died',
+                                     'hunter_summoning', 'hunter_observed', 'hunter_objective_completed', 'cooperator_died',
                                      'invader_died', 'hunter_died', 'cooperator_left',
                                      'hunter_left', 'cooperator_dismissed', 'hunter_dismissed'} or name)):
             result.append(value)

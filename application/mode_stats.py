@@ -33,11 +33,14 @@ def mode_user(profile, mode):
 
 
 def add_mode_score(mode, victory, defeat, egality, combats, no_result, fight_exit,
-                   abandon, connexion_error, game_exit, *, independent_victory=False):
+                   abandon, connexion_error, game_exit, *, independent_victory=False,
+                   active_match_pending=False):
     if mode not in ('Invasion', 'Defense'):
         raise ValueError('Unknown mode')
     if independent_victory and (mode != 'Defense' or (victory, defeat, egality, combats, no_result, fight_exit, abandon, connexion_error, game_exit) != (1, 0, 0, 1, 0, 0, 0, 0, 0)):
         raise ValueError('Invalid independent victory')
+    if active_match_pending and not independent_victory:
+        raise ValueError('Active match adjustment requires an independent victory')
     with closing(_connect()) as con:
         con.execute('BEGIN IMMEDIATE')
         con.execute('INSERT OR IGNORE INTO mode_stats (mode) VALUES (?)', (mode,))
@@ -48,7 +51,7 @@ def add_mode_score(mode, victory, defeat, egality, combats, no_result, fight_exi
                            ('connexionError', connexion_error), ('gameExit', game_exit)):
             s[key] += delta
         s['abandon'] = max(0, s['combats'] - s['victory'] - s['defeat'] - s['egality'] -
-                           s['noResult'] - s['fight_exit'] - s['connexionError'] - s['gameExit'] - abandon)
+                           s['noResult'] - s['fight_exit'] - s['connexionError'] - s['gameExit'] - abandon - int(active_match_pending))
         if victory or defeat or egality:
             s['maxVictory'] = s['maxVictory'] + 1 if victory else 0
             s['maxDefeat'] = s['maxDefeat'] + 1 if defeat else 0
@@ -61,7 +64,8 @@ def add_mode_score(mode, victory, defeat, egality, combats, no_result, fight_exi
         try:
             from application.leaderboard_events import record_delta, record_independent_victory
             if independent_victory:
-                record_independent_victory(con, mode, database_setting)
+                record_independent_victory(con, mode, database_setting,
+                                           active_match_pending=active_match_pending)
             else:
                 record_delta(con, mode, (victory, defeat, egality, combats, no_result, fight_exit, abandon, connexion_error, game_exit), database_setting)
         except Exception:

@@ -5,6 +5,11 @@ def text(packs, language, key, fallback):
     return packs.get(language, {}).get('modern', {}).get(key, fallback)
 
 
+def prepare_store_update(app, functions):
+    """Wait until the capture thread has stopped at its own safe boundary."""
+    return not functions.run_monitor and not functions.monitor_lock.locked()
+
+
 def change_tracking(app, functions, store_update, icon, start, translate):
     if store_update.is_required():
         icon.notify(translate('store_update_message', 'Mets le tracker à jour pour continuer.'))

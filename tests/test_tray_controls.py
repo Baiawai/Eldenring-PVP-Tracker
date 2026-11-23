@@ -1,6 +1,7 @@
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock
+import threading
 
 from flask import Flask, jsonify
 
@@ -48,6 +49,19 @@ class TrayControlsTests(unittest.TestCase):
         with self.assertLogs(self.app.logger, level='ERROR'):
             self.invoke(True)
         self.icon.notify.assert_called_once_with('monitor_start_error')
+
+    def test_update_waits_for_fight_then_stops_tracking(self):
+        self.functions.run_monitor = True
+        self.functions.monitor_lock = threading.Lock()
+        self.functions.monitor_lock.acquire()
+        self.assertFalse(tray_controls.prepare_store_update(self.app, self.functions))
+        self.functions.stop.assert_not_called()
+        # Stopping is performed by the capture thread at its loop boundary.
+        self.functions.run_monitor = False
+        self.assertFalse(tray_controls.prepare_store_update(self.app, self.functions))
+        self.functions.monitor_lock.release()
+        self.assertTrue(tray_controls.prepare_store_update(self.app, self.functions))
+        self.functions.stop.assert_not_called()
 
 
 if __name__ == '__main__':

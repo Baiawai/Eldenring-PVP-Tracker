@@ -107,11 +107,10 @@
                     </div>
                 </section>
                 <header class="information-header"><p class="information-eyebrow">FAQ</p><h1 id="information_title" data-i18n="information_title">Informations</h1></header>
-                <p class="stats-chart-note" data-i18n="tracker_presence_notice">Le tracker transmet au site un identifiant aléatoire au démarrage, puis un signal d’activité au moins toutes les 10 minutes tant que l’interface est ouverte ou le suivi actif, indépendamment du classement.</p>
                 <div class="faq-list">
                     <details class="faq-item"><summary data-i18n="faq_q_12">Faut-il installer Python ou Tesseract ?</summary><p data-i18n="faq_a_12">La version Store comprend les composants nécessaires. Pour lancer le projet depuis ses sources, installe Python et prépare la distribution locale de Tesseract ou utilise une installation existante ; consulte le README du projet.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_01">Comment démarrer le suivi ?</summary><p data-i18n="faq_a_01">Lance le tracker et Elden Ring. Vérifie que la langue choisie correspond à celle du jeu, puis clique sur Start. Stop arrête le suivi ; le redémarrer remet la session en mémoire à zéro.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_05">Comment choisir la langue ?</summary><p data-i18n="faq_a_05">Au premier lancement, le tracker utilise automatiquement la langue du navigateur si elle est prise en charge, sinon l’anglais. Tu peux la modifier dans Configuration pour qu’elle corresponde à celle du jeu : elle règle l’interface et la reconnaissance des notifications sans changer la langue du jeu. Ton choix est conservé.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_05">Comment choisir la langue ?</summary><p data-i18n="faq_a_05">Au premier lancement, l’interface utilise la langue du navigateur si elle est prise en charge, sinon l’anglais. Le tracker essaie de détecter la langue du jeu dans les réglages Steam ; à défaut, il utilise l’anglais. Tu peux choisir ces deux langues séparément dans Configuration. Tes choix sont conservés.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_03">Quels modes sont suivis ?</summary><p data-i18n="faq_a_03">L’arène 1v1, les invasions et les défenses sont séparées. Les égalités concernent uniquement l’arène.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_19">Comment le tracker établit-il les statistiques ?</summary><p data-i18n="faq_a_19">Il capture l’écran du jeu et lit les notifications grâce à l’OCR, ou reconnaissance optique de caractères : cette technologie transforme le texte d’une image en texte lisible. Il identifie les événements et résultats pour mettre à jour les statistiques du mode concerné. L’OCR peut mal lire ou manquer une notification.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_02">Le jeu doit-il rester visible ?</summary><p data-i18n="faq_a_02">Garde Elden Ring au premier plan pendant la détection. Les notifications masquées ou absentes ne peuvent pas être lues.</p></details>
@@ -122,11 +121,12 @@
                     <details class="faq-item"><summary data-i18n="faq_q_15">Comment récupérer mon profil de personnage ?</summary><p data-i18n="faq_a_15">Dans Configuration → Profil, lance la capture. En jeu, ouvre Configuration → Quitter la partie sans confirmer la sortie et garde le jeu visible. Le tracker récupère ensemble pseudo, niveau et image : vérifie-les avant d’enregistrer ou annule si nécessaire.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_08">Que montre la page Joueurs ?</summary><p data-i18n="faq_a_08">Elle regroupe les noms reconnus et les profils Steam observés. Un nom de personnage et un profil Steam ne sont pas automatiquement associés.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_17">Comment activer la détection Steam ?</summary><p data-i18n="faq_a_17">Dans Configuration → P2P, active la détection des joueurs. L’activation automatique du journal Steam est proposée par défaut : elle demande à Steam d’activer le journal nécessaire au démarrage du tracker ou de Steam. Si elle échoue, la commande manuelle reste disponible. Les profils observés ne sont pas automatiquement associés aux personnages en jeu.</p></details>
-                    <details class="faq-item"><summary data-i18n="faq_q_09">Comment fonctionne le ping ?</summary><p data-i18n="faq_a_09">Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. La mesure avancée du ping peut demander une autorisation administrateur Windows. En cas de refus ou d’indisponibilité, le ping Steam est utilisé lorsqu’il est disponible.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_09">Comment fonctionne le ping ?</summary><p data-i18n="faq_a_09">Les informations Steam et le ping apparaissent lorsqu’ils sont disponibles. Une adresse peut être celle d’un relais et sa localisation reste indicative. La mesure avancée du ping peut demander une autorisation administrateur Windows. En cas de refus ou d’indisponibilité, le ping Steam est utilisé lorsqu’il est disponible. La mesure avancée est disponible uniquement dans la version de développement ; la version Store utilise le ping Steam.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_11">Le classement est-il disponible ?</summary><p data-i18n="faq_a_11">Pour afficher les joueurs dans l’application, active la participation et accepte les conditions. Le classement utilise le serveur configuré, par défaut eldenringpvp.com. La participation est facultative et nécessite un compte Steam.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_18">Comment connecter Steam et participer au classement ?</summary><p data-i18n="faq_a_18">Dans Configuration → Classement en ligne, active la participation, accepte les conditions et connecte-toi à Steam. La confirmation peut être automatique ; si un code apparaît, saisis-le dans le tracker sans le partager. La publication du lien vers ton profil Steam est facultative.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_21">Mes anciens combats sont-ils importés dans le classement ?</summary><p data-i18n="faq_a_21">Les statistiques locales existantes sont reprises pour chaque mode. Les nouveaux combats sont synchronisés et les événements en attente sont réessayés.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_22">Puis-je utiliser le tracker sans connexion ?</summary><p data-i18n="faq_a_22">Le suivi et les statistiques locales restent disponibles hors ligne. Le classement en ligne et la connexion Steam nécessitent Internet ; les événements de classement en attente sont réessayés au retour de la connexion.</p></details>
+                    <details class="faq-item"><summary data-i18n="faq_q_23">Quelles informations d’activité le tracker transmet-il ?</summary><p data-i18n="faq_a_23">Au démarrage, le tracker transmet au site un identifiant aléatoire, puis environ toutes les cinq minutes un signal d’activité tant que l’interface est ouverte ou que le suivi est actif, indépendamment du classement. Pour les participants au classement, un signal distinct permet d’afficher publiquement que leur tracker a été récemment actif.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_10">Où sont mes données ?</summary><p data-i18n="faq_a_10">Les statistiques, réglages, captures et historiques sont stockés sur ton PC. Consulte Information → Dossier des données pour connaître leur emplacement, puis arrête le tracker avant de sauvegarder les dossiers indiqués.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_14">Comment protéger mes informations ?</summary><p data-i18n="faq_a_14">Les captures et historiques peuvent contenir des noms ou adresses réseau. Protège tes sauvegardes avant de les partager.</p></details>
                     <details class="faq-item"><summary data-i18n="faq_q_16">Comment fonctionnent l’archivage et la purge de l’historique ?</summary><p data-i18n="faq_a_16">Arrête le suivi avant d’archiver ou de purger l’historique actif. L’archivage retire les événements de la liste, y compris les rencontres Steam, et les conserve chiffrés localement. La restauration ajoute les événements absents sans doublons et conserve l’archive. La purge retire l’historique actif mais conserve les archives, les captures et les statistiques cumulées.</p></details>
@@ -226,23 +226,7 @@
                 <div id="history_list" class="history-list" aria-live="polite"></div>
                 <button type="button" class="history-more players-filter" id="history_more" data-i18n="history_more" hidden>Afficher les événements précédents</button>
                 <p class="players-notice" data-i18n="history_notice">Les nouveaux événements sont conservés à partir de l’activation de cet historique.</p>
-                <section class="history-storage-section">
-                    <div class="history-storage-controls">
-                        <span data-i18n="history_storage_label">Taille de l’historique actif</span>
-                        <strong id="history_storage_size">—</strong>
-                        <button type="button" id="history_purge" data-i18n="history_purge" disabled>Purger l’historique</button>
-                    </div>
-                    <p id="history_storage_note" class="history-storage-note" data-i18n="history_storage_note">Espace alloué dans la base locale : après une purge, SQLite peut le réutiliser sans réduire immédiatement la taille du fichier.</p>
-                    <p id="history_monitor_note" class="history-action-status" role="status"></p>
-                    <p id="history_action_status" class="history-action-status" role="status" aria-live="polite"></p>
-                </section>
-                <section class="history-archives" aria-labelledby="history_archives_title">
-                    <div class="history-archives-header">
-                        <div><h2 id="history_archives_title" data-i18n="history_archives_title">Archives</h2><p data-i18n="history_archives_intro">Archive l’historique actif pour le retirer de cette liste. Les archives restent stockées localement et peuvent être restaurées.</p></div>
-                        <button type="button" id="history_archive" data-i18n="history_archive" disabled>Archiver l’historique</button>
-                    </div>
-                    <div id="history_archives_list" class="history-archives-list"></div>
-                </section>
+
             </div>
         </section>
 
@@ -397,18 +381,27 @@
                     <div class="btn_menu_settings active_setting" menu="0"><img  src="{{ url_for('static', filename='icon-setting.png') }}"/></div>
                     <div class="btn_menu_settings" menu="1"><img  src="{{ url_for('static', filename='icon-ecrant.png') }}"/></div>
                     <div class="btn_menu_settings" menu="2"><img  src="{{ url_for('static', filename='icon-picture.png') }}"/></div>
+                    <button type="button" class="btn_menu_settings overlay-settings-tab" menu="8" aria-label="Overlay en jeu" data-i18n-aria="settings_overlay_section"><img src="{{ url_for('static', filename='icon-overlay-bronze.svg') }}" alt=""></button>
                     <div class="btn_menu_settings" menu="3"><img  src="{{ url_for('static', filename='icon-multi.png') }}"/></div>
                     <div class="btn_menu_settings steam-peer-tab" menu="5" title="Steam P2P">P2P</div>
+                    <button type="button" class="btn_menu_settings data-settings-tab" menu="9" aria-label="Données du tracker" data-i18n-aria="settings_tab_data"><img src="{{ url_for('static', filename='icon-data-bronze.svg') }}" alt=""></button>
                     <button type="button" class="btn_menu_settings steam-peer-tab diagnostics-tab" menu="6" aria-label="Diagnostic" data-i18n-aria="diagnostics_title"><span class="diagnostics-icon"><img src="{{ url_for('static', filename='icon-diagnostics.png') }}" alt=""></span></button>
                     <div class="btn_menu_settings" menu="4"><img  src="{{ url_for('static', filename='icon-exit.png') }}"/></div>
                 </div>
                 <div class="contente_settings" setting="0">
                   
                     <div class="form_single game-language-setting">
-                        <label class="form_single_left" for="game_language" id="game_language_label">Langue</label>
+                        <label class="form_single_left" for="game_language" id="game_language_label" data-i18n="game_language_label">Langue du jeu</label>
                         <div class="form_single_right">
                             <select id="game_language" aria-labelledby="game_language_label" disabled></select>
                             <span id="game_language_status" role="status" aria-live="polite"></span>
+                        </div>
+                    </div>
+                    <div class="form_single game-language-setting interface-language-setting">
+                        <label class="form_single_left" for="interface_language" id="interface_language_label" data-i18n="interface_language_label">Langue de l’interface</label>
+                        <div class="form_single_right">
+                            <select id="interface_language" aria-labelledby="interface_language_label" disabled></select>
+                            <span id="interface_language_status" role="status" aria-live="polite"></span>
                         </div>
                     </div>
                     <div class="form_single capture-speed-setting">
@@ -511,23 +504,22 @@
                         <p id="notification_ocr_status" role="status" aria-live="polite"></p>
                         <pre id="notification_ocr_result" hidden></pre>
                     </div>
-                    <div class="form_single">
-                        <label class="form_single_left" for="retention_captures" data-i18n="retention_captures">Conservation des captures</label>
-                        <div class="form_single_right">
-                            <select id="retention_captures" disabled><option value="0" data-i18n="retention_forever">Tout conserver</option><option value="30">30 j</option><option value="90">90 j</option><option value="365">365 j</option></select>
-                            <p data-i18n="retention_captures_help">Les captures plus anciennes sont supprimées au démarrage. Elles disparaissent aussi des graphiques et de certaines rencontres ; les statistiques cumulées restent conservées.</p>
-                            <span id="retention_captures_status" role="status" aria-live="polite"></span>
-                        </div>
-                    </div>
+
 
                 </div>
+                <section class="contente_settings hide overlay-settings" setting="8" aria-label="Overlay en jeu" data-i18n-aria="settings_overlay_section">
+                    <div class="form_single">
+                        <label class="form_single_left" for="game_overlay_enabled" data-i18n="game_overlay_enabled">Overlay en jeu</label>
+                        <div class="form_single_right"><input type="checkbox" id="game_overlay_enabled" disabled><span id="game_overlay_status" role="status" aria-live="polite"></span></div>
+                    </div>
+                </section>
                 <div class="contente_settings hide setting_user" setting="3">
                     <div class="form_single">
                         <span class="form_single_left" data-i18n="profile_capture_title">Profil du personnage</span>
                         <div class="form_single_right"><button type="button" id="profile_capture_start" data-i18n="profile_capture_start">Récupérer mon profil</button></div>
                     </div>
                     <div class="profile-capture-panel" id="profile_capture_panel" hidden>
-                        <p id="profile_capture_instructions" data-i18n="profile_step_menu">Lance Elden Ring et charge ta partie. Une fois dans le monde du jeu, ouvre le menu principal, puis Configuration. Va dans l’onglet tout à droite, « Quitter la partie », sans quitter la partie. L’application y récupérera automatiquement ton pseudo, ton niveau et ton image. Attends quelques secondes (environ 2 à 5 secondes), puis reviens ici pour vérifier les informations récupérées et les enregistrer.</p>
+                        <div id="profile_capture_instructions" data-i18n="profile_step_menu">Lance Elden Ring et charge ta partie. Une fois dans le monde du jeu, ouvre le menu principal, puis Configuration. Va dans l’onglet tout à droite, « Quitter la partie », sans quitter la partie. L’application y récupérera automatiquement ton pseudo, ton niveau et ton image. Attends quelques secondes, puis reviens ici pour vérifier les informations récupérées et les enregistrer.</div>
                         <p id="profile_capture_success" data-i18n="profile_capture_success" hidden>Tous les éléments ont été récupérés avec succès.</p>
                         <p id="profile_capture_status" role="status" aria-live="polite"></p>
                         <div id="profile_capture_preview" hidden>
@@ -566,7 +558,7 @@
                         <div class="form_single"><label class="form_single_left" for="steam_show_name" data-i18n="steam_show_name">Afficher les noms Steam</label><div class="form_single_right"><input type="checkbox" id="steam_show_name" checked></div></div>
                         <div class="form_single"><label class="form_single_left" for="steam_show_country" data-i18n="steam_show_country">Afficher le pays</label><div class="form_single_right"><input type="checkbox" id="steam_show_country" checked></div></div>
                         <div class="form_single"><label class="form_single_left" for="steam_show_ping" data-i18n="steam_show_ping">Afficher le ping</label><div class="form_single_right"><input type="checkbox" id="steam_show_ping" checked></div></div>
-                        <div class="form_single"><label class="form_single_left" for="retention_steam" data-i18n="retention_steam">Conservation de l’historique Steam</label><div class="form_single_right"><select id="retention_steam" disabled><option value="0" data-i18n="retention_forever">Tout conserver</option><option value="30">30 j</option><option value="90">90 j</option><option value="365">365 j</option></select><p data-i18n="retention_steam_help">Les anciennes rencontres Steam sont supprimées au démarrage. Les événements de suivi et les autres historiques sont conservés.</p><span id="retention_steam_status" role="status" aria-live="polite"></span></div></div>
+
                         <p data-i18n="steam_settings_help">Lance le jeu puis laisse Steam ouvert. Les noms affichés sont les profils Steam ; les personnages et les rôles peuvent être différents. Le ping peut être indisponible.</p>
                         <details id="steam_manual_setup">
                             <summary data-i18n="steam_manual_setup">Configuration manuelle de Steam</summary>
@@ -576,8 +568,42 @@
                         </details>
                     </div>
                 </div>
-                <section class="contente_settings hide diagnostics-settings" setting="6" aria-labelledby="diagnostics_title">
-                    <h2 id="diagnostics_title" data-i18n="diagnostics_title">Diagnostic</h2>
+                <section class="contente_settings hide data-settings" setting="9" aria-label="Données du tracker" data-i18n-aria="settings_tab_data">
+                    <div class="data-retention-row" data-retention-kind="retention_captures">
+                    <div class="form_single">
+                        <label class="form_single_left" for="retention_captures" data-i18n="retention_captures">Conservation des captures</label>
+                        <div class="form_single_right">
+                            <select id="retention_captures" disabled><option value="0" data-i18n="retention_forever">Tout conserver</option><option value="30">30 j</option><option value="90">90 j</option><option value="365">365 j</option></select>
+                            <p data-i18n="retention_captures_help">Les captures plus anciennes sont supprimées au démarrage. Elles disparaissent aussi des graphiques et de certaines rencontres ; les statistiques cumulées restent conservées.</p>
+                            <span id="retention_captures_status" role="status" aria-live="polite"></span>
+                        </div>
+                    </div>
+                    </div>
+                    <div class="data-retention-row" data-retention-kind="retention_steam">
+                        <div class="form_single"><label class="form_single_left" for="retention_steam" data-i18n="retention_steam">Conservation de l’historique Steam</label><div class="form_single_right"><select id="retention_steam" disabled><option value="0" data-i18n="retention_forever">Tout conserver</option><option value="30">30 j</option><option value="90">90 j</option><option value="365">365 j</option></select><p data-i18n="retention_steam_help">Les anciennes rencontres Steam sont supprimées au démarrage. Les événements de suivi et les autres historiques sont conservés.</p><span id="retention_steam_status" role="status" aria-live="polite"></span></div></div>
+                    </div>
+                    <div class="history-data-settings" aria-labelledby="history_data_title">
+                        <h2 id="history_data_title" data-i18n="history_data_title">Données de l’historique</h2>
+                <section class="history-storage-section">
+                    <div class="history-storage-controls">
+                        <span data-i18n="history_storage_label">Taille de l’historique actif</span>
+                        <strong id="history_storage_size">—</strong>
+                        <button type="button" id="history_purge" data-i18n="history_purge" disabled>Purger l’historique</button>
+                    </div>
+                    <p id="history_storage_note" class="history-storage-note" data-i18n="history_storage_note">Espace alloué dans la base locale : après une purge, SQLite peut le réutiliser sans réduire immédiatement la taille du fichier.</p>
+                    <p id="history_monitor_note" class="history-action-status" role="status"></p>
+                    <p id="history_action_status" class="history-action-status" role="status" aria-live="polite"></p>
+                </section>
+                <section class="history-archives" aria-labelledby="history_archives_title">
+                    <div class="history-archives-header">
+                        <div><h2 id="history_archives_title" data-i18n="history_archives_title">Archives</h2><p data-i18n="history_archives_intro">Archive l’historique actif pour le retirer de la liste de l’historique. Les archives restent stockées localement et peuvent être restaurées.</p></div>
+                        <button type="button" id="history_archive" data-i18n="history_archive" disabled>Archiver l’historique</button>
+                    </div>
+                    <div id="history_archives_list" class="history-archives-list"></div>
+                </section>
+                    </div>
+                </section>
+                <section class="contente_settings hide diagnostics-settings" setting="6" aria-label="Diagnostic" data-i18n-aria="diagnostics_title">
                     <p data-i18n="diagnostics_note">Mesures locales depuis le lancement actuel. Le CPU et la mémoire concernent le processus du tracker.</p>
                     <div class="stat-detail-row"><label for="error-reporting-enabled" data-i18n="error_reporting_label">Envoi automatique des erreurs techniques</label><input id="error-reporting-enabled" type="checkbox" disabled></div>
                     <p data-i18n="error_reporting_notice">Les messages et traces techniques filtrés sont envoyés automatiquement au site. Les secrets, chemins et identifiants courants sont masqués, mais des données personnelles inattendues peuvent subsister. Aucune capture n’est envoyée. Désactive cette option pour supprimer les rapports en attente.</p>
@@ -730,12 +756,12 @@
             <div class="sidebar-guidance">
             <div class="carde_info" info="languages">
                 <div class="header_carde_info">
-                        <h5 class="btr_1">Choisir la langue du jeu</h5>
+                        <h5 class="btr_1" data-i18n="game_language_label" data-i18n-fr="Langue du jeu">Langue du jeu</h5>
                         <div class="carde_banner_info">
                             <img src="{{ url_for('static', filename='icon-settings-bronze.png') }}" alt=""/>
                         </div>
                 </div>
-                <p class="btr_2">Sélectionne la langue utilisée dans ton jeu pour reconnaître les messages.</p>
+                <p class="btr_2" data-i18n="help_game_language" data-i18n-fr="Choisit la langue utilisée pour reconnaître les messages du jeu sans modifier ses réglages.">Choisit la langue utilisée pour reconnaître les messages du jeu sans modifier ses réglages.</p>
                 <p class="sidebar-guidance-action" data-i18n="sidebar_guidance_hint">Clique dans le cadre pour accéder à cette option.</p>
          
             </div>
@@ -773,7 +799,6 @@
                     <p class="leaderboard-player-eyebrow" data-i18n="leaderboard_eyebrow">ARÈNE 1V1</p>
                     <h2 id="leaderboard_player_name"></h2>
                     <div class="leaderboard-player-meta"><span><span data-i18n="leaderboard_rank">Rang</span> <strong id="leaderboard_player_rank"></strong></span><span><span data-i18n="leaderboard_level">Niveau</span> <strong id="leaderboard_player_level"></strong></span></div>
-                    <a class="leaderboard-player-report" data-i18n="leaderboard_report_button" href="https://discord.gg/y79z83D2Ua" target="_blank" rel="noopener noreferrer">Signaler un contenu</a>
                 </div>
             </div>
             <section class="leaderboard-player-stats" aria-labelledby="leaderboard_player_stats_title">
@@ -812,6 +837,7 @@
     <script src="{{ url_for('static', filename='settings-yes-no.js') }}"></script>
     <script src="{{ url_for('static', filename='steam-log-auto.js') }}"></script>
     <script src="{{ url_for('static', filename='game-language.js') }}"></script>
+    <script src="{{ url_for('static', filename='overlay-settings.js') }}"></script>
     <script src="{{ url_for('static', filename='capture-speed.js') }}"></script>
     <script src="{{ url_for('static', filename='notification-region.js') }}"></script>
     <script src="{{ url_for('static', filename='country.js') }}"></script>

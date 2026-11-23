@@ -11,18 +11,20 @@ import urllib.request
 from datetime import datetime
 import base64
 import io
+import json
 from PIL import Image
 
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
 CHROME = Path(os.environ.get('ProgramFiles', r'C:\Program Files')) / 'Google/Chrome/Application/chrome.exe'
+LANGUAGES = list(json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8')))
 with socket.socket() as sock:
     sock.bind(('127.0.0.1', 0))
     port = sock.getsockname()[1]
 with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
     env = os.environ.copy()
-    env.update(APPDATA=directory, TRACKER_TEST_PORT=str(port))
+    env.update(APPDATA=directory, LOCALAPPDATA=directory, TRACKER_TEST_PORT=str(port), TRACKER_TEST_NO_STEAM='1')
     server = subprocess.Popen([sys.executable, str(ROOT / 'tests/support/browser_server.py')],
                               cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -42,6 +44,13 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
             for width, height in [(1440, 900), (900, 700), (390, 844)]:
                 page = browser.new_page(viewport={'width':width, 'height':height})
                 page.route('**/*', lambda route: route.continue_() if route.request.url.startswith(url + '/') else route.abort())
+                # Simulate a template cached before the card report link was removed.
+                def cached_template(route):
+                    response = route.fetch()
+                    html = response.text().replace('<div class="leaderboard-player-meta">',
+                        '<a class="leaderboard-player-report" href="#">Old report</a><div class="leaderboard-player-meta">', 1)
+                    route.fulfill(response=response, body=html)
+                page.route(url + '/', cached_template)
                 page.route('**/online-leaderboard/settings', lambda route: route.fulfill(json={'enabled':True, 'configured':True, 'state':'idle'}))
                 page.route('**/online-leaderboard/sync', lambda route: route.fulfill(json={'state':'success'}))
                 errors = []
@@ -55,7 +64,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                         raise AssertionError(('Inactive server transition control is visible', width, selector))
                 previous_interval = page.locator('#capture_speed').input_value()
                 page.evaluate("document.getElementById('capture_speed').value = '0.5'")
-                for code in ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
+                for code in ['fra', *LANGUAGES]:
                     page.evaluate('(code) => launchLanguages(code)', code)
                     if page.locator('.leaderboard-report').get_attribute('href') != 'https://discord.gg/y79z83D2Ua':
                         raise AssertionError(('Incorrect Discord report link', width, code))
@@ -148,19 +157,28 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                     from urllib.parse import parse_qs, urlparse
                     params = parse_qs(urlparse(route.request.url).query)
                     page_number = int(params.get('page', ['1'])[0])
+                    page_size = int(params.get('per_page', ['10'])[0])
                     players = [{'rank': rank, 'name': 'UniqueFoe&bcc=intruder@example.test' if rank == 6 else 'Player ' + str(rank), 'level': 150, 'score': 10 - rank,
                                 'avatar': None, 'language': 'fra', 'steam_id': '76561198000000000' if rank == 6 else None, 'history_unverified': rank == 6, 'stats': {'victory': rank, 'defeat': 1, 'egality': 0,
                                                           'combats': rank + 1, 'ratio': 50}}
                                for rank in range(1, 7)]
                     search = params.get('search', [''])[0].lower()
                     filtered = [player for player in players if search in player['name'].lower()]
-                    route.fulfill(json={'mode': params.get('mode', ['Arena'])[0], 'entries': filtered[(page_number-1)*5:page_number*5],
-                                        'page': page_number, 'per_page': 5, 'total': 6, 'filtered_total': len(filtered)})
+                    route.fulfill(json={'mode': params.get('mode', ['Arena'])[0], 'entries': filtered[(page_number-1)*page_size:page_number*page_size],
+                                        'page': page_number, 'per_page': page_size, 'total': 6, 'filtered_total': len(filtered)})
                 page.route('**/online-leaderboard/entries?**', leaderboard_response)
                 page.locator('#menu_button_multi').click()
                 if not page.locator('.leaderboard-report').is_visible() or page.locator('#leaderboard_content_toggle').count():
                     raise AssertionError(('Leaderboard report missing or extra content toggle present', width))
                 page.wait_for_function("() => document.querySelector('#table_multi tbody')?.textContent.includes('Player 1')")
+                page_size_select = page.locator('.cadre_multi .dataTables_length select')
+                if page_size_select.input_value() != '10' or page_size_select.locator('option').all_text_contents() != ['5', '10', '20']:
+                    raise AssertionError(('Incorrect leaderboard page-size options or default', width))
+                with page.expect_response(lambda response: '/online-leaderboard/entries?' in response.url and 'per_page=20' in response.url):
+                    page_size_select.select_option('20')
+                page.wait_for_function("() => document.querySelectorAll('#table_multi tbody tr').length === 6")
+                page_size_select.select_option('5')
+                page.wait_for_function("() => !document.querySelector('#table_multi tbody')?.textContent.includes('UniqueFoe')")
                 page.locator('.cadre_multi .dataTables_paginate .next').click()
                 page.wait_for_function("() => document.querySelector('#table_multi tbody')?.textContent.includes('UniqueFoe')")
                 if not page.locator('.panel_multi_body').is_visible() or not page.locator('#leaderboard_refresh').is_visible():
@@ -182,8 +200,11 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                     raise AssertionError('A shared Steam profile was shown as unavailable')
                 if not page.locator('.leaderboard-history-notice').is_visible():
                     raise AssertionError('Legacy score must be identified as unverified')
-                if page.locator('.leaderboard-player-report').get_attribute('href') != 'https://discord.gg/y79z83D2Ua':
-                    raise AssertionError(('Player report must open Discord', width))
+                if page.locator('.leaderboard-player-report').count():
+                    raise AssertionError(('Player card must not contain the report action', width))
+                meta = page.locator('.leaderboard-player-meta')
+                if meta.evaluate('(node) => getComputedStyle(node).justifyContent') != 'center':
+                    raise AssertionError(('Player rank and level must be centered', width))
                 page.locator('.leaderboard-player-close').click()
                 page.locator('.cadre_multi .dataTables_paginate .previous').click()
                 page.wait_for_function("() => document.querySelector('#table_multi tbody')?.textContent.includes('Player 1')")
@@ -237,7 +258,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 page.locator('#menu_button_settings').click()
                 information = page.locator('#information_panel')
                 page.locator('#menu_button_information').click()
-                if not information.is_visible() or information.locator('.faq-item').count() != 22:
+                if not information.is_visible() or information.locator('.faq-item').count() != 23:
                     raise AssertionError(('Information FAQ unavailable', width))
                 discord = information.locator('.information-discord')
                 if discord.count() != 1 or not discord.is_visible() or discord.get_attribute('href') != 'https://discord.gg/y79z83D2Ua':
@@ -254,7 +275,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 information.locator('.faq-item summary').first.click()
                 if not information.locator('.faq-item p').first.is_visible():
                     raise AssertionError(('FAQ answer did not open', width))
-                for code in ['eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
+                for code in LANGUAGES:
                     page.evaluate('(code) => launchLanguages(code)', code)
                     if information.locator('.faq-item summary').first.text_content() != page.evaluate('(code) => ELDEN_UI_PACKS[code].modern.faq_q_12', code):
                         raise AssertionError(('FAQ language did not change', width, code))
@@ -293,7 +314,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                     if not page.locator('.capture-toolbar').is_visible() or not page.locator('.capture-scroll').is_visible():
                         raise AssertionError('Capture toolbar or scroll area unavailable')
                 page.screenshot(path=str(ROOT / 'build' / ('audit-ui-' + str(width) + '.png')), full_page=True)
-                print('UI OK', width, height, '15 languages', flush=True)
+                print('UI OK', width, height, len(LANGUAGES) + 1, 'languages', flush=True)
                 page.close()
             # A running backend may still serve its older cached HTML template.
             context = browser.new_context()
@@ -306,9 +327,11 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
             page.goto(url, wait_until='load')
             page.evaluate("() => launchLanguages('fra')")
             assert page.locator('[data-i18n="faq_q_18"]').count() == 1
-            assert 'code temporaire' in page.locator('[data-i18n="faq_a_18"]').text_content()
+            french_answer = page.locator('[data-i18n="faq_a_18"]').text_content()
+            assert 'Steam' in french_answer and 'code' in french_answer
             page.evaluate("() => launchLanguages('eng')")
-            assert 'temporary code' in page.locator('[data-i18n="faq_a_18"]').text_content()
+            english_answer = page.locator('[data-i18n="faq_a_18"]').text_content()
+            assert 'Steam' in english_answer and 'code' in english_answer
             context.close()
             # Reproduce a running server without its newer limiter: the UI must
             # still suppress repeat uploads and notices across tabs and reloads.
@@ -324,7 +347,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 sync_calls.append(route.request.method)
                 route.fulfill(json={'state': 'success'})
             context.route('**/online-leaderboard/sync', record_sync)
-            context.route('**/online-leaderboard/entries?**', lambda route: route.fulfill(json={'mode': 'Arena', 'entries': [], 'page': 1, 'per_page': 5, 'total': 0, 'filtered_total': 0}))
+            context.route('**/online-leaderboard/entries?**', lambda route: route.fulfill(json={'mode': 'Arena', 'entries': [], 'page': 1, 'per_page': 10, 'total': 0, 'filtered_total': 0}))
             page = context.new_page()
             page.goto(url, wait_until='load')
             page.locator('#menu_button_multi').click()
@@ -368,7 +391,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                 route.fulfill(json={'state': 'success'})
             def queued_entries(route):
                 sync_state['reads'] += 1
-                route.fulfill(json={'mode': 'Arena', 'entries': [], 'page': 1, 'per_page': 5, 'total': 0, 'filtered_total': 0})
+                route.fulfill(json={'mode': 'Arena', 'entries': [], 'page': 1, 'per_page': 10, 'total': 0, 'filtered_total': 0})
             context.route('**/online-leaderboard/sync', queued_sync)
             context.route('**/online-leaderboard/status', queued_status)
             context.route('**/online-leaderboard/entries?**', queued_entries)
@@ -445,7 +468,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
                     route.fulfill(json={'ok':True})
             context.route('**/online-leaderboard/steam-recovery', recovery)
             context.route('https://steamcommunity.com/**', lambda route: route.fulfill(status=200, body='Steam test'))
-            context.route('**/online-leaderboard/entries?**', lambda route: route.fulfill(json={'mode':'Arena', 'entries':[], 'page':1, 'per_page':5, 'total':0, 'filtered_total':0}))
+            context.route('**/online-leaderboard/entries?**', lambda route: route.fulfill(json={'mode':'Arena', 'entries':[], 'page':1, 'per_page':10, 'total':0, 'filtered_total':0}))
             page = context.new_page()
             page.goto(url, wait_until='load')
             page.wait_for_function("() => typeof window.launchLanguages === 'function'")
@@ -457,7 +480,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
             if not page.locator('#online_dialog_text').is_visible():
                 raise AssertionError('Leaderboard consent dialog did not open')
             consent_text = page.locator('#online_dialog_text').text_content()
-            for detail in ('pseudo', 'langue', 'Steam', 'résultats des combats', 'statistiques locales ne sont pas importées'):
+            for detail in ('pseudo', 'langue', 'Steam', 'résultats des combats', 'statistiques locales existantes seront aussi envoyées'):
                 if detail not in consent_text:
                     raise AssertionError(('Incomplete leaderboard consent dialog', detail, consent_text))
             with page.expect_popup() as popup_event:
@@ -563,7 +586,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
             context.route('**/online-leaderboard/steam-status**', lambda route: route.fulfill(json={'connected':False, 'confirmation_pending':False, 'observation_only':True}))
             context.route('**/online-leaderboard/steam-login', lambda route: route.fulfill(json={'url':'https://steamcommunity.com/openid/login?test=1'}))
             context.route('https://steamcommunity.com/**', lambda route: route.fulfill(status=200, body='Steam test'))
-            context.route('**/online-leaderboard/entries?**', lambda route: route.fulfill(json={'mode':'Arena', 'entries':[], 'page':1, 'per_page':5, 'total':0, 'filtered_total':0}))
+            context.route('**/online-leaderboard/entries?**', lambda route: route.fulfill(json={'mode':'Arena', 'entries':[], 'page':1, 'per_page':10, 'total':0, 'filtered_total':0}))
             page = context.new_page()
             page.goto(url, wait_until='load')
             page.locator('#menu_button_settings').click()
@@ -679,7 +702,7 @@ with tempfile.TemporaryDirectory(prefix='tracker-browser-test-') as directory:
             for width, height in [(1440, 900), (900, 700), (390, 844)]:
                 page.set_viewport_size({'width':width, 'height':height})
                 page.wait_for_timeout(400)
-                for code in ['fra','eng','deu','ita','spaes','spaar','por','pol','rus','jap','kor','chi','zht','tha','ara']:
+                for code in ['fra', *LANGUAGES]:
                     page.evaluate('(code) => launchLanguages(code)', code)
                     if page.locator('.online-server-move').evaluate('(element) => element.scrollWidth > element.clientWidth + 1'):
                         raise AssertionError(('Server transition row overflows', width, code))

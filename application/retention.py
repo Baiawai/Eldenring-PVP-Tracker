@@ -75,5 +75,8 @@ def cleanup(database, settings, decode, now=None):
                         continue
                 db.executemany('DELETE FROM detection_history WHERE id=?', remove)
                 counts['steam'] = len(remove)
+                if remove:
+                    from application import steam_avatar_store
+                    steam_avatar_store.prune(db)
         db.commit()
     return counts

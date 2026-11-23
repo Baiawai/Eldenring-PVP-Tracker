@@ -46,7 +46,15 @@
     const description = document.createElement('p');
     description.dataset.i18n = key; description.dataset.i18nFr = fallback;
     description.textContent = t(key, fallback);
-    window.attachSettingsInfo(input.closest('.form_single'), [description], 'settings_info_' + input.id);
+    const descriptions = [description];
+    if (key === 'online_explain') {
+      const presence = document.createElement('p');
+      presence.dataset.i18n = 'online_presence_notice';
+      presence.dataset.i18nFr = 'Pour les participants, le classement peut afficher publiquement que leur tracker a été actif récemment.';
+      presence.textContent = t(presence.dataset.i18n, presence.dataset.i18nFr);
+      descriptions.push(presence);
+    }
+    window.attachSettingsInfo(input.closest('.form_single'), descriptions, 'settings_info_' + input.id);
   }
   addHelp(check, 'online_explain', 'La participation est facultative. Le tracker reste utilisable hors ligne.');
   addHelp(steamCheck, 'online_steam_help', 'Publie un lien vers ton compte Steam vérifié. Tu peux retirer ton accord à tout moment. Les changements sont appliqués au démarrage du tracker, à l’ouverture du classement ou lors de son actualisation.');
@@ -456,6 +464,8 @@
     document.querySelector('#online_diagnostic code').textContent = '';
     document.getElementById('online_dialog_title').textContent = disabling ? t('online_disable_title','Désactiver la participation') : t('online_consent_title','Participer au classement');
     document.getElementById('online_dialog_text').textContent = disabling ? t('online_disable_text','Veux-tu conserver tes données déjà publiées dans le classement ou demander leur suppression ? La suppression sera réessayée si le serveur est indisponible.') : t('online_consent_text','La participation au classement PvP est facultative. Si tu acceptes, ton pseudo, ton niveau, ton avatar et la langue de jeu sélectionnée sont envoyés au serveur et peuvent être publiés. Un drapeau représente la langue, pas la nationalité. Tu peux arrêter de participer à tout moment.');
+    if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_presence_notice', 'Pour les participants, le classement peut afficher publiquement que leur tracker a été actif récemment.');
+    if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('tracker_member_privacy', 'Si vous participez au classement et activez cette option, les SteamID des joueurs connectés sont envoyés au serveur pour être comparés aux comptes Steam vérifiés des participants, même si leur profil n’est pas partagé. Désactiver le partage de profil continue de masquer votre lien Steam public.');
     if (!disabling && document.body.dataset.storeBuild === 'true') document.getElementById('online_dialog_text').textContent += ' ' + t('online_server_consent_domain', 'Le classement public est hébergé sur https://eldenringpvp.com.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_steam_login_required', 'Connecte ton compte Steam pour participer au classement.') + ' ' + t('online_steam_identity_consent', 'Le serveur conserve ton identifiant Steam vérifié. La publication du lien vers ton profil Steam est facultative.');
     if (!disabling) document.getElementById('online_dialog_text').textContent += ' ' + t('online_event_notice', 'Les débuts et résultats des combats, leur mode et leur date sont envoyés au serveur pour calculer le classement. Les anciens scores déjà publiés ne sont pas vérifiés. Les événements sont conservés jusqu’au retrait du profil.');
@@ -616,12 +626,25 @@
   const rankingStatus = document.getElementById('leaderboard_status');
   const rankingRefresh = document.getElementById('leaderboard_refresh');
   const rankingTable = document.getElementById('table_multi');
+  function updateNameHeadingTooltip() {
+    const heading = rankingTable && rankingTable.querySelector('thead th.tb-3');
+    if (heading) heading.title = heading.textContent.trim();
+  }
+  document.addEventListener('ui-language-change', updateNameHeadingTooltip);
+  document.addEventListener('ui-language-change', () => {
+    const label = t('leaderboard_tracker_active', 'Tracker actif récemment');
+    if (rankingTable) rankingTable.querySelectorAll('.leaderboard-active-indicator').forEach(indicator => {
+      indicator.title = label;
+      indicator.setAttribute('aria-label', label);
+    });
+  });
+  updateNameHeadingTooltip();
   const playerDialog = document.getElementById('leaderboard_player_dialog');
   const rankingHeader = document.querySelector('.leaderboard-shell .leaderboard-header');
   const rankingHeading = rankingHeader && rankingHeader.querySelector('.leaderboard-eyebrow');
   const rankingIntro = rankingHeader && rankingHeader.querySelector('.leaderboard-intro');
   const rankingContent = document.getElementById('leaderboard_content');
-  let rankingRequest = 0, rankingPlayers = new Map(), selectedRank = null, rankingStatusKey = '', rankingMode = 'Arena';
+  let rankingRequest = 0, rankingPlayers = new Map(), selectedRank = null, rankingStatusKey = '', rankingMode = 'Arena', rankingLastResponseAt = 0, rankingPresenceTimer;
   // Player-provided content is available only while participation is accepted.
   let rankingContentVisible = false;
   if (rankingContent) rankingContent.hidden = false;
@@ -681,19 +704,20 @@
     return window.jQuery && $.fn.DataTable && rankingTable ? $(rankingTable).DataTable() : null;
   }
   window.createLeaderboardTableOptions = function (language) {
-    return {language: language || {}, serverSide:true, processing:true, pageLength:5, lengthChange:false,
+    return {language: language || {}, serverSide:true, processing:true, pageLength:10, lengthChange:true, lengthMenu:[5,10,20],
       columnDefs:[{targets:3, orderable:false, searchable:false}], order:[[0,'asc']],
       ajax:async function (query, done) {
         if (!rankingContentVisible) { done({draw:query.draw, recordsTotal:0, recordsFiltered:0, data:[]}); return; }
         const request = ++rankingRequest, mode = rankingMode;
         const fields = ['rank','language','name',null,'level','score','victory','defeat','egality','ratio','combats'];
         const order = query.order && query.order[0] || {column:0, dir:'asc'};
-        const params = new URLSearchParams({mode, page:String(Math.floor(query.start / 5) + 1), search:String(query.search.value || '').slice(0,80), sort:fields[order.column] || 'rank', direction:order.dir === 'desc' ? 'desc' : 'asc'});
+        const pageSize = [5, 10, 20].includes(query.length) ? query.length : 10;
+        const params = new URLSearchParams({mode, per_page:String(pageSize), page:String(Math.floor(query.start / pageSize) + 1), search:String(query.search.value || '').slice(0,80), sort:fields[order.column] || 'rank', direction:order.dir === 'desc' ? 'desc' : 'asc'});
         rankingFetchPending = true; updateRefreshButton(); rankingMessage('leaderboard_loading', 'Chargement du classement…');
         try {
           const result = await call('entries?' + params.toString());
           if (!rankingContentVisible || request !== rankingRequest) { done({draw:query.draw, recordsTotal:0, recordsFiltered:0, data:[]}); return; }
-          if (!result || result.mode !== mode || !Array.isArray(result.entries) || result.entries.length > 5 || !Number.isSafeInteger(result.total) || !Number.isSafeInteger(result.filtered_total) || result.total < 0 || result.filtered_total < 0 || result.filtered_total > result.total || result.page !== Number(params.get('page')) || result.per_page !== 5) throw Error('invalid response');
+          if (!result || result.mode !== mode || !Array.isArray(result.entries) || result.entries.length > pageSize || !Number.isSafeInteger(result.total) || !Number.isSafeInteger(result.filtered_total) || result.total < 0 || result.filtered_total < 0 || result.filtered_total > result.total || result.page !== Number(params.get('page')) || result.per_page !== pageSize) throw Error('invalid response');
           const players = new Map();
           const rows = result.entries.map(entry => {
             if (!Number.isSafeInteger(entry.rank) || entry.rank < 1 || players.has(entry.rank) || typeof entry.name !== 'string') throw Error('invalid player');
@@ -701,12 +725,16 @@
             const stats = entry.stats || {};
             const validAvatar = typeof entry.avatar === 'string' && entry.avatar.length <= 280000 && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(entry.avatar);
             const avatar = validAvatar ? $('<img alt="">').attr('src', entry.avatar).prop('outerHTML') : '<div class="fakeImageuser" aria-hidden="true"></div>';
-            return [entry.rank, languageFlag(entry.language), escapeCell(entry.name), avatar, escapeCell(entry.level), escapeCell(entry.score), escapeCell(stats.victory), escapeCell(stats.defeat), escapeCell(mode === 'Arena' ? stats.egality : null), escapeCell(stats.ratio == null ? null : stats.ratio + ' %'), escapeCell(stats.combats)];
+            const name = $('<span class="leaderboard-player-name">').text(entry.name).attr('title', entry.name).prop('outerHTML');
+            const active = entry.tracker_active === true
+              ? $('<span class="leaderboard-active-indicator" role="img">').attr({title:t('leaderboard_tracker_active', 'Tracker actif récemment'), 'aria-label':t('leaderboard_tracker_active', 'Tracker actif récemment')}).prop('outerHTML')
+              : '';
+            return [entry.rank, languageFlag(entry.language), name, '<span class="leaderboard-avatar-frame">' + avatar + active + '</span>', escapeCell(entry.level), escapeCell(entry.score), escapeCell(stats.victory), escapeCell(stats.defeat), escapeCell(mode === 'Arena' ? stats.egality : null), escapeCell(stats.ratio == null ? null : stats.ratio + ' %'), escapeCell(stats.combats)];
           });
-          if (request === rankingRequest) { rankingPlayers = players; rankingMessage('', ''); }
+          if (request === rankingRequest) { rankingPlayers = players; rankingLastResponseAt = Date.now(); schedulePresenceRefresh(5 * 60 * 1000); rankingMessage('', ''); }
           done({draw:query.draw, recordsTotal:result.total, recordsFiltered:result.filtered_total, data:rows});
         } catch (_) {
-          if (request === rankingRequest) { rankingPlayers.clear(); rankingMessage('leaderboard_error', 'Impossible de charger le classement.'); }
+          if (request === rankingRequest) { rankingPlayers.clear(); schedulePresenceRefresh(60000); rankingMessage('leaderboard_error', 'Impossible de charger le classement.'); }
           done({draw:query.draw, recordsTotal:0, recordsFiltered:0, data:[]});
         } finally { if (request === rankingRequest) { rankingFetchPending = false; updateRefreshButton(); } }
       }};
@@ -717,6 +745,22 @@
     const table = currentTable();
     if (table && table.ajax) table.ajax.reload(null, true);
   }
+  // Refresh presence with the existing paginated request, without starting a
+  // synchronization or disturbing the manual refresh cooldown.
+  function schedulePresenceRefresh(delay) {
+    clearTimeout(rankingPresenceTimer);
+    rankingPresenceTimer = setTimeout(refreshPresenceIfStale, delay);
+  }
+  function refreshPresenceIfStale() {
+    const tab = document.getElementById('menu_button_multi');
+    if (!rankingContentVisible || document.hidden || !tab || !tab.classList.contains('active')) return;
+    if (rankingFetchPending || rankingSyncOperations || refreshPending) { schedulePresenceRefresh(10000); return; }
+    const age = Date.now() - rankingLastResponseAt;
+    if (rankingLastResponseAt && age >= 0 && age < 5 * 60 * 1000) { schedulePresenceRefresh(5 * 60 * 1000 - age); return; }
+    const table = currentTable();
+    if (table && table.ajax) table.ajax.reload(null, false);
+  }
+  document.addEventListener('visibilitychange', refreshPresenceIfStale);
   function visibleRanks() {
     const table = currentTable();
     return table ? table.rows({search:'applied', order:'applied'}).data().toArray().map(row => Number(row[0])).filter(rank => rankingPlayers.has(rank)) : [];

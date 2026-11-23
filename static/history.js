@@ -5,17 +5,38 @@
     const list = document.getElementById('history_list');
     const more = document.getElementById('history_more');
     const count = document.getElementById('history_count');
-    // Move the existing controls when the running server still has the old template cached.
-    const controls = panel.querySelector('.history-storage-controls');
-    const archivesSection = panel.querySelector('.history-archives');
-    if (controls && archivesSection) {
-        let storageSection = panel.querySelector('.history-storage-section');
+    // Move existing controls out of a server-cached older history template.
+    const dataSection = document.querySelector('.contente_settings[setting="9"]');
+    const settingsPanel = document.querySelector('.settings-panel');
+    const controls = document.querySelector('.history-storage-controls');
+    const archivesSection = document.querySelector('.history-archives');
+    if (dataSection && controls && archivesSection) {
+        let storageSection = controls.closest('.history-storage-section');
         if (!storageSection) {
             storageSection = document.createElement('section');
             storageSection.className = 'history-storage-section';
             archivesSection.before(storageSection);
         }
         [controls, document.getElementById('history_storage_note'), document.getElementById('history_monitor_note'), document.getElementById('history_action_status')].filter(Boolean).forEach(node => storageSection.appendChild(node));
+        let group = dataSection.querySelector('.history-data-settings');
+        if (!group) {
+            group = document.createElement('div');
+            group.className = 'history-data-settings';
+            const heading = document.createElement('h2');
+            heading.id = 'history_data_title';
+            heading.dataset.i18n = 'history_data_title';
+            heading.dataset.i18nFr = 'Données de l’historique';
+            heading.textContent = window.uiT ? window.uiT('history_data_title', heading.dataset.i18nFr) : heading.dataset.i18nFr;
+            group.setAttribute('aria-labelledby', heading.id);
+            group.appendChild(heading);
+            dataSection.appendChild(group);
+        }
+        group.append(storageSection, archivesSection);
+        const intro = archivesSection.querySelector('[data-i18n="history_archives_intro"]');
+        if (intro) {
+            intro.dataset.i18nFr = 'Archive l’historique actif pour le retirer de la liste de l’historique. Les archives restent stockées localement et peuvent être restaurées.';
+            intro.textContent = window.uiT ? window.uiT('history_archives_intro', intro.dataset.i18nFr) : intro.dataset.i18nFr;
+        }
     }
     // Support an older template cached by the running server.
     const modeLabelNode = document.querySelector('label[for="history_mode"]');
@@ -33,6 +54,7 @@
     let hasMore = false;
     let generation = 0;
     let loading = false;
+    let autoLoadBlocked = false;
     let poller = null;
     let storage = null, mutationPending = false, storageRequest = 0;
     const storageSize = document.getElementById('history_storage_size');
@@ -43,6 +65,12 @@
     const actionStatus = document.getElementById('history_action_status');
     const monitorNote = document.getElementById('history_monitor_note');
     const tr = (key, fallback) => window.uiT ? window.uiT(key, fallback) : fallback;
+    // Keep the journal scrollable without pushing the archive controls away.
+    list.tabIndex = 0;
+    const moreError = element('p', 'history-action-status');
+    moreError.hidden = true;
+    moreError.setAttribute('role', 'status');
+    more.before(moreError);
 
     function element(tag, cls, value) {
         const node = document.createElement(tag);
@@ -115,10 +143,16 @@
             date.dateTime = item.created_at.replace(' ', 'T');
             const summary = element('span', '', new Intl.NumberFormat(document.documentElement.lang || undefined).format(item.events) + ' ' + tr('history_archive_events', 'événements') + ' · ' + tr('history_archive_data', 'données chiffrées') + ' : ' + formatSize(item.bytes));
             const restore = element('button', '', tr('history_restore', 'Restaurer'));
-            restore.type = 'button'; restore.disabled = mutationPending;
+            restore.type = 'button'; restore.disabled = mutationPending || !stopped;
             restore.setAttribute('aria-label', tr('history_restore', 'Restaurer') + ' : ' + formatDate(item.created_at));
             restore.addEventListener('click', () => mutate('/history-archives/' + item.id + '/restore', 'restore'));
-            details.append(date, summary); row.append(details, restore); archiveList.appendChild(row);
+            const remove = element('button', '', tr('history_archive_delete', 'Supprimer'));
+            remove.type = 'button'; remove.disabled = mutationPending || !stopped;
+            remove.setAttribute('aria-label', tr('history_archive_delete', 'Supprimer') + ' : ' + formatDate(item.created_at));
+            remove.addEventListener('click', () => mutate('/history-archives/' + item.id + '/delete', 'delete'));
+            const actions = element('div', 'history-archive-actions');
+            actions.append(restore, remove);
+            details.append(date, summary); row.append(details, actions); archiveList.appendChild(row);
         });
     }
     async function refreshStorage() {
@@ -142,8 +176,10 @@
         const confirmation = kind === 'purge'
             ? tr('history_purge_confirm', 'Supprimer définitivement tout l’historique actif, y compris les rencontres Steam ? Les archives, captures et statistiques sont conservées.')
             : kind === 'archive'
-                ? tr('history_archive_confirm', 'Archiver tout l’historique actif et le retirer de cette liste ? Les rencontres Steam seront aussi archivées. Les captures et statistiques sont conservées.')
-                : tr('history_restore_confirm', 'Restaurer les événements absents de cette archive dans l’historique actif ? L’archive sera conservée.');
+                ? tr('history_archive_confirm', 'Archiver tout l’historique actif et le retirer de la liste de l’historique ? Les rencontres Steam seront aussi archivées. Les captures et statistiques sont conservées.')
+                : kind === 'delete'
+                    ? tr('history_archive_delete_confirm', 'Supprimer définitivement cette archive ? L’historique actif, les captures et les statistiques sont conservés.')
+                    : tr('history_restore_confirm', 'Restaurer les événements absents de cette archive dans l’historique actif ? L’archive sera conservée.');
         if (!window.confirm(confirmation)) return;
         mutationPending = true; renderStorage(); window.uiSetStatus(actionStatus);
         try {
@@ -156,10 +192,12 @@
             }
             if (kind === 'purge') window.uiSetStatus(actionStatus, 'history_purge_done', 'Historique actif purgé.');
             else if (kind === 'archive') window.uiSetStatus(actionStatus, 'history_archive_done', 'Historique archivé et retiré de la liste active.');
-            else if (result.restored) window.uiSetStatus(actionStatus, 'history_restore_done', 'Les événements absents ont été restaurés.');
-            else window.uiSetStatus(actionStatus, 'history_restore_none', 'Tous les événements de cette archive sont déjà présents.');
-            generation++; entries = []; hasMore = false; render();
-            load('initial');
+            else if (kind === 'restore' && result.restored) window.uiSetStatus(actionStatus, 'history_restore_done', 'Les événements absents ont été restaurés.');
+            else if (kind === 'restore') window.uiSetStatus(actionStatus, 'history_restore_none', 'Tous les événements de cette archive sont déjà présents.');
+            if (kind !== 'delete') {
+                generation++; entries = []; hasMore = false; autoLoadBlocked = false; render();
+                load('initial');
+            }
         } catch (error) {
             if (error.message === 'monitor_running') window.uiSetStatus(actionStatus, 'history_stop_required', 'Arrête le suivi pour archiver ou purger l’historique.');
             else if (error.message === 'empty') window.uiSetStatus(actionStatus, 'history_archive_empty_error', 'Il n’y a aucun événement à archiver.');
@@ -170,7 +208,30 @@
         purge.addEventListener('click', () => mutate('/history-purge', 'purge'));
         archive.addEventListener('click', () => mutate('/history-archives', 'archive'));
     }
-    function render() {
+    // Storage controls now live in settings, independently of the journal page.
+    let storagePoller = null;
+    function updateStorageVisibility() {
+        const visible = dataSection && settingsPanel && dataSection.getClientRects().length > 0;
+        if (visible && !storagePoller) {
+            if (purge && archive) purge.disabled = archive.disabled = true;
+            if (archiveList) archiveList.querySelectorAll('button').forEach(button => { button.disabled = true; });
+            refreshStorage();
+            storagePoller = setInterval(refreshStorage, 5000);
+        } else if (!visible && storagePoller) {
+            clearInterval(storagePoller); storagePoller = null;
+            storageRequest++;
+        }
+    }
+    if (dataSection && settingsPanel) {
+        const observer = new MutationObserver(updateStorageVisibility);
+        observer.observe(dataSection, {attributes:true, attributeFilter:['class','style','hidden']});
+        observer.observe(settingsPanel, {attributes:true, attributeFilter:['class','style','hidden']});
+        updateStorageVisibility();
+    }
+    function render(preservePosition) {
+        const anchor = preservePosition && Array.from(list.querySelectorAll('.history-entry')).find(card => card.getBoundingClientRect().bottom > list.getBoundingClientRect().top);
+        const anchorId = anchor && anchor.dataset.historyId;
+        const anchorOffset = anchor && anchor.getBoundingClientRect().top;
         list.replaceChildren();
         count.textContent = window.uiCurrentLanguage && window.uiCurrentLanguage() !== 'fra' ? tr('events_shown', 'Événements affichés') + ' : ' + entries.length : entries.length + (entries.length === 1 ? ' événement affiché' : ' événements affichés');
         more.hidden = !hasMore;
@@ -181,6 +242,7 @@
         const fragment = document.createDocumentFragment();
         entries.forEach(function(entry) {
             const card = element('article', 'history-entry tracker-frame');
+            card.dataset.historyId = entry.id;
             const time = element('time', '', formatDate(entry.date));
             time.dateTime = entry.date.replace(' ', 'T');
             const message = element('div', 'history-message');
@@ -219,9 +281,18 @@
             fragment.appendChild(card);
         });
         list.appendChild(fragment);
+        if (anchorId) {
+            const replacement = Array.from(list.querySelectorAll('.history-entry')).find(card => card.dataset.historyId === anchorId);
+            if (replacement) list.scrollTop += replacement.getBoundingClientRect().top - anchorOffset;
+        }
+    }
+    function maybeLoadOlder() {
+        if (panel.hidden || loading || !hasMore || autoLoadBlocked) return;
+        if (list.scrollHeight - list.clientHeight - list.scrollTop <= 160) load('older');
     }
     async function load(kind) {
         if (loading || panel.hidden) return;
+        if (kind !== 'refresh') moreError.hidden = true;
         const version = generation;
         const filter = mode.value;
         const before = kind === 'older' && entries.length ? entries[entries.length - 1].id : 0;
@@ -239,22 +310,44 @@
                 hasMore = data.has_more;
             } else if (kind === 'refresh') {
                 const known = new Set(entries.map(entry => entry.id));
-                const fresh = new Map(data.events.map(entry => [entry.id, entry]));
-                entries = data.events.filter(entry => !known.has(entry.id)).concat(entries.map(entry => fresh.get(entry.id) || entry));
+                const refreshed = data.events.slice();
+                let cursorPage = data;
+                // A busy interval may add more than one page. Fill the gap to
+                // the old head before merging, still requesting only 30 at a time.
+                while (entries.length && cursorPage.has_more && cursorPage.events.length &&
+                       !cursorPage.events.some(entry => known.has(entry.id)) &&
+                       cursorPage.events[cursorPage.events.length - 1].id > entries[0].id) {
+                    query.set('before', String(cursorPage.events[cursorPage.events.length - 1].id));
+                    const olderResponse = await fetch('/detection-history?' + query.toString(), {cache:'no-store'});
+                    if (!olderResponse.ok) throw new Error('history request failed');
+                    cursorPage = await olderResponse.json();
+                    if (version !== generation || panel.hidden) return;
+                    refreshed.push(...cursorPage.events);
+                }
+                const fresh = new Map(refreshed.map(entry => [entry.id, entry]));
+                const added = refreshed.filter(entry => !known.has(entry.id));
+                if (!added.length && entries.every(entry => !fresh.has(entry.id) || JSON.stringify(entry) === JSON.stringify(fresh.get(entry.id)))) return;
+                entries = added.concat(entries.map(entry => fresh.get(entry.id) || entry));
                 if (!entries.length || entries.length <= data.events.length) hasMore = data.has_more;
             } else {
                 entries = data.events;
                 hasMore = data.has_more;
             }
-            render();
+            render(kind === 'older' || (kind === 'refresh' && list.scrollTop > 0));
         } catch (error) {
             if (version === generation && !panel.hidden && kind !== 'refresh') {
-                list.replaceChildren(element('div', 'history-empty tracker-frame', tr('history_error', 'Impossible de charger l’historique. Réessaie dans un instant.')));
+                if (kind === 'older') {
+                    autoLoadBlocked = true;
+                    moreError.textContent = tr('history_error', 'Impossible de charger l’historique. Réessaie dans un instant.');
+                    moreError.hidden = false;
+                }
+                else list.replaceChildren(element('div', 'history-empty tracker-frame', tr('history_error', 'Impossible de charger l’historique. Réessaie dans un instant.')));
             }
         } finally {
             loading = false;
             more.disabled = false;
             if (version !== generation && !panel.hidden) load('initial');
+            else if (!panel.hidden && kind !== 'refresh') requestAnimationFrame(maybeLoadOlder);
         }
     }
     function closeHistory() {
@@ -274,10 +367,11 @@
         button.classList.add('active');
         entries = [];
         hasMore = false;
+        autoLoadBlocked = false;
+        list.scrollTop = 0;
         generation++;
         load('initial');
-        refreshStorage();
-        poller = setInterval(() => { load('refresh'); refreshStorage(); }, 5000);
+        poller = setInterval(() => { load('refresh'); }, 5000);
     });
     ['menu_button_captures', 'menu_button_multi', 'menu_button_settings', 'menu_button_players', 'menu_button_info', 'start'].forEach(function(id) {
         document.getElementById(id).addEventListener('click', closeHistory);
@@ -286,9 +380,18 @@
         generation++;
         entries = [];
         hasMore = false;
+        autoLoadBlocked = false;
+        list.scrollTop = 0;
         render();
         load('initial');
     });
-    document.addEventListener('ui-language-change', function() { if (!panel.hidden) { render(); renderStorage(); } });
-    more.addEventListener('click', () => load('older'));
+    document.addEventListener('ui-language-change', function() {
+        if (dataSection && dataSection.getClientRects().length) renderStorage();
+        if (!panel.hidden) {
+            render(true); renderStorage();
+            if (!moreError.hidden) moreError.textContent = tr('history_error', 'Impossible de charger l’historique. Réessaie dans un instant.');
+        }
+    });
+    list.addEventListener('scroll', maybeLoadOlder, {passive:true});
+    more.addEventListener('click', () => { autoLoadBlocked = false; load('older'); });
 })();

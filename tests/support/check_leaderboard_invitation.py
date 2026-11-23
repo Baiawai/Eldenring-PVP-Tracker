@@ -85,7 +85,7 @@ def check(browser, url):
                 if '/online-leaderboard/entries?' in request.url else None)
         page.route('**/online-leaderboard/entries?**', lambda route: route.fulfill(json={
             'mode': 'Arena', 'entries': [{'rank': 1, 'name': 'Test player', 'level': 1, 'score': 1, 'stats': {}}],
-            'page': 1, 'per_page': 5, 'total': 1, 'filtered_total': 1}))
+            'page': 1, 'per_page': 10, 'total': 1, 'filtered_total': 1}))
         page.locator('#menu_button_multi').click()
         if not page.locator('#leaderboard_content').is_visible() or not page.locator('#leaderboard_status').is_visible():
             raise AssertionError('The empty table and participation message must be visible before consent')

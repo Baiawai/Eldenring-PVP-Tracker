@@ -5,7 +5,7 @@ from datetime import datetime
 
 from flask import jsonify
 from __main__ import app
-from application import detection_history, functions, steam_history
+from application import detection_history, functions, steam_history, steam_avatar_store
 
 
 def _schema(db):
@@ -69,6 +69,7 @@ def history_purge():
     def purge(db):
         count = db.execute('SELECT COUNT(*) FROM detection_history').fetchone()[0]
         db.execute('DELETE FROM detection_history')
+        steam_avatar_store.prune(db)
         return count
     count = _when_stopped(purge)
     if count is None:
@@ -99,16 +100,36 @@ def history_archive():
 
 @app.route('/history-archives/<int:archive_id>/restore', methods=['POST'])
 def history_restore(archive_id):
-    with closing(detection_history._connect()) as db:
-        _schema(db)
-        db.execute('BEGIN IMMEDIATE')
+    def restore(db):
         archive = db.execute('SELECT 1 FROM history_archives WHERE id=?', (archive_id,)).fetchone()
         if not archive:
-            return jsonify({'request':'error', 'reason':'not_found'}), 404
+            return -1
         before = db.total_changes
         db.execute('''INSERT OR IGNORE INTO detection_history(id,recorded_at,mode,message,kind,metadata)
             SELECT original_id,recorded_at,mode,message,kind,metadata FROM history_archive_events WHERE archive_id=?''', (archive_id,))
         restored = db.total_changes - before
         db.execute('UPDATE detection_history_sequence SET last_id=MAX(last_id, (SELECT COALESCE(MAX(id),0) FROM detection_history)) WHERE id=1')
-        db.commit()
+        return restored
+    restored = _when_stopped(restore)
+    if restored is None:
+        return jsonify({'request':'error', 'reason':'monitor_running'}), 409
+    if restored == -1:
+        return jsonify({'request':'error', 'reason':'not_found'}), 404
     return jsonify({'request':'success', 'restored':restored})
+
+
+@app.route('/history-archives/<int:archive_id>/delete', methods=['POST'])
+def history_delete_archive(archive_id):
+    def delete(db):
+        if not db.execute('SELECT 1 FROM history_archives WHERE id=?', (archive_id,)).fetchone():
+            return False
+        db.execute('DELETE FROM history_archive_events WHERE archive_id=?', (archive_id,))
+        db.execute('DELETE FROM history_archives WHERE id=?', (archive_id,))
+        steam_avatar_store.prune(db)
+        return True
+    deleted = _when_stopped(delete)
+    if deleted is None:
+        return jsonify({'request':'error', 'reason':'monitor_running'}), 409
+    if not deleted:
+        return jsonify({'request':'error', 'reason':'not_found'}), 404
+    return jsonify({'request':'success'})

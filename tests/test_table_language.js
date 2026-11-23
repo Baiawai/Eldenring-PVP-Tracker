@@ -39,3 +39,11 @@ assert.equal(destroyed, 2);
 setLanguage('fra');
 requests[3].reject();
 assert.equal(destroyed, 3);
+
+for (const [code, file] of Object.entries({ukr:'ukr', swe:'swe', ind:'ind', vie:'vie', hin:'hin', hun:'hun', ptpt:'por'})) {
+    setLanguage(code);
+    const request = requests[requests.length - 1];
+    assert.equal(request.url, '/static/table_' + file + '.json');
+    request.resolve({name:code});
+    assert.equal(applied[applied.length - 1].name, code);
+}

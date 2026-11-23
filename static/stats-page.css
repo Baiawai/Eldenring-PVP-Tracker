@@ -73,6 +73,7 @@ body .app-content .presentation .img_eldenring button.home-start-prompt {
 }
 .home-start-prompt[hidden] { display:none; }
 body .app-content .presentation .img_eldenring button.home-start-prompt.is-ready {
+    font-size:24px;
     animation:home-prompt-fade-in 2s ease-out forwards, home-prompt-glow 5s ease-in-out 2s infinite;
 }
 .home-start-prompt:focus-visible { outline:2px solid #e1c487; outline-offset:3px; }
@@ -94,7 +95,7 @@ body .app-content #steam_peer_list .steam-peer-name:hover { color:#fff1c8; }
 .profile-sidebar .profile-card-header h5,
 .profile-sidebar .profile-card > :not(.profile-card-header),
 .profile-sidebar .sidebar-guidance { position:relative; z-index:2; }
-.sidebar-toggle { position:fixed; right:0; top:50%; z-index:1900; transform:translateY(-50%); display:grid; place-items:center; box-sizing:border-box; width:90px; height:60px; padding:0; border:0; border-radius:0; background:transparent !important; box-shadow:none; color:#e4ca91; cursor:pointer; transition:right var(--profile-sidebar-duration) ease; }
+.sidebar-toggle { position:fixed; right:0; bottom:50px; z-index:1900; display:grid; place-items:center; box-sizing:border-box; width:90px; height:60px; padding:0; border:0; border-radius:0; background:transparent !important; box-shadow:none; color:#e4ca91; cursor:pointer; transition:right var(--profile-sidebar-duration) ease; }
 .profile-sidebar-open .sidebar-toggle { right:var(--profile-sidebar-width); }
 .sidebar-toggle img { display:block; width:100%; max-width:100%; height:auto; transform:scaleX(-1); transition:transform .2s ease; pointer-events:none; }
 .profile-sidebar-open .sidebar-toggle img { transform:scaleX(1); }
@@ -174,7 +175,7 @@ body .profile-sidebar .onboarding-card * { cursor:pointer !important; }
 @media (max-width:1100px) { .stats-shell { padding:0 22px 50px; } .stats-overview { grid-template-columns:repeat(2,minmax(0,1fr)); } .stats-layout { grid-template-columns:1fr; } }
 @media (max-width:760px) {
     .app-header:has(#menu_button_settings.active) ~ .sidebar-toggle { width:28px; }
-    .settings-panel .cadre_settings_sub { display:flex; flex-direction:column; width:90%; height:95%; min-height:0; }
+    .settings-panel .cadre_settings_sub { display:flex; flex-direction:column; width:95%; height:95%; min-height:0; }
     .settings-panel .header_settings { display:none; }
     .settings-panel .contente_header_settings {
         position:relative; left:auto; top:auto; transform:none; flex:0 0 auto;
@@ -253,6 +254,55 @@ body .profile-sidebar .onboarding-card * { cursor:pointer !important; }
 .contente_header_settings .btn_menu_settings:is([menu="0"], [menu="1"], [menu="2"], [menu="3"], [menu="4"]):hover::after,
 .contente_header_settings .btn_menu_settings.active_setting:is([menu="0"], [menu="1"], [menu="2"], [menu="3"], [menu="4"])::after { opacity:1; filter:drop-shadow(0 0 7px rgba(232,195,125,.8)); }
 
+/* The overlay tab uses the same 52 px bronze icon area as the other tabs. */
+body .settings-panel .contente_header_settings button.overlay-settings-tab {
+    min-height:0; appearance:none; background:transparent; background-image:none !important; box-shadow:none;
+}
+body .settings-panel .contente_header_settings button.overlay-settings-tab.active_setting,
+body .settings-panel .contente_header_settings button.overlay-settings-tab.active_setting:hover:not(:disabled) {
+    background-image:var(--settings-active-background) !important;
+}
+.settings-panel .contente_header_settings .overlay-settings-tab img { width:min(52px, 100%); height:auto; }
+.settings-panel .contente_header_settings .overlay-settings-tab:focus-visible { outline:2px solid #e1c487; outline-offset:-2px; }
+body .settings-panel .contente_header_settings button.data-settings-tab {
+    min-height:0; appearance:none; border:0; background:transparent; background-image:none !important; box-shadow:none;
+}
+body .settings-panel .contente_header_settings button.data-settings-tab.active_setting,
+body .settings-panel .contente_header_settings button.data-settings-tab.active_setting:hover:not(:disabled) {
+    background:transparent !important;
+}
+.settings-panel .contente_header_settings .data-settings-tab img { width:min(52px, 100%); height:auto; }
+.settings-panel .contente_header_settings .data-settings-tab:focus-visible { outline:2px solid #e1c487; outline-offset:-2px; }
+@media (max-width:760px) {
+    .settings-panel .contente_header_settings .overlay-settings-tab img { width:min(42px, 100%); }
+    .settings-panel .contente_header_settings .data-settings-tab img { width:min(42px, 100%); }
+}
+.settings-panel .overlay-custom-row input[type="color"] {
+    box-sizing:border-box; width:min(100%,300px); max-width:300px; height:42px;
+    padding:4px; border:1px solid #806b45; background:#181510; cursor:pointer;
+}
+.settings-panel .overlay-custom-row input[type="color"]:disabled { cursor:default; }
+.settings-panel .overlay-custom-row output { color:#e8dfcd; font-size:18px; line-height:1.3; }
+.settings-panel .overlay-custom-status:not(:empty) {
+    box-sizing:border-box; width:90%; margin:12px auto; padding:0 2%;
+    color:#e8b8aa; font-size:18px; line-height:1.35; text-align:left;
+}
+.settings-panel .overlay-custom-group {
+    width:90%; box-sizing:border-box; margin:8px auto 0;
+    border:0; background:url("settings-panel-fade.svg") center center / 100% 100% no-repeat;
+    color:#e8dfcd;
+}
+.settings-panel .overlay-custom-group summary {
+    cursor:pointer; padding:12px 16px; color:#e4c78f;
+    font-size:18px; line-height:1.35;
+}
+.settings-panel .overlay-custom-group summary:focus-visible {
+    outline:2px solid #e1c487; outline-offset:-2px;
+}
+.settings-panel .overlay-custom-group .overlay-custom-note {
+    margin:8px 16px; font-size:18px; line-height:1.35; color:#c9b995;
+}
+
 #storage_databases .stat-detail-row span { min-width:0; overflow-wrap:anywhere; }
 
 /* Bronze capture controls preserve their original filter and resize handlers. */
@@ -298,7 +348,8 @@ body .profile-sidebar .onboarding-card * { cursor:pointer !important; }
     margin:0 auto; white-space:normal; overflow-wrap:anywhere;
 }
 .settings-panel .setting_user input[type="text"] { background-image:url("settings-field-texture.png") !important; }
-.settings-panel .contente_settings select {
+.settings-panel .contente_settings select,
+.players-panel :is(.players-category-filter, .player-category-setting) select {
     box-sizing:border-box; max-width:100%;
     background-image:linear-gradient(45deg,transparent 50%,#d3b77d 50%),
         linear-gradient(135deg,#d3b77d 50%,transparent 50%),
@@ -376,11 +427,11 @@ body select {
     background-size:5px 5px,5px 5px,1px 20px,cover;
     background-repeat:no-repeat; border-color:#806b45; color:#f0e1c4;
 }
-body :is(.app-content button:not(.diagnostics-tab):not(.player-profile-button):not(:where(.encounter-player-link, .home-start-prompt)), .modal_chart button, .dataTables_paginate .paginate_button) {
+body :is(.app-content button:not(.diagnostics-tab):not(.overlay-settings-tab):not(.data-settings-tab):not(.online-ranking-tab):not(.player-profile-button):not(:where(.encounter-player-link, .home-start-prompt, .player-category-tag, .player-category-remove, .player-favourite, .player-capture-link)), .modal_chart button, .dataTables_paginate .paginate_button) {
     background-image:linear-gradient(rgba(0,0,0,.42),rgba(0,0,0,.42)),url("settings-button-texture.png") !important;
     background-size:cover; background-position:center; border-color:#967d50; color:#f2e4c5;
 }
-body :is(.app-content button:not(.diagnostics-tab):not(.player-profile-button), .modal_chart button, .dataTables_paginate .paginate_button):hover:not(:disabled) {
+body :is(.app-content button:not(.diagnostics-tab):not(.overlay-settings-tab):not(.data-settings-tab):not(.online-ranking-tab):not(.player-profile-button):not(:where(.player-category-remove)), .modal_chart button, .dataTables_paginate .paginate_button):hover:not(:disabled) {
     border-color:#e1c487; filter:brightness(1.12);
 }
 body :is(.app-content button, .modal_chart button, .leaderboard-player-dialog button, .capture-viewer-overlay button, .sidebar-toggle, select):focus-visible {
@@ -508,6 +559,15 @@ body .stats-mode-picker select { padding-right:38px; }
 .profile-saved-fields strong { color:#f0dfbc; overflow-wrap:anywhere; }
 .profile-capture-panel[hidden], .profile-capture-panel [hidden] { display:none; }
 .profile-capture-panel p { margin:0 0 12px; font-size:18px; line-height:1.4; }
+.profile-capture-guide { text-align:start; }
+.profile-capture-guide:lang(ar) { direction:rtl; }
+.profile-capture-guide h3 { margin:0 0 12px; padding:0; color:#e5cd98; font-size:22px; font-weight:normal; line-height:1.3; }
+.profile-guide-steps { margin:0; padding-inline-start:1.7em; color:#eee1c9; font-size:18px; line-height:1.48; }
+.profile-guide-steps li { padding-inline-start:4px; margin:0 0 10px; overflow-wrap:anywhere; }
+.profile-guide-steps li::marker { color:#d7b77a; font-weight:bold; }
+.profile-guide-visual { max-width:420px; margin:18px auto 16px; text-align:center; }
+.profile-guide-visual svg { display:block; width:100%; height:auto; }
+.profile-guide-visual figcaption { margin-top:8px; color:#c9bba2; font-size:18px; line-height:1.35; }
 .profile-capture-panel #profile_capture_success { color:#e5cd98; }
 .profile-capture-content { display:grid; grid-template-columns:minmax(90px,150px) minmax(0,1fr); gap:20px; align-items:center; margin:12px 0; }
 #profile_capture_avatar { display:block; width:auto; max-width:100%; max-height:140px; margin:0 auto; object-fit:contain; }
@@ -527,7 +587,7 @@ body .stats-mode-picker select { padding-right:38px; }
 
 /* Settings navigation: continuous, muted bronze edges and an inset marker. */
 .settings-panel .contente_header_settings {
-    display:grid; grid-template-columns:repeat(7,minmax(0,1fr));
+    display:grid; grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr);
     align-items:stretch; gap:0; padding:0 3%;
     background:linear-gradient(90deg,rgba(32,30,24,.82),rgba(47,44,35,.92) 16%,rgba(47,44,35,.92) 84%,rgba(32,30,24,.82));
     border-top:1px solid rgba(169,157,128,.48); border-bottom:1px solid rgba(169,157,128,.48);
@@ -564,7 +624,7 @@ body .stats-mode-picker select { padding-right:38px; }
 .settings-panel .contente_header_settings:has([menu="4"].active_setting) { --settings-marker:92.8571%; }
 .settings-panel .contente_header_settings::after {
     content:""; position:absolute; right:3%; bottom:0; left:3%; height:1px; pointer-events:none;
-    background:linear-gradient(to right, rgba(169,157,128,.48) 0 calc(var(--settings-marker) - 8px), transparent calc(var(--settings-marker) - 8px) calc(var(--settings-marker) + 8px), rgba(169,157,128,.48) calc(var(--settings-marker) + 8px) 100%);
+    background:linear-gradient(to right, rgba(169,157,128,.48) 0 calc(var(--settings-marker) - 7px), transparent calc(var(--settings-marker) - 7px) calc(var(--settings-marker) + 7px), rgba(169,157,128,.48) calc(var(--settings-marker) + 7px) 100%);
 }
 @media (max-width:760px) { .settings-panel .contente_header_settings::after { left:2%; right:2%; } }
 
@@ -617,7 +677,7 @@ body .stats-mode-picker select { padding-right:38px; }
 .settings-panel .contente_header_settings {
     background:linear-gradient(to right,transparent 0%,#2f2c23 8%,#2f2c23 92%,transparent 100%);
 }
-.settings-panel .contente_header_settings .active_setting::before { bottom:-4px; }
+.settings-panel .contente_header_settings .active_setting::before { bottom:-5px; }
 
 /* Subtle glow and particles extend beyond the active navigation tab. */
 .settings-panel .contente_header_settings .settings-active-sparks {
@@ -767,6 +827,20 @@ input[type="range"]:focus-visible { outline:2px solid #e1c487; outline-offset:3p
     .settings-panel .contente_settings .settings-info-tooltip { width:min(230px,70vw); }
 }
 
+/* The full value is available below the common two-column control when needed. */
+.settings-panel .overlay-visibility-value { width:100%; overflow-wrap:anywhere; text-align:left; }
+.settings-panel .overlay-visibility-value[hidden] { display:none !important; }
+@media (max-width:500px) {
+    /* Keep the grouped controls on the same columns as the rows with help icons. */
+    .settings-panel .contente_settings[setting="8"] .overlay-custom-group .form_single:not(.hide):not(.setting_user_detail):not(.setting_user_level):not(.form_btn) {
+        width:calc(90% - 12px); margin-left:5%; margin-right:auto;
+    }
+    /* The group is already inset: reserve enough room for its labels. */
+    .settings-panel .contente_settings[setting="8"] .overlay-custom-group .form_single:not(.setting_user_detail):not(.setting_user_level):not(.form_btn) > .form_single_left {
+        padding-left:8px;
+    }
+}
+
 @media (max-width:500px) {
     .settings-panel .contente_settings[setting="2"] > .form_single:not(.hide):not(.setting_user_detail):not(.setting_user_level):not(.form_btn):has(> .settings-info) {
         width:calc(90% - 12px); margin-left:5%; margin-right:auto;
@@ -858,3 +932,11 @@ input[type="range"]:focus-visible { outline:2px solid #e1c487; outline-offset:3p
 .onboarding-visual .settings-info, .onboarding-visual .settings-info-tooltip { display:none !important; }
 .onboarding-visual li { list-style:none; text-align:center; padding:10px; color:#d6bd8a; font-size:20px; background:#111; }
 @media (max-width:520px) { .onboarding-visual .form_single { flex-wrap:wrap; } }
+
+/* On narrow screens, leave enough room to display language names in full. */
+@media (max-width:500px) {
+    .settings-panel .contente_settings:not([setting="4"]) .form_single.game-language-setting:not(.hide):not(.setting_user_detail):not(.setting_user_level):not(.form_btn) {
+        grid-template-columns:minmax(0,1fr); gap:6px;
+    }
+    .settings-panel .contente_settings:not([setting="4"]) .form_single.game-language-setting > .form_single_left { min-height:0; }
+}
