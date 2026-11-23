@@ -127,6 +127,20 @@ def check(browser, url):
             }''', language)
             assert page.locator('.player-record span').all_text_contents() == expected, language
 
+        # A failed category save remains translated when the interface language
+        # changes, and cancelling clears the retained translation key.
+        page.evaluate("() => uiApplyLanguage('fra')")
+        page.route('**/players/categories', lambda route: route.fulfill(status=503, json={'error':'fixture'})
+                   if route.request.method == 'POST' else route.continue_())
+        page.locator('.player-category-toggle').click()
+        page.locator('.player-category-form input[type=text]').fill('Fixture')
+        page.locator('.player-category-form button[type=submit]').click()
+        check_status('.player-category-tools > .player-category-status', 'history_action_error', 'L’opération a échoué. Réessaie.')
+        page.locator('.player-category-cancel').click()
+        page.evaluate("() => uiApplyLanguage('eng')")
+        assert page.locator('.player-category-tools > .player-category-status').text_content() == ''
+        assert page.locator('.player-category-tools > .player-category-status').get_attribute('data-i18n') is None
+
         assert page.locator('#notification_ocr_result').text_content() == raw_ocr
         assert not errors, errors
     finally:
