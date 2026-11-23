@@ -8,6 +8,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 class InterfaceTranslationTests(unittest.TestCase):
+    def test_steam_labels_use_natural_localized_word_order(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        expected = {'eng':'Steam avatars', 'deu':'Steam-Avatare', 'jap':'Steamアバター',
+                    'kor':'Steam 아바타', 'chi':'Steam 头像', 'zht':'Steam 頭像',
+                    'nld':'Steam-avatars', 'tur':'Steam avatarları', 'fin':'Steam-avatarit'}
+        for language, label in expected.items():
+            with self.subTest(language=language):
+                self.assertEqual(packs[language]['modern']['overlay_avatar_label'], label)
+
     def test_overlay_customization_labels_exist_in_all_languages(self):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         keys = ('overlay_custom_transparency', 'overlay_custom_background_color', 'overlay_custom_text_color',
