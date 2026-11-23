@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-DESCRIPTIONS = ROOT / 'store' / 'descriptions-fiche-1.0.10.0.md'
+DESCRIPTIONS = ROOT / 'store' / 'descriptions-fiche-1.0.11.0.md'
 NOTES = ROOT / 'store' / 'notes-de-version-1.0.11.0.md'
 # The draft headings use the region-specific labels shown in the review files.
 # They are not necessarily the language codes of the existing Store listings.

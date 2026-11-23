@@ -3,6 +3,22 @@
     const nav = document.querySelector('.contente_header_settings');
     const parent = document.querySelector('.cadre_settings_sub');
     if (!nav || !parent) return;
+    // Normalize older server-cached templates before binding click handlers.
+    nav.querySelectorAll('.btn_menu_settings[menu]').forEach(function (oldTab) {
+        let tab = oldTab;
+        if (oldTab.tagName !== 'BUTTON') {
+            tab = document.createElement('button');
+            Array.from(oldTab.attributes).forEach(attribute => tab.setAttribute(attribute.name, attribute.value));
+            while (oldTab.firstChild) tab.appendChild(oldTab.firstChild);
+            oldTab.replaceWith(tab);
+        }
+        tab.type = 'button';
+        const key = tab.dataset.i18nAria || tab.dataset.i18nTitle;
+        const fallback = tab.dataset.i18nAriaFr || tab.dataset.i18nTitleFr || tab.title || tab.textContent.trim();
+        if (key && !tab.dataset.i18nAria) tab.dataset.i18nAria = key;
+        if (fallback && !tab.dataset.i18nAriaFr) tab.dataset.i18nAriaFr = fallback;
+        if (!tab.getAttribute('aria-label') && fallback) tab.setAttribute('aria-label', window.uiT && key ? window.uiT(key, fallback) : fallback);
+    });
     if (!nav.querySelector('[menu="8"]')) {
         const tab = document.createElement('button');
         tab.type = 'button'; tab.className = 'btn_menu_settings overlay-settings-tab';
@@ -35,9 +51,19 @@
         tab.dataset.i18nTitleFr = tab.dataset.i18nAriaFr = 'Données du tracker';
         tab.title = window.uiT ? window.uiT('settings_tab_data', 'Données du tracker') : 'Données du tracker';
         tab.setAttribute('aria-label', tab.title);
-        const icon = document.createElement('img'); icon.src = '/static/icon-data-bronze.svg'; icon.alt = '';
+        const icon = document.createElement('img'); icon.src = '/static/icon-data-bronze.png'; icon.alt = '';
         tab.appendChild(icon);
         nav.insertBefore(tab, nav.querySelector('[menu="6"]'));
+    }
+    const dataIcon = nav.querySelector('.data-settings-tab img');
+    if (dataIcon) {
+        dataIcon.src = '/static/icon-data-bronze.png';
+        if (!dataIcon.parentElement.classList.contains('data-settings-icon')) {
+            const holder = document.createElement('span');
+            holder.className = 'data-settings-icon';
+            dataIcon.replaceWith(holder);
+            holder.appendChild(dataIcon);
+        }
     }
     if (!parent.querySelector('.contente_settings[setting="9"]')) {
         const dataSection = document.createElement('section');
@@ -59,6 +85,13 @@
         container.appendChild(row);
         dataSettings.insertBefore(container, dataSettings.firstChild);
     });
+    function syncSettingsButtons() {
+        nav.querySelectorAll('button.btn_menu_settings[menu]').forEach(function (tab) {
+            tab.setAttribute('aria-pressed', String(tab.classList.contains('active_setting')));
+        });
+    }
+    new MutationObserver(syncSettingsButtons).observe(nav, {subtree:true, childList:true, attributes:true, attributeFilter:['class']});
+    syncSettingsButtons();
     // A template cached before the overlay existed has no script tag for it.
     document.addEventListener('DOMContentLoaded', function () {
         if (document.querySelector('script[src*="/overlay-settings.js"]')) return;

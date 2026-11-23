@@ -27,6 +27,24 @@ class TrackerOverlayEventTests(unittest.TestCase):
         self.assertTrue(event.latest().startswith('a b x'))
         self.assertEqual(len(event.latest()), 240)
 
+    def test_language_change_retranslates_the_last_event_without_consuming_it(self):
+        event.publish_html('Arrivée : &lt;Joueur&gt;', language='fra',
+                           renderer=lambda language: 'Arrival : &lt;Joueur&gt;' if language == 'eng' else 'Ankunft')
+        self.assertEqual(event.latest(), 'Arrivée : <Joueur>')
+        self.assertEqual(event.latest('fra'), 'Arrivée : <Joueur>')
+        self.assertEqual(event.latest('eng'), 'Arrival : <Joueur>')
+        self.assertEqual(event.latest('deu'), 'Ankunft')
+        self.assertEqual(event.latest('fra'), 'Arrivée : <Joueur>')
+        event.publish_html('Nouvel événement')
+        self.assertEqual(event.latest('eng'), 'Nouvel événement')
+
+    def test_translation_failure_keeps_the_last_event_available(self):
+        def fail(_language):
+            raise RuntimeError('synthetic error')
+        event.publish_html('Événement', language='fra', renderer=fail)
+        with self.assertLogs('application.tracker_overlay_event', level='ERROR'):
+            self.assertEqual(event.latest('eng'), 'Événement')
+
 
 if __name__ == '__main__':
     unittest.main()

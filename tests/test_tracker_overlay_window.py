@@ -747,10 +747,10 @@ class OverlayWindowTests(unittest.TestCase):
         scene_options = overlay._scene_options(None)
         self.assertFalse(scene_options['show_steam_id'])
         self.assertFalse(scene_options['show_jitter'])
-        self.assertFalse(scene_options['show_ping_average'])
+        self.assertTrue(scene_options['show_ping_average'])
         self.assertFalse(scene_options['show_quality'])
         self.assertFalse(scene_options['show_player_count'])
-        for name in ('show_ping_average', 'show_quality', 'show_player_count'):
+        for name in ('show_quality', 'show_player_count'):
             self.assertTrue(overlay._scene_options({name: True})[name])
 
     def test_outer_border_can_be_hidden_without_changing_cards_or_opacity(self):

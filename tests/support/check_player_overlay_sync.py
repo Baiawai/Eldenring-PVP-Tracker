@@ -4,6 +4,7 @@ The server uses private APPDATA and redirected runtime images. Steam peers,
 avatars and profile actions are synthetic, and external requests are blocked.
 """
 import os
+import json
 import socket
 import subprocess
 import sys
@@ -16,6 +17,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
 CHROME = Path(os.environ.get('ProgramFiles', r'C:\Program Files')) / 'Google/Chrome/Application/chrome.exe'
+LANGUAGES = ['fra', *json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))]
 FIELDS = {
     'show_avatars': '.steam-peer-avatar',
     'show_player_name': '.steam-peer-name',
@@ -126,6 +128,23 @@ def run(browser, base, width, height):
         for selector, expected in expected_fields:
             actual = card.locator(selector).text_content().strip()
             assert actual == expected, (width, selector, actual, expected)
+        for language in LANGUAGES:
+            page.evaluate('(language) => uiApplyLanguage(language)', language)
+            expected = page.evaluate('''language => {
+                const words = ELDEN_UI_PACKS[language]?.modern || {
+                    hunter:'Chasseur', tracker_user_badge:'Utilisateur du tracker', steam_peer_duration:'Connexion',
+                    steam_peer_ping_average:'Ping moyen', steam_peer_jitter:'Variation du ping',
+                    steam_peer_connection_quality:'Qualité de connexion', overlay_encounter_count:'Nombre de rencontres'};
+                return {'.steam-peer-role':words.hunter, '.steam-peer-tracker-user':words.tracker_user_badge,
+                    '.steam-peer-duration':words.steam_peer_duration + ' : 00:02:03',
+                    '.steam-peer-ping-detail':words.steam_peer_ping_average + ' : 47 ms',
+                    '.steam-peer-jitter':words.steam_peer_jitter + ' : 4 ms',
+                    '.steam-peer-quality':words.steam_peer_connection_quality + ' : 93 %',
+                    '.steam-peer-encounters':words.overlay_encounter_count + ' : 8'};
+            }''', language)
+            for selector, value in expected.items():
+                assert card.locator(selector).text_content().strip() == value, (width, language, selector)
+        page.evaluate("() => uiApplyLanguage('fra')")
         for (previous, _), (following, _) in zip(expected_fields, expected_fields[1:]):
             ordered = card.evaluate('''(card, [previous, following]) =>
                 !!(card.querySelector(previous).compareDocumentPosition(card.querySelector(following))

@@ -28,6 +28,32 @@ def localize_overlay_time(text, language):
     return re.sub(suffix, lambda match: match.group(1) + ' ' + html.escape(label, quote=False) + ': ', text)
 
 
+def localize_overlay_event(text, source_backend, target_backend, language, *, opponent='', outcome=''):
+    """Render one in-memory event in another UI language without touching history."""
+    if opponent and outcome in ('victory', 'defeat', 'draw'):
+        keys = {'victory': ('victory_against', 'Vous remportez la victoire contre {opponent} !'),
+                'defeat': ('defeat_against', 'Vous avez perdu contre {opponent}.'),
+                'draw': ('draw_against', 'Le combat s’achève par une égalité avec {opponent}.')}
+        key, fallback = keys[outcome]
+        template = packs().get(language, {}).get('modern', {}).get(key, fallback)
+        result = html.escape(template, quote=False).replace('{opponent}', html.escape(str(opponent), quote=False))
+        duration = text.partition('<br>')[2]
+        return localize_overlay_time(result + ('<br>' + duration if duration else ''), language)
+    # Backend messages may already be translated. Match complete known phrases
+    # only; never rewrite player names or arbitrary OCR text by resemblance.
+    candidates = sorted(((len(value), index, value) for index, value in enumerate(source_backend)
+                         if isinstance(value, str) and value), reverse=True)
+    for _, index, value in candidates:
+        if index >= len(target_backend) or not text.startswith(value):
+            continue
+        suffix = text[len(value):]
+        if suffix.strip() and not suffix.lstrip().startswith('<br>'):
+            continue
+        translated = target_backend[index] + suffix
+        return localize_overlay_time(translated, language)
+    return localize_overlay_time(localize_counter(text, language), language)
+
+
 def localize_counter(text, language):
     if language == 'fra' or language not in packs():
         return text

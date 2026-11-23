@@ -89,6 +89,13 @@ class OverlaySceneTests(unittest.TestCase):
     def test_country_catalog_covers_supported_languages_and_known_regions(self):
         import json
         from pathlib import Path
+        catalog = overlay_country_names._catalog()
+        languages = json.loads((Path(__file__).resolve().parents[1] / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        self.assertEqual(set(catalog), {'fra', *languages})
+        for language in catalog:
+            with self.subTest(language=language):
+                self.assertEqual(set(catalog[language]), set(catalog['eng']))
+                self.assertTrue(all(isinstance(name, str) and name.strip() for name in catalog[language].values()))
         packs = json.loads((Path(__file__).resolve().parents[1] / 'application' / 'locales' / 'ui_packs.json').read_text(encoding='utf-8'))
         snapshot = {'status': 'active', 'peers': [{'id': '76561198000000000', 'country_code': 'FR'}]}
         for language in ['fra', *packs]:

@@ -154,7 +154,7 @@ def _worker(functions):
                         game_detected=functions.game_detected, fight=functions.fight,
                         mode=functions.mode_select if functions.mode_detected else '',
                         peers=peer_snapshot)
-                    event = tracker_overlay_event.latest()
+                    event = tracker_overlay_event.latest(functions.langue_select)
                     cards = tracker_overlay_scene.cards(peer_snapshot or {}, options,
                         getattr(functions.peer_tracking, 'avatar_png', None),
                         language=functions.langue_select)

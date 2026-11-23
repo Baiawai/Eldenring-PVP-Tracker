@@ -17,6 +17,21 @@ class InterfaceTranslationTests(unittest.TestCase):
             with self.subTest(language=language):
                 self.assertEqual(packs[language]['modern']['overlay_avatar_label'], label)
 
+    def test_faq_answers_describe_the_actual_workflows(self):
+        packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
+        for language, pack in packs.items():
+            with self.subTest(language=language):
+                modern = pack['modern']
+                self.assertIn('Start', modern['faq_a_01'])
+                self.assertIn('OCR', modern['faq_a_04'])
+                self.assertIn('Steam', modern['faq_a_16'])
+                self.assertFalse(any(mark in modern['faq_a_16'] for mark in ('?', '؟', '？')))
+                for key in ('faq_a_04', 'faq_a_06'):
+                    self.assertIn(modern['settings_tab_capture'].casefold(), modern[key].casefold(), key)
+                for answer, tab in (('faq_a_13', 'settings_tab_exit'), ('faq_a_15', 'settings_tab_profile'),
+                                    ('faq_a_17', 'settings_tab_p2p'), ('faq_a_18', 'online_title')):
+                    self.assertIn(modern[tab].casefold(), modern[answer].casefold(), answer)
+
     def test_overlay_customization_labels_exist_in_all_languages(self):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         keys = ('overlay_custom_transparency', 'overlay_custom_background_color', 'overlay_custom_text_color',

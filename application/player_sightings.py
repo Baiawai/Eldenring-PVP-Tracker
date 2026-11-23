@@ -6,7 +6,7 @@ import sqlite3
 import time
 import unicodedata
 from contextlib import closing
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from application.init import database_capture
 from application.secur import decrypt_value, encrypt_value, encryption_key
@@ -154,11 +154,71 @@ def record_sighting(sighting, observed_at=None):
     return True
 
 
+def _resolve_hunter_episodes(sightings):
+    """Fill missing hunter context only within one observed arrival/departure.
+
+    This is a read-time interpretation: the original observations are never
+    rewritten, and names from the game's OCR are not linked to Steam IDs.
+    """
+    by_name = {}
+    for index, item in enumerate(sightings):
+        if item['role'] != 'hunter':
+            continue
+        try:
+            observed = datetime.fromisoformat(item['date'])
+        except (ValueError, TypeError):
+            continue
+        name = unicodedata.normalize('NFKC', item['name']).strip().casefold()
+        by_name.setdefault(name, []).append((observed, index))
+
+    def resolve(episode):
+        if not episode or not any(sightings[i]['event'] in ('summoning', 'joined') for _, i in episode):
+            return
+        modes = set()
+        for _, i in episode:
+            item = sightings[i]
+            if item['mode'] in ('Invasion', 'Defense'):
+                modes.add(item['mode'])
+            elif item['mode'] != 'Unknown':
+                return
+            if item['relation'] in ('ally', 'opponent'):
+                modes.add('Defense' if item['relation'] == 'ally' else 'Invasion')
+            elif item['relation'] != 'unknown':
+                return
+        if len(modes) != 1:
+            return
+        mode = modes.pop()
+        relation = 'ally' if mode == 'Defense' else 'opponent'
+        for _, i in episode:
+            if sightings[i]['mode'] == 'Unknown' or sightings[i]['relation'] == 'unknown':
+                sightings[i] = {**sightings[i], 'mode': mode, 'relation': relation}
+
+    for events in by_name.values():
+        events.sort()
+        episode, starts, closed = [], set(), False
+        for observed, index in events:
+            event = sightings[index]['event']
+            starts_new = (not episode or closed or observed - episode[0][0] > timedelta(minutes=30)
+                          or event in ('summoning', 'joined') and
+                          (event in starts or event == 'summoning' and 'joined' in starts))
+            if starts_new:
+                resolve(episode)
+                episode, starts, closed = [], set(), False
+            episode.append((observed, index))
+            if event in ('summoning', 'joined'):
+                starts.add(event)
+            elif event in ('left', 'dismissed', 'died', 'completed'):
+                closed = True
+        resolve(episode)
+    return sightings
+
+
 def read_sightings():
     with closing(_connect()) as con:
-        rows = con.execute('SELECT name, role, relation, mode, event, observed_at FROM player_sightings').fetchall()
-    return [{'name': decrypt_value(row[0]).decode('utf-8'), 'role': row[1], 'relation': row[2],
-             'mode': row[3], 'event': row[4], 'date': row[5]} for row in rows]
+        rows = con.execute('SELECT name, role, relation, mode, event, observed_at FROM player_sightings ORDER BY id').fetchall()
+    sightings = [{'name': decrypt_value(row[0]).decode('utf-8'), 'role': row[1], 'relation': row[2],
+                  'mode': row[3], 'event': row[4], 'date': row[5]} for row in rows]
+    return _resolve_hunter_episodes(sightings)
 
 
 class SightingTracker:

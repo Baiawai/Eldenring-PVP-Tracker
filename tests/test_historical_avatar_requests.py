@@ -56,8 +56,10 @@ class HistoricalAvatarRequestsTests(unittest.TestCase):
 
     def test_does_not_start_a_helper_when_unavailable_or_game_closed(self):
         p = self.peers
+        self.assertTrue(p.historical_avatar_transport_available())
         with patch.object(p.ctypes.windll.user32, 'FindWindowW', return_value=0), \
                 patch.object(p.subprocess, 'Popen') as launch:
+            self.assertFalse(p.historical_avatar_transport_available())
             self.assertEqual(p.request_historical_avatar(self.steam_id, (42,)), 'unavailable')
             launch.assert_not_called()
         with patch.object(p, 'HELPER', Path('TrackerSteamPeersV6.exe')):
@@ -127,20 +129,31 @@ class HistoricalAvatarRequestsTests(unittest.TestCase):
         with patch.object(p.time, 'monotonic', return_value=10.0), \
                 patch.object(application, 'steam_avatar_store', fake, create=True):
             self.assertEqual(p.request_historical_avatar(self.steam_id, (42,)), 'queued')
+            self.assertEqual(p.historical_avatar_result(self.steam_id), 'pending')
             p._handle_historical_avatar({'id': self.steam_id, 'state': 'ready', 'avatar_png': 'not-base64!'})
+            self.assertEqual(p.historical_avatar_result(self.steam_id), 'interrupted')
             self.assertEqual(p.request_historical_avatar(self.steam_id, (42,)), 'rate_limited')
         fake.save_historical.assert_not_called()
         with patch.object(p.time, 'monotonic', return_value=311.0):
             self.assertEqual(p.request_historical_avatar(self.steam_id, (42,)), 'queued')
             p._handle_historical_avatar({'id': self.steam_id, 'state': 'unavailable'})
+            self.assertEqual(p.historical_avatar_result(self.steam_id), 'unavailable')
             self.assertEqual(p.request_historical_avatar(self.steam_id, (42,)), 'rate_limited')
 
     def test_helper_disconnect_clears_pending_and_bounds_retry(self):
         p = self.peers
         self.assertEqual(p.request_historical_avatar(self.steam_id, (42,)), 'queued')
         p._clear_historical_avatar_requests()
+        self.assertEqual(p.historical_avatar_result(self.steam_id), 'interrupted')
         self.assertEqual(p.request_historical_avatar(self.steam_id, (42,)), 'rate_limited')
         self.assertFalse(p._historical_avatar_pending)
+
+    def test_helper_reports_offline_response_as_interrupted(self):
+        p = self.peers
+        self.assertEqual(p.request_historical_avatar(self.steam_id, (42,)), 'queued')
+        p._handle_historical_avatar({'id': self.steam_id, 'state': 'interrupted'})
+        self.assertEqual(p.historical_avatar_result(self.steam_id), 'interrupted')
+        self.assertEqual(p.request_historical_avatar(self.steam_id, (42,)), 'rate_limited')
 
     def test_broken_pipe_does_not_crash_or_retry_unbounded(self):
         p = self.peers

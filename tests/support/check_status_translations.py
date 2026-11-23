@@ -141,6 +141,30 @@ def check(browser, url):
         assert page.locator('.player-category-tools > .player-category-status').text_content() == ''
         assert page.locator('.player-category-tools > .player-category-status').get_attribute('data-i18n') is None
 
+        # Recognized recorded messages follow the current language while names
+        # and arbitrary OCR/user text remain unchanged. All data is synthetic.
+        page.route(re.compile(r'/detection-history(?:\?.*)?$'), lambda route: route.fulfill(json={
+            'request':'success', 'has_more':False, 'events':[
+                {'id':5,'date':'2026-01-01 12:00:00','mode':'Arena','kind':'detection','message':'Commencing combat','metadata':None},
+                {'id':4,'date':'2026-01-01 12:00:00','mode':'Defense','kind':'detection','message':'Chasseur arrivé : Test Hunter','metadata':None},
+                {'id':3,'date':'2026-01-01 12:00:00','mode':'Arena','kind':'detection','message':'You defeated Test & Player!','metadata':{'opponent':'Test & Player','opponent_source':'game'}},
+                {'id':2,'date':'2026-01-01 12:00:00','mode':'Defense','kind':'detection','message':'Test Invader invaded your world.','metadata':None},
+                {'id':1,'date':'2026-01-01 12:00:00','mode':'Unknown','kind':'detection','message':'Texte OCR personnel 42','metadata':None}]}))
+        page.evaluate("() => document.getElementById('menu_button_history').click()")
+        page.wait_for_function("() => document.querySelectorAll('#history_list .history-entry').length === 5")
+        for language in LANGUAGES:
+            page.evaluate('(language) => uiApplyLanguage(language)', language)
+            words = page.evaluate('''language => ELDEN_UI_PACKS[language]?.modern || {
+                hunter_arrived:'Chasseur arrivé', victory_against:'Vous remportez la victoire contre {opponent} !',
+                tracking_defending_against:'{name} a envahi votre monde'}''', language)
+            messages = page.locator('#history_list .history-message').all_text_contents()
+            combat = page.evaluate("language => language === 'fra' ? 'Début du combat' : ELDEN_UI_PACKS[language].backend[9].trim()", language)
+            assert messages[0] == combat, (language, messages)
+            assert messages[1] == words['hunter_arrived'] + ' : Test Hunter', (language, messages)
+            assert messages[2] == words['victory_against'].replace('{opponent}', 'Test & Player'), (language, messages)
+            assert messages[3] == words['tracking_defending_against'].replace('{name}', 'Test Invader'), (language, messages)
+            assert messages[4] == 'Texte OCR personnel 42', (language, messages)
+
         assert page.locator('#notification_ocr_result').text_content() == raw_ocr
         assert not errors, errors
     finally:

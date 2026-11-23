@@ -7,7 +7,7 @@ $sources = @((Join-Path $peerDir 'TrackerSteamPeers.cs'), (Join-Path $peerDir 'E
 $references = @('Steamworks.NET.dll', 'Microsoft.Diagnostics.Tracing.TraceEvent.dll',
     'Microsoft.Diagnostics.FastSerialization.dll', 'OSExtensions.dll') | ForEach-Object { '/reference:' + (Join-Path $peerDir $_) }
 $arguments = @('/nologo', '/target:exe', '/platform:x64', '/optimize+',
-    ('/out:' + (Join-Path $peerDir 'TrackerSteamPeersV8.exe')), '/reference:System.Web.Extensions.dll',
+    ('/out:' + (Join-Path $peerDir 'TrackerSteamPeersV9.exe')), '/reference:System.Web.Extensions.dll',
     '/reference:System.Drawing.dll') + $references + $sources
 & $compiler @arguments
 if ($LASTEXITCODE -ne 0) { throw "La compilation du lecteur Steam a échoué ($LASTEXITCODE)." }

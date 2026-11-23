@@ -35,7 +35,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.models.mkdir()
         for model in verifier.GAME_OCR_MODELS:
             (self.models / (model + '.traineddata')).write_bytes(('synthetic ' + model).encode('ascii'))
-        self.helper = self.root / 'application' / 'steam_peers' / 'TrackerSteamPeersV8.exe'
+        self.helper = self.root / 'application' / 'steam_peers' / 'TrackerSteamPeersV9.exe'
         self.helper.parent.mkdir(parents=True)
         self.helper.write_bytes(b'synthetic Steam helper binary')
         root = patch.object(verifier, 'ROOT', self.root)
@@ -50,7 +50,7 @@ class ReleaseArtifactTests(unittest.TestCase):
         self.files['_internal/application/locales/ui_packs.json'] = catalog
         self.files['_internal/application/locales/network_messages.json'] = json.dumps(self.game_catalog).encode('utf-8')
         self.files['_internal/static/ui-packs.js'] = b'window.ELDEN_UI_PACKS = ' + catalog + b';\n'
-        self.files['_internal/application/steam_peers/TrackerSteamPeersV8.exe'] = self.helper.read_bytes()
+        self.files['_internal/application/steam_peers/TrackerSteamPeersV9.exe'] = self.helper.read_bytes()
         for model in verifier.GAME_OCR_MODELS:
             self.files['_internal/application/locales/tessdata/' + model + '.traineddata'] = (
                 self.models / (model + '.traineddata')).read_bytes()
@@ -136,7 +136,7 @@ class ReleaseArtifactTests(unittest.TestCase):
                     verifier.verify(self.package)
 
     def test_rejects_unexpected_steam_helper_binary(self):
-        self.write_package({'_internal/application/steam_peers/TrackerSteamPeersV8.exe': b'other helper'})
+        self.write_package({'_internal/application/steam_peers/TrackerSteamPeersV9.exe': b'other helper'})
         with self.assertRaisesRegex(ValueError, 'Steam helper differs'):
             verifier.verify(self.package)
 

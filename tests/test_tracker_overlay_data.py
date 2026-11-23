@@ -94,6 +94,23 @@ class TrackerOverlayDataTests(unittest.TestCase):
                 self.assertTrue(label.strip())
                 self.assertNotEqual(label.casefold(), 'jitter')
 
+    def test_all_overlay_labels_follow_selected_interface_language(self):
+        keys = {'tracking':'sidebar_tracking', 'mode':'mode', 'last':'last_combat',
+                'empty_last':'last_combat_empty', 'peers':'steam_peer_title', 'ping':'steam_ping_label',
+                'last_event':'overlay_last_event', 'no_event':'overlay_no_event',
+                'player_count':'overlay_player_count', 'quality':'steam_peer_connection_quality',
+                'quality_unavailable':'steam_peer_quality_unknown', 'encounters':'overlay_encounter_count',
+                'unknown_name':'steam_world_host_unknown', 'duration':'steam_peer_duration',
+                'average_ping':'steam_peer_ping_average', 'jitter':'steam_peer_jitter',
+                'tracker_user':'tracker_user_badge', 'capture_paused':'overlay_capture_paused'}
+        for language in ['fra', *overlay._packs()]:
+            modern, _ = overlay._translation(language)
+            labels = overlay.build_snapshot(language=language)['labels']
+            for field, key in keys.items():
+                with self.subTest(language=language, field=field):
+                    self.assertEqual(labels[field], modern[key])
+                    self.assertTrue(labels[field].strip())
+
     def test_fight_status_uses_the_in_progress_translation(self):
         for language in ['fra', *overlay._packs()]:
             with self.subTest(language=language):

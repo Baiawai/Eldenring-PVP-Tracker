@@ -54,19 +54,40 @@ def _matches(encrypted, steam_id):
 
 def _save_locked(db, steam_id, event_ids, encoded, digest):
     key = _key(steam_id)
-    old = db.execute('SELECT digest FROM steam_avatars WHERE steam_key=?', (key,)).fetchone()
+    old = db.execute('SELECT digest,avatar FROM steam_avatars WHERE steam_key=?', (key,)).fetchone()
+    valid_old = True
+    if old:
+        try:
+            valid_old = _decode_avatar(decrypt_value(old[1]).decode('ascii')) is not None
+        except (InvalidToken, ValueError, TypeError, UnicodeError):
+            valid_old = False
     links = {row[0]: row[1] for row in db.execute('SELECT event_id,steam_key FROM steam_avatar_links WHERE steam_key=?', (key,))}
     missing = [event_id for event_id in event_ids if links.get(event_id) != key]
-    changed = not old or old[0] != digest or bool(missing)
+    changed = not old or old[0] != digest or not valid_old or bool(missing)
     if not old:
         # Least recently observed cached images may be evicted; the original
         # history and archives themselves are never altered.
-        while db.execute('SELECT COUNT(*) FROM steam_avatars').fetchone()[0] >= MAX_ENTRIES:
+        capacity = MAX_ENTRIES
+        if _has_table(db, 'steam_avatar_cache_policy'):
+            row = db.execute('SELECT capacity FROM steam_avatar_cache_policy WHERE id=1').fetchone()
+            if row and type(row[0]) is int:
+                capacity = max(capacity, row[0])
+        count = db.execute('SELECT COUNT(*) FROM steam_avatars').fetchone()[0]
+        # New live encounters can arrive while the one-time historical batch
+        # is running. Grow only when needed so they cannot evict batch avatars.
+        recovering = _has_table(db, 'steam_avatar_backfill') and db.execute(
+            'SELECT 1 FROM steam_avatar_backfill WHERE completed=0 LIMIT 1').fetchone()
+        if count >= capacity and recovering and _has_table(db, 'steam_avatar_cache_policy'):
+            capacity = count + 1
+            db.execute('''INSERT INTO steam_avatar_cache_policy(id,capacity) VALUES(1,?)
+                ON CONFLICT(id) DO UPDATE SET capacity=MAX(capacity,excluded.capacity)''', (capacity,))
+        while count >= capacity:
             oldest = db.execute('SELECT steam_key FROM steam_avatars ORDER BY updated_at, steam_key LIMIT 1').fetchone()[0]
             db.execute('DELETE FROM steam_avatar_links WHERE steam_key=?', (oldest,))
             db.execute('DELETE FROM steam_avatars WHERE steam_key=?', (oldest,))
+            count -= 1
         db.execute('INSERT INTO steam_avatars VALUES(?,?,?,?)', (key, encrypt_value(encoded), digest, int(time.time())))
-    elif old[0] != digest:
+    elif old[0] != digest or not valid_old:
         db.execute('UPDATE steam_avatars SET avatar=?, digest=?, updated_at=? WHERE steam_key=?',
                    (encrypt_value(encoded), digest, int(time.time()), key))
     elif missing:

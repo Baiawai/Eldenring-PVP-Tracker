@@ -20,11 +20,13 @@ Le tracker essaie d’ouvrir `http://elden-tracker.localhost/` avec une écoute 
 
 Le contrôle `.\.venv\Scripts\python.exe store\smoke_test.py` utilise un APPDATA temporaire et interroge l'interface sans ouvrir de port. Il nécessite l'accès à WMI ; il ne remplace pas un essai de capture en jeu ou du package installé.
 
+La récupération unique des anciens avatars Steam utilise le lecteur Steam embarqué, sans clé API et sans élévation supplémentaire pour la version Store. Avant toute soumission, vérifier sur une copie d'une installation Store existante que le lot reprend après fermeture, respecte la désactivation P2P, n'est pas considéré terminé lorsque Steam ou le jeu est indisponible, et ne se relance pas après sa fin. Tester aussi la conservation de la base et des avatars lors de la mise à jour MSIX ; une compilation locale ne prouve pas leur reprise par une installation Store réelle.
+
 Renseigner la fiche Store, ses captures et une URL publique de politique de confidentialité. Celle-ci doit décrire les captures d'écran, les données conservées localement (dont historique Steam et adresses IP éventuelles), et l'identifiant construit à partir de l'adresse MAC et du nom de machine. Vérifier les données effectivement transmises, leurs destinataires et durées de conservation. L'application utilise un serveur HTTP sur localhost et possède des routes de modification : examiner leur protection contre les requêtes non sollicitées d'autres pages locales ou sites web avant publication. L'installation MSIX peut isoler ou rediriger les données existantes : tester la migration et la désinstallation sur une copie, sans toucher aux données réelles.
 
 ## Préparer les textes de la fiche
 
-Les brouillons [descriptions](descriptions-fiche-1.0.10.0.md) et [notes de version](notes-de-version-1.0.11.0.md) couvrent les 30 langues de l’interface. Les notes Store sont un résumé court ; les [notes GitHub](../release/github-notes-1.0.11.0.md) comportent des détails supplémentaires en français. Les textes doivent être relus et comparés avec la dernière version effectivement publiée avant toute soumission.
+Les brouillons [descriptions](descriptions-fiche-1.0.11.0.md) et [notes de version](notes-de-version-1.0.11.0.md) couvrent les 30 langues de l’interface. Les notes Store sont un résumé court ; les [notes GitHub](../release/github-notes-1.0.11.0.md) comportent des détails supplémentaires en français. Les textes doivent être relus et comparés avec la dernière version effectivement publiée avant toute soumission.
 
 Pour préparer un fichier de travail, exporter d’abord les fiches **MSIX** depuis Partner Center, puis fournir cet export CSV UTF-8 à l’outil local :
 

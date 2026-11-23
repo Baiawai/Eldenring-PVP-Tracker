@@ -42,7 +42,7 @@ _SCENE_BOOL = ('show_mode', 'show_peers', 'show_event', 'show_avatars', 'show_pl
                'show_steam_id', 'show_ping', 'show_ping_average', 'show_jitter', 'show_quality',
                'show_duration', 'show_player_count', 'show_player_stats', 'show_country', 'show_role', 'show_tracker_user',
                'show_player_tags', 'show_player_favourite')
-_SCENE_FALSE_DEFAULTS = frozenset(('show_steam_id', 'show_jitter', 'show_ping_average',
+_SCENE_FALSE_DEFAULTS = frozenset(('show_steam_id', 'show_jitter',
                                    'show_quality', 'show_player_count'))
 _SCENE_NUMBERS = {'avatar_size': (24, 96, 48), 'card_spacing': (0, 24, 8), 'card_size': (48, 160, 60)}
 _SCENE_COLORS = {'ping_good_color': '#85cda4', 'ping_medium_color': '#e1c16e', 'ping_bad_color': '#de7777'}

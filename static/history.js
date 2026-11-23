@@ -96,6 +96,66 @@
         }
         return '';
     }
+    // History stores the text as observed at the time. Translate only known
+    // tracker templates; never guess at an arbitrary player name or OCR text.
+    let recordedRolePrefixes = null;
+    function localizedHistoryLine(line, metadata) {
+        const frenchBackend = {4:'En attente de joueur(s)', 8:'Tous les combattants sont rassemblés',
+            9:'Début du combat', 10:'Vous remportez la victoire !', 12:'Vous avez perdu',
+            20:'Le combat s\'achève par une égalité'};
+        const packs = Object.values(window.ELDEN_UI_PACKS || {});
+        for (const [index, french] of Object.entries(frenchBackend)) {
+            const candidates = [french, ...packs.map(pack => pack.backend && pack.backend[Number(index)])];
+            if (candidates.some(value => typeof value === 'string' && !/<br\s*\/?\s*>/i.test(value) && value.trim() === line.trim())) {
+                const language = window.uiCurrentLanguage ? window.uiCurrentLanguage() : 'fra';
+                const target = window.ELDEN_UI_PACKS?.[language]?.backend?.[Number(index)] || french;
+                return target.replace(/<br\s*\/?\s*>/gi, ' ').trim();
+            }
+        }
+        const templates = [
+            ['victory_against', 'Vous remportez la victoire contre {opponent} !', 'opponent'],
+            ['defeat_against', 'Vous avez perdu contre {opponent}.', 'opponent'],
+            ['draw_against', 'Le combat s’achève par une égalité avec {opponent}.', 'opponent'],
+            ['tracking_defending_against', '{name} a envahi votre monde', 'name'],
+            ['hunter_objective_completed_message', "Son objectif accompli, le Chasseur {name} s'en est retourné dans son monde.", 'name']
+        ];
+        for (const [key, french, placeholder] of templates) {
+            const marker = '{' + placeholder + '}';
+            const candidates = [french, ...packs.map(pack => pack.modern && pack.modern[key])];
+            for (const template of candidates) {
+                if (typeof template !== 'string' || !template.includes(marker)) continue;
+                const pieces = template.split(marker);
+                if (pieces.length !== 2 || !line.startsWith(pieces[0]) || !line.endsWith(pieces[1])) continue;
+                const name = line.slice(pieces[0].length, pieces[1] ? -pieces[1].length : undefined);
+                if (!name || (placeholder === 'opponent' && metadata.opponent && metadata.opponent !== name)) continue;
+                return tr(key, french).replace(marker, () => name);
+            }
+        }
+        const roles = [
+            ['summoned_ally','Allié arrivé'], ['ally_left','Allié reparti'], ['ally_dismissed','Allié renvoyé dans son monde'], ['ally_died','Allié mort'],
+            ['cooperator_summoned','Allié adverse arrivé'], ['cooperator_left','Allié adverse reparti'], ['cooperator_dismissed','Allié adverse renvoyé dans son monde'], ['cooperator_died','Allié adverse mort'],
+            ['hunter_arrived','Chasseur arrivé'], ['hunter_summoning','Chasseur en cours d’invocation'], ['hunter_left','Chasseur reparti'],
+            ['hunter_objective_completed','Objectif du chasseur accompli'], ['hunter_dismissed','Chasseur renvoyé dans son monde'], ['hunter_died','Chasseur mort'],
+            ['coinvader_arrived','Autre envahisseur arrivé'], ['coinvader_died','Autre envahisseur mort'],
+            ['invasion_detected','Envahisseur arrivé'], ['invader_died','Envahisseur mort']
+        ];
+        if (!recordedRolePrefixes) {
+            recordedRolePrefixes = roles.flatMap(([key, french]) => [french, ...packs.map(pack => pack.modern && pack.modern[key])]
+                .filter(value => typeof value === 'string' && value).map(value => ({value, key, french})));
+            [['cooperator_summoned','arrivé'], ['cooperator_left','reparti'],
+             ['cooperator_dismissed','renvoyé dans son monde'], ['cooperator_died','mort']].forEach(([key, suffix]) => {
+                const french = roles.find(role => role[0] === key)[1];
+                recordedRolePrefixes.push({value:'Coopérateur adverse ' + suffix, key, french});
+            });
+            recordedRolePrefixes.sort((a, b) => b.value.length - a.value.length);
+        }
+        for (const prefix of recordedRolePrefixes) {
+            const marker = prefix.value + ' : ';
+            if (line.startsWith(marker) && line.length > marker.length)
+                return tr(prefix.key, prefix.french) + ' : ' + line.slice(marker.length);
+        }
+        return line;
+    }
     function appendPlayerName(container, line, name, source, id) {
         const index = name ? line.indexOf(name) : -1;
         if (index < 0 || !window.openEncounteredPlayer) {
@@ -263,10 +323,11 @@
             }
             text = text.replace(/Time:/g, tr('time', 'Temps') + ':');
             text.split('\n').forEach(function(line, i) {
+                const metadata = entry.metadata || {};
+                if (entry.kind === 'detection') line = localizedHistoryLine(line, metadata);
                 if (i) message.appendChild(document.createElement('br'));
                 const translatedWarnings = Object.values(window.ELDEN_UI_PACKS || {}).map(pack => pack.modern.inventory_warning);
                 const span = element('span', line.startsWith('Pensez à retirer') || translatedWarnings.includes(line) ? 'history-warning' : '');
-                const metadata = entry.metadata || {};
                 const steamEvent = entry.kind && entry.kind.startsWith('steam_');
                 const name = i === 0 ? (steamEvent ? (metadata.name || metadata.id || '') : (metadata.opponent || historicalOpponent(line))) : '';
                 appendPlayerName(span, line, name, steamEvent ? 'steam' : (metadata.opponent_source || ''), steamEvent ? String(metadata.id || '') : '');

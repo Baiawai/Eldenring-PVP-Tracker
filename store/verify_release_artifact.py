@@ -18,7 +18,7 @@ REQUIRED = (
     'EldenRingTracker.exe', 'AppxManifest.xml', 'tesseract/tesseract.exe',
     'tesseract/doc/LICENSE', '_internal/application/store-build.marker',
     '_internal/application/locales/ui_packs.json', '_internal/application/locales/network_messages.json',
-    '_internal/application/steam_peers/TrackerSteamPeersV8.exe',
+    '_internal/application/steam_peers/TrackerSteamPeersV9.exe',
     '_internal/application/steam_peers/LICENSE-SteamP2PInfo.txt',
     '_internal/static/ui-packs.js', '_internal/static/overlay-settings.js',
     '_internal/static/overlay-country-flags.png', '_internal/templates/index.html',
@@ -77,8 +77,8 @@ def verify(path, expected_identity=None, expected_publisher=None):
             name = '_internal/' + relative
             if name not in names or hashlib.sha256(package.read(name)).digest() != hashlib.sha256((ROOT / relative).read_bytes()).digest():
                 raise ValueError('Package OCR model is missing or differs from source: ' + model)
-        helper = '_internal/application/steam_peers/TrackerSteamPeersV8.exe'
-        if package.read(helper) != (ROOT / 'application/steam_peers/TrackerSteamPeersV8.exe').read_bytes():
+        helper = '_internal/application/steam_peers/TrackerSteamPeersV9.exe'
+        if package.read(helper) != (ROOT / 'application/steam_peers/TrackerSteamPeersV9.exe').read_bytes():
             raise ValueError('Package Steam helper differs from the checked source artifact')
     digest = hashlib.sha256()
     with Path(path).open('rb') as stream:

@@ -122,7 +122,11 @@ class TrackerSteamPeers {
                 historicalAvatars.Tick(DateTime.UtcNow,
                     id => AvatarUpdate(new CSteamID(id), id, DateTime.UtcNow, true),
                     (id, image) => {
-                        if (image == null) Emit(new { type="avatar", id=id.ToString(), state="unavailable" });
+                        if (image == null) {
+                            bool loggedOn = false;
+                            try { loggedOn = SteamUser.BLoggedOn(); } catch (Exception) { }
+                            Emit(new { type="avatar", id=id.ToString(), state=SteamAvatarRequests.MissingImageState(loggedOn) });
+                        }
                         else Emit(new { type="avatar", id=id.ToString(), state="ready", avatar_png=image });
                     });
                 lock (profileRequests) {

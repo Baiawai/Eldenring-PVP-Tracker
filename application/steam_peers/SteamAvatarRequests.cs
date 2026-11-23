@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 
 public sealed class SteamAvatarRequests {
+    public static string MissingImageState(bool loggedOn) {
+        return loggedOn ? "unavailable" : "interrupted";
+    }
     const int MaxPending = 32;
     const int MaxInFlight = 4;
     static readonly TimeSpan Interval = TimeSpan.FromSeconds(2);

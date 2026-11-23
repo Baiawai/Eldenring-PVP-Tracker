@@ -30,7 +30,7 @@ from application.runtime_paths import STORE_BUILD
 from application.steam_peer_enrichment import PeerCache
 from application.steam_log_diagnostics import LogProbe
 
-HELPER = Path(__file__).with_name('steam_peers') / 'TrackerSteamPeersV8.exe'
+HELPER = Path(__file__).with_name('steam_peers') / 'TrackerSteamPeersV9.exe'
 _lock = threading.Lock()
 _started = False
 _process = None
@@ -58,6 +58,7 @@ _HISTORICAL_AVATAR_MAX_EVENT_IDS = 128
 _historical_avatar_lock = threading.Lock()
 _historical_avatar_pending = {}
 _historical_avatar_cooldown = OrderedDict()
+_historical_avatar_outcomes = OrderedDict()
 _historical_avatar_save_queue = queue.Queue(maxsize=_HISTORICAL_AVATAR_MAX_PENDING)
 _historical_avatar_save_start_lock = threading.Lock()
 _historical_avatar_save_thread = None
@@ -75,24 +76,60 @@ def _historical_avatar_set_cooldown(steam_id, now):
         _historical_avatar_cooldown.popitem(last=False)
 
 
+def _historical_avatar_set_outcome(steam_id, outcome):
+    # Called under _historical_avatar_lock. This bounded in-memory result is
+    # shared by the page and the one-time background recovery worker.
+    _historical_avatar_outcomes.pop(steam_id, None)
+    _historical_avatar_outcomes[steam_id] = outcome
+    while len(_historical_avatar_outcomes) > _HISTORICAL_AVATAR_MAX_COOLDOWNS:
+        _historical_avatar_outcomes.popitem(last=False)
+
+
+def historical_avatar_result(steam_id):
+    with _historical_avatar_lock:
+        _prune_historical_avatar_requests(time.monotonic())
+        if steam_id in _historical_avatar_pending:
+            return 'pending'
+        return _historical_avatar_outcomes.get(steam_id)
+
+
 def _prune_historical_avatar_requests(now):
     for steam_id, request in list(_historical_avatar_pending.items()):
         if not request['saving'] and now - request['started'] >= _HISTORICAL_AVATAR_TIMEOUT:
             del _historical_avatar_pending[steam_id]
             _historical_avatar_set_cooldown(steam_id, now)
+            _historical_avatar_set_outcome(steam_id, 'interrupted')
     for steam_id, until in list(_historical_avatar_cooldown.items()):
         if now >= until:
             del _historical_avatar_cooldown[steam_id]
 
 
+def historical_avatar_transport_available():
+    """Check the existing reader without launching Steam or the game."""
+    try:
+        if not enabled() or not ctypes.windll.user32.FindWindowW(None, 'ELDEN RING™'):
+            return False
+        steam = sys.modules.get('application.steam_log_auto')
+        steam_session = getattr(steam, 'steam_session', None)
+        if not callable(steam_session) or steam_session() is None:
+            return False
+    except (OSError, sqlite3.Error):
+        return False
+    with _lock:
+        if _snapshot.get('status') not in ('active', 'waiting_log'):
+            return False
+    with _command_lock:
+        return _command_writer is not None
+
+
 def request_historical_avatar(steam_id, event_ids):
-    """Ask an already-running V7 helper for an authorized historical avatar.
+    """Ask an already-running compatible helper for an authorized historical avatar.
 
     The caller checks that the ID occurs in active history.  The store repeats
     that check atomically when a response arrives.  Never starts Steam or the
     helper, including when Elden Ring is closed.
     """
-    if (not _historical_avatar_id(steam_id) or HELPER.name not in ('TrackerSteamPeersV7.exe', 'TrackerSteamPeersV8.exe')
+    if (not _historical_avatar_id(steam_id) or HELPER.name not in ('TrackerSteamPeersV7.exe', 'TrackerSteamPeersV8.exe', 'TrackerSteamPeersV9.exe')
             or not isinstance(event_ids, (list, tuple)) or not event_ids
             or len(event_ids) > _HISTORICAL_AVATAR_MAX_EVENT_IDS
             or any(type(value) is not int or not 0 < value <= 9223372036854775807 for value in event_ids)):
@@ -123,11 +160,13 @@ def request_historical_avatar(steam_id, event_ids):
             if steam_id in _historical_avatar_cooldown or len(_historical_avatar_pending) >= _HISTORICAL_AVATAR_MAX_PENDING:
                 return 'rate_limited'
             _historical_avatar_pending[steam_id] = {'started': now, 'saving': False, 'event_ids': event_ids}
+            _historical_avatar_set_outcome(steam_id, 'pending')
             try:
                 _command_writer('avatar:' + steam_id)
             except (OSError, pywintypes.error, ValueError):
                 _historical_avatar_pending.pop(steam_id, None)
                 _historical_avatar_set_cooldown(steam_id, now)
+                _historical_avatar_set_outcome(steam_id, 'interrupted')
                 return 'unavailable'
     return 'queued'
 
@@ -136,6 +175,7 @@ def _save_historical_avatars():
     """Persist off the peer-reader thread so a busy database cannot stall ping."""
     global _historical_avatar_save_thread
     while True:
+        outcome = 'saved'
         try:
             steam_id, png, request = _historical_avatar_save_queue.get(timeout=5)
         except queue.Empty:
@@ -153,11 +193,13 @@ def _save_historical_avatars():
             # A storage failure must never stop Steam peer detection. Avoid
             # logging identifiers or file paths from exception details.
             logging.getLogger(__name__).warning('Unable to save a historical Steam avatar')
+            outcome = 'interrupted'
         finally:
             with _historical_avatar_lock:
                 if _historical_avatar_pending.get(steam_id) is request:
                     _historical_avatar_pending.pop(steam_id, None)
                     _historical_avatar_set_cooldown(steam_id, time.monotonic())
+                    _historical_avatar_set_outcome(steam_id, outcome)
             _historical_avatar_save_queue.task_done()
 
 
@@ -197,12 +239,14 @@ def _handle_historical_avatar(data):
         if data.get('state') != 'ready' or not isinstance(encoded, str) or len(encoded) > _HISTORICAL_AVATAR_MAX_BASE64:
             del _historical_avatar_pending[steam_id]
             _historical_avatar_set_cooldown(steam_id, now)
+            _historical_avatar_set_outcome(steam_id, 'unavailable' if data.get('state') == 'unavailable' else 'interrupted')
             return
         try:
             png = base64.b64decode(encoded, validate=True)
         except (ValueError, binascii.Error):
             del _historical_avatar_pending[steam_id]
             _historical_avatar_set_cooldown(steam_id, now)
+            _historical_avatar_set_outcome(steam_id, 'interrupted')
             return
         request['saving'] = True
     if not _enqueue_historical_avatar_save(steam_id, png, request):
@@ -210,6 +254,7 @@ def _handle_historical_avatar(data):
             if _historical_avatar_pending.get(steam_id) is request:
                 _historical_avatar_pending.pop(steam_id, None)
                 _historical_avatar_set_cooldown(steam_id, time.monotonic())
+                _historical_avatar_set_outcome(steam_id, 'interrupted')
 
 
 def _clear_historical_avatar_requests():
@@ -218,6 +263,7 @@ def _clear_historical_avatar_requests():
         _prune_historical_avatar_requests(now)
         for steam_id in _historical_avatar_pending:
             _historical_avatar_set_cooldown(steam_id, now)
+            _historical_avatar_set_outcome(steam_id, 'interrupted')
         _historical_avatar_pending.clear()
 
 

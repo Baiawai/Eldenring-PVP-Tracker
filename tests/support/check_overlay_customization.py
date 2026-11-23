@@ -29,7 +29,22 @@ def get_options(page):
 
 
 def wait_option(page, key, value):
-    page.wait_for_function("async ([key, value]) => (await (await fetch('/overlay-settings')).json()).options[key] === value", arg=[key, value])
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if get_options(page).get(key) == value:
+            return
+        page.wait_for_timeout(50)
+    raise AssertionError(f'Overlay option was not saved: {key}')
+
+
+def wait_enabled(page, expected):
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        actual = page.evaluate("async () => (await (await fetch('/overlay-settings')).json()).enabled")
+        if actual is expected:
+            return
+        page.wait_for_timeout(50)
+    raise AssertionError('Overlay enabled state was not saved')
 
 
 with socket.socket() as sock:
@@ -129,17 +144,13 @@ with tempfile.TemporaryDirectory(prefix='overlay-custom-ui-', ignore_cleanup_err
                     master_row = master.locator('xpath=ancestor::div[contains(@class,"form_single")]')
                     initial_master = master.is_checked()
                     master_row.locator('.yes-no-control button').first.click()
-                    page.wait_for_function('''async expected =>
-                        (await (await fetch('/overlay-settings', {cache:'no-store'})).json()).enabled === expected''',
-                        arg=not initial_master)
+                    wait_enabled(page, not initial_master)
                     page.reload(wait_until='load')
                     open_settings(page)
                     assert page.locator('#game_overlay_enabled').is_checked() is (not initial_master)
                     master_row = page.locator('#game_overlay_enabled').locator('xpath=ancestor::div[contains(@class,"form_single")]')
                     master_row.locator('.yes-no-control button').first.click()
-                    page.wait_for_function('''async expected =>
-                        (await (await fetch('/overlay-settings', {cache:'no-store'})).json()).enabled === expected''',
-                        arg=initial_master)
+                    wait_enabled(page, initial_master)
                 for percentage in (60, 100, 75):
                     slider = page.locator('#overlay_custom_width_percent')
                     slider.fill(str(percentage))
@@ -202,7 +213,7 @@ with tempfile.TemporaryDirectory(prefix='overlay-custom-ui-', ignore_cleanup_err
                     page.locator('#overlay_custom_position').select_option(position)
                     wait_option(page, 'position', position)
                 for name in ('show_status','show_mode','show_peers','show_event', 'show_player_count',
-                             'show_avatars', 'show_player_name', 'show_role', 'show_steam_id', 'show_country', 'show_ping',
+                             'show_avatars', 'show_player_name', 'show_role', 'show_tracker_user', 'show_steam_id', 'show_country', 'show_ping',
                              'show_ping_average', 'show_jitter', 'show_quality', 'show_duration',
                              'show_player_stats', 'show_player_tags', 'show_player_favourite'):
                     control = page.locator('#overlay_custom_' + name)
@@ -237,12 +248,13 @@ with tempfile.TemporaryDirectory(prefix='overlay-custom-ui-', ignore_cleanup_err
                 assert page.locator('#overlay_custom_visibility_mode').input_value() == 'game_visible'
                 assert all(page.locator('#overlay_custom_' + name).is_checked() == saved[name]
                            for name in ('show_status', 'show_mode', 'show_peers', 'show_event', 'show_player_count',
-                                        'show_avatars', 'show_player_name', 'show_role', 'show_steam_id',
+                                        'show_avatars', 'show_player_name', 'show_role', 'show_tracker_user', 'show_steam_id',
                                         'show_country', 'show_ping', 'show_ping_average', 'show_jitter',
                                         'show_quality', 'show_duration', 'show_player_stats', 'show_player_tags', 'show_player_favourite'))
                 for name in ('avatar_size', 'card_size', 'card_spacing', 'ping_good_color',
                              'ping_medium_color', 'ping_bad_color'):
-                    assert page.locator('#overlay_custom_' + name).input_value() == str(saved[name]), name
+                    actual = page.locator('#overlay_custom_' + name).input_value()
+                    assert actual == str(saved[name]), (width, name, actual, saved[name])
                 page.evaluate("launchLanguages('eng')")
                 assert page.locator('label[for="overlay_custom_background_color"]').inner_text() == page.evaluate("ELDEN_UI_PACKS.eng.modern.overlay_custom_background_color")
                 assert page.locator('#overlay_custom_position option[value="bottom_right"]').inner_text() == page.evaluate("ELDEN_UI_PACKS.eng.modern.overlay_position_bottom_right")

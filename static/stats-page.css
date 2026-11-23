@@ -271,11 +271,24 @@ body .settings-panel .contente_header_settings button.data-settings-tab.active_s
 body .settings-panel .contente_header_settings button.data-settings-tab.active_setting:hover:not(:disabled) {
     background:transparent !important;
 }
-.settings-panel .contente_header_settings .data-settings-tab img { width:min(52px, 100%); height:auto; }
+.settings-panel .contente_header_settings .data-settings-icon {
+    position:relative; display:block; width:min(52px, 100%); aspect-ratio:1; overflow:hidden;
+    opacity:.75; transition:opacity .2s, filter .2s;
+}
+.settings-panel .contente_header_settings .data-settings-icon img {
+    position:absolute; left:50%; top:50%; width:240%; max-width:none; height:auto;
+    transform:translate(-50%, -50%); opacity:1; filter:none;
+}
+.settings-panel .contente_header_settings .data-settings-tab:hover .data-settings-icon,
+.settings-panel .contente_header_settings .data-settings-tab.active_setting .data-settings-icon {
+    opacity:1; filter:drop-shadow(0 0 7px rgba(232,195,125,.8));
+}
+.settings-panel .contente_header_settings .data-settings-tab:hover .data-settings-icon img,
+.settings-panel .contente_header_settings .data-settings-tab.active_setting .data-settings-icon img { filter:none; }
 .settings-panel .contente_header_settings .data-settings-tab:focus-visible { outline:2px solid #e1c487; outline-offset:-2px; }
 @media (max-width:760px) {
     .settings-panel .contente_header_settings .overlay-settings-tab img { width:min(42px, 100%); }
-    .settings-panel .contente_header_settings .data-settings-tab img { width:min(42px, 100%); }
+    .settings-panel .contente_header_settings .data-settings-icon { width:min(42px, 100%); }
 }
 .settings-panel .overlay-custom-row input[type="color"] {
     box-sizing:border-box; width:min(100%,300px); max-width:300px; height:42px;
@@ -427,11 +440,11 @@ body select {
     background-size:5px 5px,5px 5px,1px 20px,cover;
     background-repeat:no-repeat; border-color:#806b45; color:#f0e1c4;
 }
-body :is(.app-content button:not(.diagnostics-tab):not(.overlay-settings-tab):not(.data-settings-tab):not(.online-ranking-tab):not(.player-profile-button):not(:where(.encounter-player-link, .home-start-prompt, .player-category-tag, .player-category-remove, .player-favourite, .player-capture-link)), .modal_chart button, .dataTables_paginate .paginate_button) {
+body :is(.app-content button:not(.btn_menu_settings):not(.diagnostics-tab):not(.overlay-settings-tab):not(.data-settings-tab):not(.online-ranking-tab):not(.player-profile-button):not(:where(.encounter-player-link, .home-start-prompt, .player-category-tag, .player-category-remove, .player-favourite, .player-capture-link)), .modal_chart button, .dataTables_paginate .paginate_button) {
     background-image:linear-gradient(rgba(0,0,0,.42),rgba(0,0,0,.42)),url("settings-button-texture.png") !important;
     background-size:cover; background-position:center; border-color:#967d50; color:#f2e4c5;
 }
-body :is(.app-content button:not(.diagnostics-tab):not(.overlay-settings-tab):not(.data-settings-tab):not(.online-ranking-tab):not(.player-profile-button):not(:where(.player-category-remove)), .modal_chart button, .dataTables_paginate .paginate_button):hover:not(:disabled) {
+body :is(.app-content button:not(.btn_menu_settings):not(.diagnostics-tab):not(.overlay-settings-tab):not(.data-settings-tab):not(.online-ranking-tab):not(.player-profile-button):not(:where(.player-category-remove)), .modal_chart button, .dataTables_paginate .paginate_button):hover:not(:disabled) {
     border-color:#e1c487; filter:brightness(1.12);
 }
 body :is(.app-content button, .modal_chart button, .leaderboard-player-dialog button, .capture-viewer-overlay button, .sidebar-toggle, select):focus-visible {
@@ -595,8 +608,10 @@ body .stats-mode-picker select { padding-right:38px; }
     z-index:2;
 }
 .settings-panel .contente_header_settings .btn_menu_settings {
-    width:100%; min-width:0; height:100%; margin:0; padding:0; border:0;
+    width:100%; min-width:0; min-height:0; height:100%; margin:0; padding:0; border:0;
+    appearance:none; background:transparent; box-shadow:none;
 }
+.settings-panel .contente_header_settings .btn_menu_settings:focus-visible { outline:2px solid #e1c487; outline-offset:-2px; }
 .settings-panel .contente_header_settings .btn_menu_settings.active_setting {
     background:radial-gradient(ellipse at 50% 55%,rgba(189,173,128,.15),transparent 70%);
 }

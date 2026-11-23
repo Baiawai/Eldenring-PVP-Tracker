@@ -44,12 +44,54 @@ class OverlayDefaultMigrationTests(unittest.TestCase):
                 db.execute('INSERT INTO overlay_defaults_version VALUES (1, ?)', (generation,))
 
     def assert_upgraded(self, module):
-        self.assertEqual(module.options(), dict(module.UPGRADE_V2_DEFAULT_OPTIONS, show_player_tags=True, show_player_favourite=True))
+        self.assertEqual(module.options(), module.UPGRADE_V2_DEFAULT_OPTIONS)
         self.assertFalse(module.enabled())
         with closing(sqlite3.connect(module.database_setting)) as db:
             self.assertEqual(db.execute('SELECT version FROM overlay_defaults_version WHERE id=1').fetchone(), ('v2',))
             self.assertEqual(db.execute("SELECT value FROM overlay_options WHERE name='unknown_future_option'").fetchone(), ('"keep me"',))
             self.assertEqual(db.execute('SELECT value FROM unrelated_settings').fetchone(), ('untouched',))
+
+    def test_upgrade_writes_the_complete_reviewed_preset(self):
+        db_path = Path(self.temp.name) / 'complete.db'
+        self.create_existing(db_path, 'current')
+        module = self.module(db_path)
+        expected = {
+            'background_opacity': 50, 'text_opacity': 50, 'background_color': '#1a1a1a',
+            'text_color': '#c7c7c7', 'border_color': '#cab486', 'border_radius': 4,
+            'show_overlay_border': False, 'font_size': 15, 'width_percent': 80,
+            'position': 'top_right', 'visibility_mode': 'game_visible', 'show_status': True,
+            'show_mode': True, 'show_peers': True, 'show_event': True, 'show_avatars': True,
+            'show_player_name': True, 'show_role': True, 'show_tracker_user': True,
+            'show_player_tags': True, 'show_player_favourite': True, 'show_steam_id': False,
+            'show_country': True, 'show_ping': True, 'show_ping_average': True,
+            'show_jitter': False, 'show_quality': False, 'show_duration': True,
+            'show_player_count': False, 'show_rank': True, 'show_player_stats': True,
+            'avatar_size': 48, 'card_spacing': 8, 'card_size': 60,
+            'ping_good_color': '#85cda4', 'ping_medium_color': '#e1c16e',
+            'ping_bad_color': '#de7777',
+        }
+        self.assertEqual(module.UPGRADE_V2_DEFAULT_OPTIONS, expected)
+        self.assertEqual(set(expected), set(module.DEFAULT_OPTIONS))
+        module.initialize_defaults(False)
+        self.assertEqual(module.options(), expected)
+        with closing(sqlite3.connect(db_path)) as db:
+            saved = {row[0] for row in db.execute('SELECT name FROM overlay_options')}
+        self.assertTrue(set(expected).issubset(saved))
+        self.assertFalse(module.enabled())
+        changed = dict(expected)
+        changed.update({key: not value for key, value in expected.items() if isinstance(value, bool)})
+        changed.update({'background_opacity': 20, 'text_opacity': 30, 'font_size': 22,
+                        'border_radius': 12, 'width_percent': 72, 'avatar_size': 64,
+                        'card_size': 100, 'card_spacing': 16, 'position': 'bottom_left',
+                        'visibility_mode': 'always', 'background_color': '#123456',
+                        'text_color': '#234567', 'border_color': '#345678',
+                        'ping_good_color': '#456789', 'ping_medium_color': '#56789a',
+                        'ping_bad_color': '#6789ab'})
+        module.set_options(changed)
+        restarted = self.module(db_path)
+        restarted.initialize_defaults(False)
+        self.assertEqual(restarted.options(), changed)
+        self.assertFalse(restarted.enabled())
 
     def test_existing_profiles_migrate_once_and_keep_later_customizations(self):
         for generation in (None, 'legacy', 'current'):

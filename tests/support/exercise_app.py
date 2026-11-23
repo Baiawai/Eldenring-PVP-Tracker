@@ -684,6 +684,20 @@ with patch.object(functions, 'langue_select', 'eng'), \
     assert tracker_overlay_event.latest() == tracker_overlay_event._plain_text(
         functions.localize_counter('Invocation de l’allié…', 'eng'))
     assert tracker_overlay_event.latest() != 'Invocation de l’allié…'
+    for language in ('fra', *functions.ui_packs()):
+        assert tracker_overlay_event.latest(language) == tracker_overlay_event._plain_text(
+            functions.localize_counter('Invocation de l’allié…', language)), language
+    functions.emit_tracking_event('Victoire<br> Time: 12 s', opponent='A & B', opponent_source='game', outcome='victory')
+    for language in ('fra', *functions.ui_packs()):
+        value = tracker_overlay_event.latest(language)
+        assert 'A & B' in value
+        expected = 'Temps' if language == 'fra' else functions.ui_packs()[language]['modern']['time']
+        assert expected + ': 12 s' in value, (language, value)
+    with patch.object(functions, 'correspondly_active', functions.ui_packs()['eng']['backend']):
+        functions.emit_tracking_event(functions.ui_packs()['eng']['backend'][9])
+        for language in ('fra', *functions.ui_packs()):
+            backend = functions.correspondly_fr if language == 'fra' else functions.ui_packs()[language]['backend']
+            assert tracker_overlay_event.latest(language) == tracker_overlay_event._plain_text(backend[9]), language
 tracker_overlay_event.clear()
 assert functions.game_locale in functions.game_language.LANGUAGES
 original_game = functions.game_locale
@@ -2284,7 +2298,8 @@ for hunter_mode, detected, in_fight, hunter_relation, hunter_name, hunter_langua
         functions.process_game_text(hunter_notice, 'unused-test-image', None, notification_text=hunter_notice)
         assert functions.array_stats['text'] == expected_html, repr(functions.array_stats['text'])
         assert functions.fight is in_fight and functions.mode_select == hunter_mode
-        publish.assert_called_once_with(expected_html)
+        assert publish.call_count == 1 and publish.call_args.args == (expected_html,)
+        assert publish.call_args.kwargs['language'] == ui_language and callable(publish.call_args.kwargs['renderer'])
         assert tracker_overlay_event.latest() == expected_overlay, tracker_overlay_event.latest()
         assert hunter_roles.annotate([hunter_peer])[0]['role'] is None
     rows = [item for item in player_sightings.read_sightings() if item['name'].startswith(hunter_name)]
@@ -2294,3 +2309,17 @@ for hunter_mode, detected, in_fight, hunter_relation, hunter_name, hunter_langua
     assert sum(item['message'] == expected_message for item in events) == 1
     with closing(mode_stats._connect()) as db:
         assert db.execute('SELECT * FROM mode_stats ORDER BY mode').fetchall() == scores_before
+
+# Previously recorded hunter observations with incomplete context become
+# consistent in the Players API when another event identifies that episode.
+for name, mode, relation in (('ContextAlly', 'Defense', 'ally'), ('ContextEnemy', 'Invasion', 'opponent')):
+    player_sightings.record_sighting({'name':name, 'role':'hunter', 'event':'joined', 'mode':mode, 'relation':relation},
+                                     observed_at='2026-06-01 12:00:00')
+    player_sightings.record_sighting({'name':name, 'role':'hunter', 'event':'completed', 'mode':'Unknown', 'relation':'unknown'},
+                                     observed_at='2026-06-01 12:02:00')
+    response = client.get('/players', query_string={'limit':30, 'q':name}).get_json()
+    player = next(p for p in response['players'] if p['name'] == name)
+    assert player['relations'] == [relation]
+    assert {entry['mode'] for entry in player['history']} == {mode}
+    assert {entry['relation'] for entry in player['history']} == {relation}
+    assert client.get('/players', query_string={'limit':30, 'q':name, 'filter':relation}).get_json()['filtered_count'] == 1

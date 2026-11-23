@@ -8,10 +8,13 @@
   if (!nav || !parent) return;
   const tab = document.createElement('button');
   tab.type = 'button'; tab.className = 'btn_menu_settings steam-peer-tab online-ranking-tab'; tab.setAttribute('menu', '7');
+  tab.dataset.i18nTitle = tab.dataset.i18nAria = 'online_title';
+  tab.dataset.i18nTitleFr = tab.dataset.i18nAriaFr = 'Classement en ligne';
   tab.title = t('online_title', 'Classement en ligne');
   tab.setAttribute('aria-label', tab.title);
   tab.innerHTML = '<img src="/static/page-icon-ranking.png" alt="">';
-  nav.insertBefore(tab, nav.querySelector('[menu="4"]'));
+  const profileTab = nav.querySelector('[menu="3"]');
+  nav.insertBefore(tab, profileTab ? profileTab.nextSibling : nav.querySelector('[menu="4"]'));
   const section = document.createElement('section');
   section.className = 'contente_settings hide online-settings'; section.setAttribute('setting', '7');
   section.innerHTML = '<div class="form_single"><label class="form_single_left" for="online_enabled" data-online="online_participate">Participer au classement</label><div class="form_single_right"><input id="online_enabled" type="checkbox"></div></div><div class="form_single online-steam-state-row"><span class="form_single_left" data-online="online_steam_status_label">Compte Steam</span><div class="form_single_right"><span id="online_steam_state" class="online-steam-state" role="status" aria-live="polite"></span></div></div><div class="form_single"><label class="form_single_left" for="online_steam" data-online="online_steam_share">Partager mon profil Steam</label><div class="form_single_right"><input id="online_steam" type="checkbox"></div></div><div class="form_single"><span class="form_single_left" data-online="online_recovery_label">Récupérer une installation</span><div class="form_single_right"><button type="button" id="online_recover" data-online="online_recovery_start">Récupérer</button></div></div>';

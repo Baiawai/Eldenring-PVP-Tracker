@@ -1,4 +1,5 @@
 import importlib.util
+import re
 import sqlite3
 import sys
 import tempfile
@@ -21,6 +22,36 @@ def load_module(database):
 
 
 class OverlaySettingsTests(unittest.TestCase):
+    def test_every_overlay_control_is_persisted_and_reaches_its_consumer(self):
+        from application import tracker_overlay_window
+        root = Path(__file__).resolve().parents[1]
+        script = (root / 'static' / 'overlay-settings.js').read_text(encoding='utf-8')
+        definitions = script.split('const definitions = [', 1)[1].split('\n    ];', 1)[0]
+        controls = re.findall(r"\['([a-z_]+)'", definitions)
+        with tempfile.TemporaryDirectory() as temp:
+            module = load_module(Path(temp) / 'settings.db')
+            # show_rank is an obsolete stored option, with no control or renderer.
+            self.assertEqual(set(controls), set(module.DEFAULT_OPTIONS) - {'show_rank'})
+            self.assertEqual(len(controls), len(set(controls)))
+            values = dict(module.DEFAULT_OPTIONS)
+            values.update({key: not value for key, value in values.items() if isinstance(value, bool)})
+            values.update({'position':'bottom_left', 'visibility_mode':'always', 'font_size':22,
+                           'width_percent':72, 'background_opacity':30, 'text_opacity':70,
+                           'border_radius':12, 'avatar_size':64, 'card_size':100, 'card_spacing':16,
+                           'background_color':'#123456', 'text_color':'#234567', 'border_color':'#345678',
+                           'ping_good_color':'#456789', 'ping_medium_color':'#56789a', 'ping_bad_color':'#6789ab'})
+            module.set_options(values)
+            saved = module.options()
+            self.assertEqual(saved, values)
+            rendered = tracker_overlay_window._scene_options(saved)
+            for key in controls:
+                with self.subTest(option=key):
+                    if key == 'visibility_mode':
+                        # This is consumed by tracker_overlay._window_content before rendering.
+                        self.assertEqual(saved[key], 'always')
+                    else:
+                        self.assertEqual(rendered[key], saved[key])
+
     def test_new_installation_uses_the_requested_overlay_defaults(self):
         with tempfile.TemporaryDirectory() as temp:
             module = load_module(Path(temp) / 'settings.db')
@@ -31,7 +62,7 @@ class OverlaySettingsTests(unittest.TestCase):
                 'ping_medium_color': '#e1c16e', 'position': 'top_right',
                 'show_status': True, 'show_mode': True, 'show_peers': True, 'show_event': True,
                 'show_avatars': True, 'show_player_name': True, 'show_role': True, 'show_tracker_user': True, 'show_steam_id': False, 'show_country': True, 'show_ping': True,
-                'show_ping_average': False, 'show_jitter': False, 'show_quality': False, 'show_duration': True,
+                'show_ping_average': True, 'show_jitter': False, 'show_quality': False, 'show_duration': True,
                 'show_player_count': False, 'show_rank': True, 'show_player_stats': True, 'show_player_tags': True, 'show_player_favourite': True,
                 'text_color': '#c7c7c7', 'text_opacity': 50, 'visibility_mode': 'game_visible',
             }

@@ -31,7 +31,7 @@ DEFAULT_OPTIONS = {
     'show_steam_id': False,
     'show_country': True,
     'show_ping': True,
-    'show_ping_average': False,
+    'show_ping_average': True,
     'show_jitter': False,
     'show_quality': False,
     'show_duration': True,
@@ -76,7 +76,8 @@ CURRENT_V1_DEFAULT_OPTIONS = {
 # silently changing the appearance of already upgraded installations.
 UPGRADE_V2_DEFAULT_OPTIONS = dict(
     CURRENT_V1_DEFAULT_OPTIONS,
-    show_ping_average=False, show_quality=False, show_player_count=False,
+    show_quality=False, show_player_count=False,
+    show_player_tags=True, show_player_favourite=True,
 )
 
 # Defaults used before the new-installation preset was introduced. Keeping a

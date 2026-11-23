@@ -14,7 +14,9 @@ class OverlayHelpTranslationTests(unittest.TestCase):
         definitions = re.search(r'const definitions = \[(.*?)\n\s*\];', source, re.S)
         self.assertIsNotNone(definitions)
         options = re.findall(r"^\s*\['([a-z_]+)'", definitions.group(1), re.M)
+        label_keys = re.findall(r"^\s*\['[a-z_]+',\s*'([a-z_]+)'", definitions.group(1), re.M)
         self.assertEqual(len(options), len(set(options)))
+        self.assertEqual(len(label_keys), len(options))
         self.assertIn('visibility_mode', options)
         self.assertIn('show_tracker_user', options)
         help_keys = {'overlay_info_' + option for option in options}
@@ -24,6 +26,9 @@ class OverlayHelpTranslationTests(unittest.TestCase):
         packs = json.loads((ROOT / 'application/locales/ui_packs.json').read_text(encoding='utf-8'))
         self.assertEqual(len(packs), 29)  # French is supplied by the UI fallback.
         for language, pack in packs.items():
+            for key in label_keys:
+                with self.subTest(language=language, label=key):
+                    self.assertTrue(pack['modern'].get(key), key)
             for key in help_keys:
                 with self.subTest(language=language, key=key):
                     value = pack['modern'].get(key)

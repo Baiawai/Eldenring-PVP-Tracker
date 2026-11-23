@@ -40,7 +40,7 @@ from application import store_update
 from application import tracker_overlay_event, steam_encounter_counts, peer_rankings
 from application.session_summary import SessionSummary
 from application.browser_language import browser_language
-from application.ui_localization import packs as ui_packs, localize_counter, localize_overlay_time, display_game_text
+from application.ui_localization import packs as ui_packs, localize_counter, localize_overlay_time, localize_overlay_event, display_game_text
 from application.runtime_paths import image_dir, RESOURCE_DIR, tesseract_path, data_dir, STORE_BUILD
 from application import usage_metrics
 from application import auto_tracking
@@ -1258,6 +1258,8 @@ def emit_tracking_event(text, mode_override=None, *, opponent='', opponent_sourc
         if text.startswith(candidate):
             marker, text = candidate, text[len(candidate):]
             break
+    original_overlay_text, overlay_language = text, langue_select
+    overlay_backend = tuple(correspondly_active)
     # The frontend uses commas as message separators. Preserve literal commas
     # inside translated strings and leave the queue delimiter unambiguous.
     text = localize_counter(text, langue_select)
@@ -1292,7 +1294,12 @@ def emit_tracking_event(text, mode_override=None, *, opponent='', opponent_sourc
     else:
         if show_in_overlay:
             try:
-                tracker_overlay_event.publish_html(localize_overlay_time(text, langue_select))
+                def render_overlay_event(language):
+                    backend = correspondly_fr if language == 'fra' else ui_packs().get(language, ui_packs()['eng'])['backend']
+                    return localize_overlay_event(original_overlay_text, overlay_backend, backend, language,
+                                                  opponent=opponent if opponent_source in ('game', 'steam') else '', outcome=outcome)
+                tracker_overlay_event.publish_html(localize_overlay_time(text, overlay_language),
+                                                   language=overlay_language, renderer=render_overlay_event)
             except Exception:
                 app.logger.exception('Unable to prepare tracker overlay event')
         with tracking_event_lock:

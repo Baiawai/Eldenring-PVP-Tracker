@@ -456,6 +456,11 @@ if __name__ == '__main__' and app_started == True:
         tracker_presence.start(lambda: bool(functions.run_monitor))
         from application import error_reports
         error_reports.start()
+        try:
+            from application import steam_avatar_backfill
+            steam_avatar_backfill.start()
+        except Exception:
+            app.logger.exception('Unable to start historical Steam avatar recovery')
         online_leaderboard.start_sync()
         online_leaderboard.start_periodic_sync()
         auto_tracking.start_worker(app, functions)

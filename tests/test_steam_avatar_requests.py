@@ -45,8 +45,8 @@ class SteamAvatarRequestTests(unittest.TestCase):
         self.check('retry')
 
     def test_built_helper_is_present_and_rejects_invalid_invocation(self):
-        helper = ROOT / 'application/steam_peers/TrackerSteamPeersV8.exe'
-        self.assertTrue(helper.is_file(), 'Build the V8 helper before testing')
+        helper = ROOT / 'application/steam_peers/TrackerSteamPeersV9.exe'
+        self.assertTrue(helper.is_file(), 'Build the V9 helper before testing')
         result = subprocess.run([str(helper)], capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 0)
         self.assertEqual(json.loads(result.stdout.lstrip('\ufeff')), {'status': 'log_missing'})

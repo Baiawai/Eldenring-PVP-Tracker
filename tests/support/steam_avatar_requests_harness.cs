@@ -8,6 +8,8 @@ static class SteamAvatarRequestsHarness {
         var queue = new SteamAvatarRequests();
         var results = new List<string>();
         if (args[0] == "protocol") {
+            Require(SteamAvatarRequests.MissingImageState(false) == "interrupted", "offline must not consume attempts");
+            Require(SteamAvatarRequests.MissingImageState(true) == "unavailable", "online missing image");
             ulong id;
             Require(SteamAvatarRequests.TryParseCommand("avatar:76561198000000001", out id) && id == 76561198000000001UL, "valid command");
             Require(!SteamAvatarRequests.TryParseCommand("76561198000000001", out id), "profile command must remain distinct");

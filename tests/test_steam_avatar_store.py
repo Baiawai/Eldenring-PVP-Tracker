@@ -55,6 +55,14 @@ class SteamAvatarStoreTests(unittest.TestCase):
             self.assertNotIn(base64.b64encode(self.image), encrypted)
             self.assertEqual(db.execute('SELECT COUNT(*) FROM steam_avatars').fetchone()[0], 1)
 
+    def test_historical_recovery_replaces_corrupted_cached_image_even_with_same_digest(self):
+        self.assertTrue(store.save(self.sid, 1, self.image))
+        with closing(sqlite3.connect(self.database)) as db, db:
+            db.execute('UPDATE steam_avatars SET avatar=?', (b'corrupted',))
+        self.assertIsNone(store.avatar(self.sid))
+        self.assertTrue(store.save_historical(self.sid, self.image, (1,)))
+        self.assertEqual(store.avatar(self.sid), self.image)
+
     def test_deduplicates_images_and_tracks_purge_archive_and_restore(self):
         self.assertTrue(store.save(self.sid, 1, self.image))
         with closing(sqlite3.connect(self.database)) as db, db:

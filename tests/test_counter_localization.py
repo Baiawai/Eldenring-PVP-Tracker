@@ -29,6 +29,24 @@ def load_localization():
 
 
 class CounterLocalizationTests(unittest.TestCase):
+    def test_overlay_event_follows_language_changes_and_keeps_player_names_safe(self):
+        _, localization = load_localization()
+        french_backend = ['Début du combat', 'Vous remportez la victoire ! ']
+        for language, pack in localization.packs().items():
+            with self.subTest(language=language):
+                translated = localization.localize_overlay_event('Début du combat', french_backend,
+                    [pack['backend'][9], pack['backend'][10]], language)
+                self.assertEqual(translated, pack['backend'][9])
+                event = localization.localize_overlay_event('Vous remportez la victoire ! <br> Time: 12 s',
+                    french_backend, [pack['backend'][9], pack['backend'][10]], language,
+                    opponent='A <B> & C', outcome='victory')
+                self.assertIn('A &lt;B&gt; &amp; C', event)
+                self.assertIn(html.escape(pack['modern']['time'], quote=False) + ': 12 s', event)
+                named = localization.localize_overlay_event('Chasseur arrivé : A&lt;B&gt;', french_backend,
+                    [pack['backend'][9], pack['backend'][10]], language)
+                self.assertEqual(named, html.escape(pack['modern']['hunter_arrived'], quote=False) + ' : A&lt;B&gt;')
+        self.assertEqual(localization.localize_overlay_event('Début du combat signé Joueur', french_backend,
+                         ['Commencing combat', 'Victory'], 'eng'), 'Début du combat signé Joueur')
     def test_hunter_objective_uses_complete_localized_sentence_and_safe_name(self):
         language, localization = load_localization()
         name = 'A&lt;B&gt;&amp;C&#x27;s,Test'
